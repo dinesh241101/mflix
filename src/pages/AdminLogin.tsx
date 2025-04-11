@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { LoaderCircle, AtSign, Lock, UserPlus, KeyRound } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
+import MFlixLogo from "@/components/MFlixLogo";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -116,7 +117,9 @@ const AdminLogin = () => {
     <div className="min-h-screen bg-gray-900 flex items-center justify-center">
       <div className="w-full max-w-md p-8 bg-gray-800 rounded-lg shadow-lg">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white">MFlix Admin</h1>
+          <div className="flex justify-center mb-2">
+            <MFlixLogo />
+          </div>
           <p className="text-gray-400 mt-2">Access the admin control panel</p>
         </div>
         
@@ -135,7 +138,7 @@ const AdminLogin = () => {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
+                    placeholder="Admin Email"
                     className="bg-gray-700 border-gray-600 text-white pl-10"
                     required
                   />
@@ -147,7 +150,7 @@ const AdminLogin = () => {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
+                    placeholder="Password"
                     className="bg-gray-700 border-gray-600 text-white pl-10"
                     required
                   />
@@ -179,8 +182,8 @@ const AdminLogin = () => {
                 
                 <div className="text-center text-sm text-gray-500">
                   <p>Default admin credentials:</p>
-                  <p>Email: dinesh001kaushik@gmail.com</p>
-                  <p>Password: dinesh001</p>
+                  <p>dinesh001kaushik@gmail.com</p>
+                  <p>dinesh001</p>
                 </div>
               </div>
             </form>
@@ -195,7 +198,7 @@ const AdminLogin = () => {
                     type="email"
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
-                    placeholder="Enter your email"
+                    placeholder="Email Address"
                     className="bg-gray-700 border-gray-600 text-white pl-10"
                     required
                   />
@@ -207,7 +210,7 @@ const AdminLogin = () => {
                     type="password"
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
-                    placeholder="Create a password"
+                    placeholder="Create Password"
                     className="bg-gray-700 border-gray-600 text-white pl-10"
                     required
                   />
@@ -219,7 +222,7 @@ const AdminLogin = () => {
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm your password"
+                    placeholder="Confirm Password"
                     className="bg-gray-700 border-gray-600 text-white pl-10"
                     required
                   />
