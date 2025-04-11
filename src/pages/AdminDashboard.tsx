@@ -1,38 +1,294 @@
-
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
-import { Search, Upload, ChevronDown, LogOut, Users, BarChart3, Settings, Film, Tv, Layers, PlusCircle, UserPlus, UserMinus, Edit, Trash2 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  Search, Upload, ChevronDown, LogOut, Users, BarChart3, Settings, 
+  Film, Tv, Layers, PlusCircle, UserPlus, UserMinus, Edit, Trash2,
+  Calendar, Clock, Share2, Link, Copy, Play, Youtube, FilmIcon, Video,
+  Clipboard, X
+} from "lucide-react";
+import { 
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
+} from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import LoadingScreen from "@/components/LoadingScreen";
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { format } from "date-fns";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [adminEmail, setAdminEmail] = useState("");
   const [activeTab, setActiveTab] = useState("movies");
+  const [loading, setLoading] = useState(true);
+  
+  // Data states
+  const [users, setUsers] = useState<any[]>([]);
+  const [movies, setMovies] = useState<any[]>([]);
+  const [selectedMovie, setSelectedMovie] = useState<any>(null);
+  const [shorts, setShorts] = useState<any[]>([]);
+  const [ads, setAds] = useState<any[]>([]);
+  const [analytics, setAnalytics] = useState<any>({
+    totalDownloads: 0,
+    activeUsers: 0,
+    adClicks: 0,
+    adRevenue: 0,
+    countries: []
+  });
+  const [movieCast, setMovieCast] = useState<any[]>([]);
   
   // Form states
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   
+  // Movie form state
+  const [movieForm, setMovieForm] = useState({
+    title: "",
+    year: "",
+    contentType: "movie",
+    genre: "",
+    quality: "1080p",
+    country: "",
+    director: "",
+    productionHouse: "",
+    imdbRating: "",
+    storyline: "",
+    seoTags: "",
+    posterUrl: "",
+    featured: false,
+    youtubeTrailer: "",
+    downloadLinks: ""
+  });
+  
+  // New user form state
+  const [newUserForm, setNewUserForm] = useState({
+    email: "",
+    password: "",
+    role: "editor"
+  });
+  
+  // Short form state
+  const [shortForm, setShortForm] = useState({
+    title: "",
+    videoUrl: "",
+    thumbnailUrl: ""
+  });
+  
+  // Ad form state
+  const [adForm, setAdForm] = useState({
+    name: "",
+    adType: "banner",
+    position: "home",
+    contentUrl: "",
+    targetUrl: "",
+    displayFrequency: 2
+  });
+  
+  // Cast member form
+  const [castForm, setCastForm] = useState({
+    name: "",
+    role: ""
+  });
+  
   // Check if user is logged in
   useEffect(() => {
-    const token = localStorage.getItem("adminToken");
-    const email = localStorage.getItem("adminEmail");
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem("adminToken");
+        const email = localStorage.getItem("adminEmail");
+        
+        if (!token) {
+          navigate("/admin/login");
+          return;
+        }
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          throw new Error("Session expired");
+        }
+        
+        // Check if user is admin
+        const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin', {
+          user_id: user.id
+        });
+        
+        if (adminError || !isAdmin) {
+          throw new Error("Not authorized as admin");
+        }
+        
+        setIsLoggedIn(true);
+        setAdminEmail(email || user.email || "admin@example.com");
+        
+        // Set active tab based on URL if needed
+        const path = location.pathname.split("/").pop();
+        if (path && ["movies", "ads", "users", "analytics", "settings", "shorts"].includes(path)) {
+          setActiveTab(path);
+        }
+        
+        // Load initial data
+        fetchData();
+        
+      } catch (error) {
+        console.error("Auth error:", error);
+        localStorage.removeItem("adminToken");
+        localStorage.removeItem("adminEmail");
+        navigate("/admin/login");
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    if (token) {
-      setIsLoggedIn(true);
-      setAdminEmail(email || "admin@example.com");
-    } else {
-      navigate("/admin/login");
+    checkAuth();
+  }, [navigate, location.pathname]);
+  
+  // Fetch data from Supabase
+  const fetchData = async () => {
+    try {
+      // Fetch users data
+      const { data: userData, error: userError } = await supabase
+        .from('user_roles')
+        .select(`
+          id,
+          role,
+          created_at,
+          user_id
+        `);
+      
+      if (userError) throw userError;
+      
+      // Get auth user details for each user
+      let populatedUsers = [];
+      if (userData) {
+        for (const user of userData) {
+          const { data: authUser } = await supabase.auth.admin.getUserById(user.user_id);
+          if (authUser && authUser.user) {
+            populatedUsers.push({
+              ...user,
+              email: authUser.user.email,
+              status: authUser.user.confirmed_at ? 'Active' : 'Pending'
+            });
+          }
+        }
+      }
+      
+      setUsers(populatedUsers);
+      
+      // Fetch movies data
+      const { data: movieData, error: movieError } = await supabase
+        .from('movies')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (movieError) throw movieError;
+      setMovies(movieData || []);
+      
+      // Fetch shorts data
+      const { data: shortsData, error: shortsError } = await supabase
+        .from('shorts')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (shortsError) throw shortsError;
+      setShorts(shortsData || []);
+      
+      // Fetch ads data
+      const { data: adsData, error: adsError } = await supabase
+        .from('ads')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (adsError) throw adsError;
+      setAds(adsData || []);
+      
+      // Fetch analytics data (simplified for demo)
+      const { data: analyticsData, error: analyticsError } = await supabase
+        .from('analytics')
+        .select('*');
+      
+      if (analyticsError) throw analyticsError;
+      
+      // Process analytics data for display
+      if (analyticsData) {
+        // Group by country
+        const countries = analyticsData.reduce((acc: any, item: any) => {
+          const country = item.country || 'Unknown';
+          if (!acc[country]) {
+            acc[country] = { count: 0, states: {} };
+          }
+          acc[country].count++;
+          
+          // Track states/cities
+          const state = item.state || 'Unknown';
+          if (!acc[country].states[state]) {
+            acc[country].states[state] = { count: 0, cities: {} };
+          }
+          acc[country].states[state].count++;
+          
+          // Track cities
+          const city = item.city || 'Unknown';
+          if (!acc[country].states[state].cities[city]) {
+            acc[country].states[state].cities[city] = { count: 0, devices: {} };
+          }
+          acc[country].states[state].cities[city].count++;
+          
+          // Track devices
+          const device = item.device || 'Unknown';
+          if (!acc[country].states[state].cities[city].devices[device]) {
+            acc[country].states[state].cities[city].devices[device] = 1;
+          } else {
+            acc[country].states[state].cities[city].devices[device]++;
+          }
+          
+          return acc;
+        }, {});
+        
+        // Convert to array for display
+        const countriesArray = Object.entries(countries).map(([name, data]: [string, any]) => ({
+          name,
+          users: data.count,
+          downloads: data.count * 2, // Just for demo
+          revenue: Math.floor(data.count * 0.5), // Just for demo
+          states: Object.entries(data.states).map(([stateName, stateData]: [string, any]) => ({
+            name: stateName,
+            count: stateData.count,
+            cities: Object.entries(stateData.cities).map(([cityName, cityData]: [string, any]) => ({
+              name: cityName,
+              count: cityData.count,
+              devices: Object.entries(cityData.devices).map(([deviceName, deviceCount]: [string, any]) => ({
+                name: deviceName,
+                count: deviceCount
+              }))
+            }))
+          }))
+        }));
+        
+        setAnalytics({
+          totalDownloads: analyticsData.length * 3, // Just for demo
+          activeUsers: analyticsData.length,
+          adClicks: Math.floor(analyticsData.length * 0.7), // Just for demo
+          adRevenue: Math.floor(analyticsData.length * 0.2), // Just for demo
+          countries: countriesArray.sort((a, b) => b.users - a.users)
+        });
+      }
+      
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load data. Please try again.",
+        variant: "destructive"
+      });
     }
-  }, [navigate]);
-
+  };
+  
   // Handle logout
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
@@ -40,25 +296,169 @@ const AdminDashboard = () => {
     setIsLoggedIn(false);
     navigate("/admin/login");
   };
-
-  // Placeholder functions - will be implemented with Supabase
-  const handleUploadMovie = (e: React.FormEvent) => {
+  
+  // Handle movie upload
+  const handleUploadMovie = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Not Implemented",
-      description: "Movie upload requires Supabase integration. Please connect to Supabase first.",
-    });
+    
+    try {
+      setLoading(true);
+      
+      // Convert form data for Supabase
+      const movieData = {
+        title: movieForm.title,
+        year: parseInt(movieForm.year),
+        content_type: movieForm.contentType,
+        genre: movieForm.genre.split(',').map(g => g.trim()),
+        quality: movieForm.quality,
+        country: movieForm.country,
+        director: movieForm.director,
+        production_house: movieForm.productionHouse,
+        imdb_rating: parseFloat(movieForm.imdbRating),
+        storyline: movieForm.storyline,
+        seo_tags: movieForm.seoTags.split(',').map(t => t.trim()),
+        poster_url: movieForm.posterUrl,
+        featured: movieForm.featured
+      };
+      
+      // Insert movie data
+      const { data: movie, error: movieError } = await supabase
+        .from('movies')
+        .insert(movieData)
+        .select('id')
+        .single();
+      
+      if (movieError) throw movieError;
+      
+      // If movie created successfully, add download links
+      if (movie && movie.id) {
+        // Process download links if any
+        if (movieForm.downloadLinks.trim()) {
+          const links = movieForm.downloadLinks.split('\n').filter(link => link.trim());
+          
+          for (const link of links) {
+            const match = link.match(/Quality:\s*(.*),\s*Size:\s*(.*),\s*URL:\s*(.*)/i);
+            
+            if (match && match.length >= 4) {
+              const [_, quality, size, url] = match;
+              
+              await supabase
+                .from('download_links')
+                .insert({
+                  movie_id: movie.id,
+                  quality: quality.trim(),
+                  size: size.trim(),
+                  url: url.trim()
+                });
+            }
+          }
+        }
+        
+        // Add YouTube trailer if provided
+        if (movieForm.youtubeTrailer.trim()) {
+          await supabase
+            .from('media_clips')
+            .insert({
+              movie_id: movie.id,
+              title: `${movieForm.title} - Trailer`,
+              type: 'trailer',
+              video_url: movieForm.youtubeTrailer.trim()
+            });
+        }
+        
+        toast({
+          title: "Success",
+          description: "Movie uploaded successfully!",
+        });
+        
+        // Reset form
+        setMovieForm({
+          title: "",
+          year: "",
+          contentType: "movie",
+          genre: "",
+          quality: "1080p",
+          country: "",
+          director: "",
+          productionHouse: "",
+          imdbRating: "",
+          storyline: "",
+          seoTags: "",
+          posterUrl: "",
+          featured: false,
+          youtubeTrailer: "",
+          downloadLinks: ""
+        });
+        
+        // Reload movie data
+        fetchData();
+      }
+    } catch (error: any) {
+      console.error("Error uploading movie:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload movie",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const handleUploadAd = (e: React.FormEvent) => {
+  
+  // Handle upload ad
+  const handleUploadAd = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Not Implemented",
-      description: "Ad upload requires Supabase integration. Please connect to Supabase first.",
-    });
+    
+    try {
+      setLoading(true);
+      
+      const adData = {
+        name: adForm.name,
+        ad_type: adForm.adType,
+        position: adForm.position,
+        content_url: adForm.contentUrl,
+        target_url: adForm.targetUrl,
+        display_frequency: parseInt(adForm.displayFrequency.toString())
+      };
+      
+      const { error } = await supabase
+        .from('ads')
+        .insert(adData);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Ad campaign created successfully!",
+      });
+      
+      // Reset form
+      setAdForm({
+        name: "",
+        adType: "banner",
+        position: "home",
+        contentUrl: "",
+        targetUrl: "",
+        displayFrequency: 2
+      });
+      
+      // Reload ad data
+      fetchData();
+      
+    } catch (error: any) {
+      console.error("Error creating ad:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create ad campaign",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const handlePasswordChange = (e: React.FormEvent) => {
+  
+  // Handle password change
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (newPassword !== confirmPassword) {
@@ -70,14 +470,358 @@ const AdminDashboard = () => {
       return;
     }
     
-    toast({
-      title: "Not Implemented",
-      description: "Password change requires Supabase integration. Please connect to Supabase first.",
-    });
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Password updated successfully.",
+      });
+      
+      // Reset form
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      
+    } catch (error: any) {
+      console.error("Password change error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update password",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
-
+  
+  // Handle add user
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      setLoading(true);
+      
+      // Create user with Supabase Auth
+      const { data, error } = await supabase.auth.admin.createUser({
+        email: newUserForm.email,
+        password: newUserForm.password,
+        email_confirm: true
+      });
+      
+      if (error) throw error;
+      
+      if (data && data.user) {
+        // Add user role
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: data.user.id,
+            role: newUserForm.role
+          });
+        
+        if (roleError) throw roleError;
+        
+        toast({
+          title: "Success",
+          description: "User created successfully!",
+        });
+        
+        // Reset form
+        setNewUserForm({
+          email: "",
+          password: "",
+          role: "editor"
+        });
+        
+        // Reload user data
+        fetchData();
+      }
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create user",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle user role update
+  const handleUpdateUserRole = async (userId: string, newRole: string) => {
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('user_roles')
+        .update({ role: newRole })
+        .eq('user_id', userId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "User role updated successfully!",
+      });
+      
+      // Reload user data
+      fetchData();
+      
+    } catch (error: any) {
+      console.error("Error updating user role:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update user role",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle delete user
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      setLoading(true);
+      
+      // Delete from Supabase Auth
+      const { error } = await supabase.auth.admin.deleteUser(userId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "User deleted successfully!",
+      });
+      
+      // Reload user data
+      fetchData();
+      
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete user",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle add short video
+  const handleAddShort = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('shorts')
+        .insert({
+          title: shortForm.title,
+          video_url: shortForm.videoUrl,
+          thumbnail_url: shortForm.thumbnailUrl
+        });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Short video added successfully!",
+      });
+      
+      // Reset form
+      setShortForm({
+        title: "",
+        videoUrl: "",
+        thumbnailUrl: ""
+      });
+      
+      // Reload shorts data
+      fetchData();
+      
+    } catch (error: any) {
+      console.error("Error adding short:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add short video",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle delete short
+  const handleDeleteShort = async (id: string) => {
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('shorts')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Short video deleted successfully!",
+      });
+      
+      // Reload shorts data
+      fetchData();
+      
+    } catch (error: any) {
+      console.error("Error deleting short:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete short video",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle movie select for cast management
+  const handleSelectMovieForCast = async (movieId: string) => {
+    try {
+      setLoading(true);
+      
+      // Fetch movie details
+      const { data: movie, error: movieError } = await supabase
+        .from('movies')
+        .select('*')
+        .eq('id', movieId)
+        .single();
+      
+      if (movieError) throw movieError;
+      
+      // Fetch existing cast for this movie
+      const { data: cast, error: castError } = await supabase
+        .from('movie_cast')
+        .select('*')
+        .eq('movie_id', movieId);
+      
+      if (castError) throw castError;
+      
+      setSelectedMovie(movie);
+      setMovieCast(cast || []);
+      
+    } catch (error: any) {
+      console.error("Error fetching movie details:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load movie details",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle add cast member
+  const handleAddCastMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedMovie) {
+      toast({
+        title: "Error",
+        description: "No movie selected",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('movie_cast')
+        .insert({
+          movie_id: selectedMovie.id,
+          name: castForm.name,
+          role: castForm.role
+        });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Cast member added successfully!",
+      });
+      
+      // Reset form
+      setMovieCast([
+        ...movieCast,
+        {
+          id: Date.now().toString(), // Temporary ID
+          name: castForm.name,
+          role: castForm.role
+        }
+      ]);
+      
+      setCastForm({
+        name: "",
+        role: ""
+      });
+      
+    } catch (error: any) {
+      console.error("Error adding cast member:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add cast member",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle delete cast member
+  const handleDeleteCastMember = async (id: string) => {
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('movie_cast')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Cast member removed successfully!",
+      });
+      
+      // Update local state
+      setMovieCast(movieCast.filter(member => member.id !== id));
+      
+    } catch (error: any) {
+      console.error("Error deleting cast member:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove cast member",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // For unauthorized access
-  if (!isLoggedIn) {
+  if (!isLoggedIn && !loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center text-white">
@@ -94,19 +838,19 @@ const AdminDashboard = () => {
     );
   }
 
-  // Mock users data for the UI
-  const mockUsers = [
-    { id: 1, email: "user1@example.com", role: "Admin", status: "Active" },
-    { id: 2, email: "user2@example.com", role: "Editor", status: "Active" },
-    { id: 3, email: "user3@example.com", role: "Viewer", status: "Inactive" },
-  ];
+  if (loading) {
+    return <LoadingScreen message="Loading Admin Dashboard" />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <header className="bg-gray-800 shadow-md">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold">MFlix Admin</h1>
+            <Link to="/admin" className="text-2xl font-bold flex items-center">
+              <Film className="mr-2" />
+              MFlix Admin
+            </Link>
             <div className="flex items-center space-x-4">
               <span className="text-gray-400">Welcome, {adminEmail}</span>
               <button 
@@ -128,6 +872,10 @@ const AdminDashboard = () => {
               <Film className="mr-2" size={16} />
               Movies
             </TabsTrigger>
+            <TabsTrigger value="shorts" className="flex-1 py-3">
+              <Video className="mr-2" size={16} />
+              Shorts
+            </TabsTrigger>
             <TabsTrigger value="ads" className="flex-1 py-3">
               <Layers className="mr-2" size={16} />
               Ads & Affiliates
@@ -147,382 +895,126 @@ const AdminDashboard = () => {
           </TabsList>
 
           <TabsContent value="movies" className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-bold mb-4">Upload New Content</h2>
-            <form onSubmit={handleUploadMovie} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">Title</label>
-                  <Input className="bg-gray-700 border-gray-600" placeholder="Movie or series title" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">Year</label>
-                  <Input type="number" className="bg-gray-700 border-gray-600" placeholder="2025" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Content Type</label>
-                <Select>
-                  <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                    <SelectValue placeholder="Select content type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="movie">Movie</SelectItem>
-                    <SelectItem value="series">Web Series</SelectItem>
-                    <SelectItem value="anime">Anime</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Genre</label>
-                <Select>
-                  <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                    <SelectValue placeholder="Select genre" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="action">Action</SelectItem>
-                    <SelectItem value="comedy">Comedy</SelectItem>
-                    <SelectItem value="drama">Drama</SelectItem>
-                    <SelectItem value="horror">Horror</SelectItem>
-                    <SelectItem value="sci-fi">Sci-Fi</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Quality</label>
-                <Select>
-                  <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                    <SelectValue placeholder="Select quality" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1080p">1080p</SelectItem>
-                    <SelectItem value="720p">720p</SelectItem>
-                    <SelectItem value="480p">480p</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Country</label>
-                <Input className="bg-gray-700 border-gray-600" placeholder="Country of origin" />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Director</label>
-                <Input className="bg-gray-700 border-gray-600" placeholder="Director name" />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Production House</label>
-                <Input className="bg-gray-700 border-gray-600" placeholder="Production company" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">IMDB Rating</label>
-                <Input type="number" step="0.1" min="0" max="10" className="bg-gray-700 border-gray-600" placeholder="8.5" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Storyline</label>
-                <Textarea 
-                  className="w-full min-h-[100px] rounded-md bg-gray-700 border-gray-600 text-white p-3"
-                  placeholder="Enter movie storyline..."
-                ></Textarea>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">SEO Tags (comma separated)</label>
-                <Input className="bg-gray-700 border-gray-600" placeholder="action, thriller, 2025, new release" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Poster Image URL</label>
-                <Input className="bg-gray-700 border-gray-600" placeholder="https://example.com/image.jpg" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Featured on Homepage</label>
-                <div className="flex items-center space-x-2">
-                  <input type="checkbox" id="featured" className="rounded bg-gray-700 border-gray-600" />
-                  <label htmlFor="featured">Show on homepage carousel</label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Download URLs (one per line)</label>
-                <Textarea 
-                  className="w-full min-h-[100px] rounded-md bg-gray-700 border-gray-600 text-white p-3"
-                  placeholder="Quality: 1080p, Size: 2.1GB, URL: https://example.com/download1&#10;Quality: 720p, Size: 1.2GB, URL: https://example.com/download2"
-                ></Textarea>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">YouTube Trailer URL</label>
-                <Input className="bg-gray-700 border-gray-600" placeholder="https://youtube.com/watch?v=xxxxx" />
-              </div>
-
-              <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">
-                <Upload className="mr-2" size={16} />
-                Upload Content
-              </Button>
-            </form>
-          </TabsContent>
-
-          <TabsContent value="ads" className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-bold mb-4">Ads & Affiliate Links</h2>
-            <form onSubmit={handleUploadAd} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Ad Type</label>
-                <Select>
-                  <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                    <SelectValue placeholder="Select ad type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="banner">Banner Image</SelectItem>
-                    <SelectItem value="video">Video Ad</SelectItem>
-                    <SelectItem value="affiliate">Affiliate Link</SelectItem>
-                    <SelectItem value="popup">Popup Ad</SelectItem>
-                    <SelectItem value="interstitial">Interstitial Ad</SelectItem>
-                    <SelectItem value="clickAction">Click Action Ad</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Ad Name</label>
-                <Input className="bg-gray-700 border-gray-600" placeholder="Ad campaign name" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Ad Position</label>
-                <Select>
-                  <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                    <SelectValue placeholder="Select ad position" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="home">Home Page</SelectItem>
-                    <SelectItem value="detail">Movie Detail Page</SelectItem>
-                    <SelectItem value="click">After Click Action</SelectItem>
-                    <SelectItem value="side">Side Panel</SelectItem>
-                    <SelectItem value="shorts">After Video Shorts</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Content URL (Image/Video)</label>
-                <Input className="bg-gray-700 border-gray-600" placeholder="https://example.com/ad-image.jpg" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Target URL</label>
-                <Input className="bg-gray-700 border-gray-600" placeholder="https://advertiser.com/landing-page" />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Display Frequency</label>
-                <div className="flex items-center">
-                  <span className="mr-2">Show every</span>
-                  <Input type="number" min="1" max="10" defaultValue="2" className="w-16 bg-gray-700 border-gray-600" />
-                  <span className="ml-2">clicks</span>
-                </div>
-              </div>
-
-              <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">
-                <Upload className="mr-2" size={16} />
-                Save Ad
-              </Button>
-            </form>
-          </TabsContent>
-
-          <TabsContent value="users" className="bg-gray-800 p-6 rounded-lg">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold">User Management</h2>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <UserPlus className="mr-2" size={16} />
-                Add New User
-              </Button>
-            </div>
-            
-            <div className="bg-gray-700 rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-800">
-                    <th className="text-left p-3">Email</th>
-                    <th className="text-left p-3">Role</th>
-                    <th className="text-left p-3">Status</th>
-                    <th className="text-right p-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mockUsers.map(user => (
-                    <tr key={user.id} className="border-t border-gray-600">
-                      <td className="p-3">{user.email}</td>
-                      <td className="p-3">{user.role}</td>
-                      <td className="p-3">
-                        <span className={`px-2 py-1 rounded-full text-xs ${user.status === 'Active' ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>
-                          {user.status}
-                        </span>
-                      </td>
-                      <td className="p-3 text-right">
-                        <Button variant="ghost" size="sm" className="mr-2">
-                          <Edit size={16} />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-red-500">
-                          <Trash2 size={16} />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            <div className="mt-6 text-center text-gray-400">
-              <p>Note: User management requires Supabase integration.</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="analytics" className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-bold mb-6">Analytics</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <div className="bg-gray-700 p-4 rounded-lg">
-                <h3 className="text-gray-400 text-sm mb-1">Total Downloads</h3>
-                <p className="text-2xl font-bold">12,345</p>
-              </div>
-              <div className="bg-gray-700 p-4 rounded-lg">
-                <h3 className="text-gray-400 text-sm mb-1">Active Users</h3>
-                <p className="text-2xl font-bold">5,678</p>
-              </div>
-              <div className="bg-gray-700 p-4 rounded-lg">
-                <h3 className="text-gray-400 text-sm mb-1">Ad Clicks</h3>
-                <p className="text-2xl font-bold">3,210</p>
-              </div>
-              <div className="bg-gray-700 p-4 rounded-lg">
-                <h3 className="text-gray-400 text-sm mb-1">Ad Revenue</h3>
-                <p className="text-2xl font-bold">$1,234</p>
-              </div>
-            </div>
-            
-            <div className="mb-8">
-              <h3 className="text-lg font-medium mb-4">User Demographics</h3>
-              <div className="bg-gray-700 p-4 rounded-lg h-64 flex items-center justify-center">
-                <p className="text-gray-400">Analytics charts will appear here after Supabase integration.</p>
-              </div>
-            </div>
-            
-            <div className="mb-8">
-              <h3 className="text-lg font-medium mb-4">Top Countries</h3>
-              <div className="bg-gray-700 rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gray-800">
-                      <th className="text-left p-3">Country</th>
-                      <th className="text-left p-3">Users</th>
-                      <th className="text-left p-3">Downloads</th>
-                      <th className="text-left p-3">Revenue</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-t border-gray-600">
-                      <td className="p-3">United States</td>
-                      <td className="p-3">1,234</td>
-                      <td className="p-3">3,456</td>
-                      <td className="p-3">$567</td>
-                    </tr>
-                    <tr className="border-t border-gray-600">
-                      <td className="p-3">India</td>
-                      <td className="p-3">987</td>
-                      <td className="p-3">2,345</td>
-                      <td className="p-3">$345</td>
-                    </tr>
-                    <tr className="border-t border-gray-600">
-                      <td className="p-3">United Kingdom</td>
-                      <td className="p-3">876</td>
-                      <td className="p-3">1,987</td>
-                      <td className="p-3">$234</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            
-            <div className="text-center text-gray-400">
-              <p>Note: Analytics tracking requires Supabase integration.</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="settings" className="bg-gray-800 p-6 rounded-lg">
-            <h2 className="text-xl font-bold mb-4">Admin Settings</h2>
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium mb-2">Change Password</h3>
-                <form onSubmit={handlePasswordChange} className="space-y-3 bg-gray-700 p-4 rounded-lg">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">Current Password</label>
-                    <Input 
-                      type="password" 
-                      className="bg-gray-600 border-gray-500" 
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">New Password</label>
-                    <Input 
-                      type="password" 
-                      className="bg-gray-600 border-gray-500" 
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">Confirm New Password</label>
-                    <Input 
-                      type="password" 
-                      className="bg-gray-600 border-gray-500" 
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    Update Password
-                  </Button>
-                </form>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-medium mb-2">Website Settings</h3>
-                <div className="bg-gray-700 p-4 rounded-lg space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">Website Title</label>
-                    <Input className="bg-gray-600 border-gray-500" defaultValue="MFlix - Movie Download Hub" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">Meta Description</label>
-                    <Textarea className="bg-gray-600 border-gray-500" defaultValue="Download your favorite movies, web series and anime" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">Favicon URL</label>
-                    <Input className="bg-gray-600 border-gray-500" defaultValue="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=32&h=32&fit=crop&auto=format" />
-                  </div>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    Save Settings
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
-  );
-};
-
-export default AdminDashboard;
+              <h2 className="text-xl font-bold">Movies Management</h2>
+              <div className="flex space-x-4">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Edit className="mr-2" size={16} />
+                      Manage Content
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-gray-800 text-white border-gray-700 max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Content Management</DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-4 space-y-4">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-medium">All Movies ({movies.length})</h3>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-3 text-gray-400" size={16} />
+                          <Input 
+                            placeholder="Search movies..." 
+                            className="pl-10 bg-gray-700 border-gray-600"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gray-700 rounded-lg p-2">
+                        <div className="grid grid-cols-12 font-medium border-b border-gray-600 pb-2 mb-2">
+                          <div className="col-span-5">Title</div>
+                          <div className="col-span-1">Year</div>
+                          <div className="col-span-2">Type</div>
+                          <div className="col-span-2">Downloads</div>
+                          <div className="col-span-2 text-right">Actions</div>
+                        </div>
+                        
+                        {movies.map(movie => (
+                          <div 
+                            key={movie.id} 
+                            className="grid grid-cols-12 py-2 border-b border-gray-600 items-center text-sm"
+                          >
+                            <div className="col-span-5 font-medium">{movie.title}</div>
+                            <div className="col-span-1">{movie.year || 'N/A'}</div>
+                            <div className="col-span-2">
+                              <span className="px-2 py-1 rounded-full text-xs bg-blue-900 text-blue-300">
+                                {movie.content_type}
+                              </span>
+                            </div>
+                            <div className="col-span-2">{movie.downloads}</div>
+                            <div className="col-span-2 text-right space-x-2">
+                              <Button 
+                                onClick={() => handleSelectMovieForCast(movie.id)} 
+                                variant="ghost" 
+                                size="sm"
+                              >
+                                <Users size={16} />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Edit size={16} />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-red-500">
+                                <Trash2 size={16} />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                
+                {/* Cast Management Dialog */}
+                <Dialog open={!!selectedMovie} onOpenChange={(open) => !open && setSelectedMovie(null)}>
+                  <DialogContent className="bg-gray-800 text-white border-gray-700">
+                    <DialogHeader>
+                      <DialogTitle>
+                        {selectedMovie ? `Cast for "${selectedMovie.title}"` : 'Cast Management'}
+                      </DialogTitle>
+                    </DialogHeader>
+                    {selectedMovie && (
+                      <div className="mt-4 space-y-4">
+                        {/* Cast Form */}
+                        <form onSubmit={handleAddCastMember} className="space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-400 mb-1">Cast Name</label>
+                              <Input 
+                                value={castForm.name}
+                                onChange={(e) => setCastForm({ ...castForm, name: e.target.value })}
+                                className="bg-gray-700 border-gray-600"
+                                placeholder="Actor/Actress Name"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-400 mb-1">Role</label>
+                              <Input 
+                                value={castForm.role}
+                                onChange={(e) => setCastForm({ ...castForm, role: e.target.value })}
+                                className="bg-gray-700 border-gray-600"
+                                placeholder="Character Name"
+                                required
+                              />
+                            </div>
+                          </div>
+                          <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                            <UserPlus size={16} className="mr-2" />
+                            Add Cast Member
+                          </Button>
+                        </form>
+                        
+                        {/* Cast List */}
+                        <div className="mt-6">
+                          <h3 className="text-lg font-medium mb-2">Current Cast</h3>
+                          {movieCast.length === 0 ? (
+                            <p className="text-gray-400">No cast members added yet.</p>
+                          ) : (
+                            <div className="bg-gray-700 rounded-lg overflow-hidden">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="bg-gray-800">
+                                    <th className="text-left p-3">Actor/Actress</th>
+                                    <th className="text-left p-3">Role</th>
+                                    <th className="text-right p-3">Actions</th>

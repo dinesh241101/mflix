@@ -1,54 +1,77 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { LoaderCircle, AtSign, Lock, UserPlus, KeyRound } from "lucide-react";
+import LoadingScreen from "@/components/LoadingScreen";
 
 const AdminLogin = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   
   // Signup fields
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Simulate page load
+  setTimeout(() => setPageLoading(false), 1000);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Placeholder implementation for demonstration
-    if (email === "dinesh001kaushik@gmail.com" && password === "dinesh001") {
-      setTimeout(() => {
-        setIsLoading(false);
-        
-        // In a real implementation, this would save auth token to localStorage
-        localStorage.setItem("adminToken", "demo-token");
-        localStorage.setItem("adminEmail", email);
-        
-        toast({
-          title: "Login successful",
-          description: "Redirecting to admin dashboard...",
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Check if user is an admin
+        const { data: roleData, error: roleError } = await supabase.rpc('is_admin', {
+          user_id: data.user.id
         });
-        
-        window.location.href = "/admin";
-      }, 1500);
-    } else {
-      setTimeout(() => {
-        setIsLoading(false);
-        toast({
-          title: "Login failed",
-          description: "Invalid email or password. Try dinesh001kaushik@gmail.com/dinesh001",
-          variant: "destructive"
-        });
-      }, 1500);
+
+        if (roleError) {
+          throw roleError;
+        }
+
+        if (roleData) {
+          localStorage.setItem("adminToken", data.session?.access_token || "");
+          localStorage.setItem("adminEmail", email);
+          
+          toast({
+            title: "Login successful",
+            description: "Redirecting to admin dashboard...",
+          });
+          
+          navigate("/admin");
+        } else {
+          throw new Error("You don't have admin privileges");
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: "Login failed",
+        description: error.message || "Invalid credentials",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
@@ -62,15 +85,32 @@ const AdminLogin = () => {
       return;
     }
     
-    // This is a placeholder - we'll implement actual signup with Supabase
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Not Implemented",
-        description: "User registration requires Supabase integration. Please connect to Supabase first.",
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: signupEmail,
+        password: signupPassword
       });
-    }, 1500);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Account created",
+        description: "Please check your email for verification. An admin will need to grant you admin privileges.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Registration failed",
+        description: error.message || "Something went wrong",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  if (pageLoading) {
+    return <LoadingScreen message="Preparing Admin Portal" />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -89,32 +129,26 @@ const AdminLogin = () => {
           <TabsContent value="login">
             <form onSubmit={handleLogin}>
               <div className="space-y-4">
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-1">
-                    Email
-                  </label>
+                <div className="relative">
+                  <AtSign className="absolute left-3 top-3 text-gray-400" size={16} />
                   <Input
-                    id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="admin@example.com"
-                    className="bg-gray-700 border-gray-600 text-white"
+                    placeholder="Enter your email"
+                    className="bg-gray-700 border-gray-600 text-white pl-10"
                     required
                   />
                 </div>
                 
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-400 mb-1">
-                    Password
-                  </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 text-gray-400" size={16} />
                   <Input
-                    id="password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="bg-gray-700 border-gray-600 text-white"
+                    placeholder="Enter your password"
+                    className="bg-gray-700 border-gray-600 text-white pl-10"
                     required
                   />
                 </div>
@@ -130,7 +164,17 @@ const AdminLogin = () => {
                   className="w-full bg-blue-600 hover:bg-blue-700"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Logging in..." : "Login"}
+                  {isLoading ? (
+                    <>
+                      <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                      Logging in...
+                    </>
+                  ) : (
+                    <>
+                      <KeyRound className="mr-2 h-4 w-4" />
+                      Sign In
+                    </>
+                  )}
                 </Button>
                 
                 <div className="text-center text-sm text-gray-500">
@@ -145,47 +189,38 @@ const AdminLogin = () => {
           <TabsContent value="signup">
             <form onSubmit={handleSignup}>
               <div className="space-y-4">
-                <div>
-                  <label htmlFor="signup-email" className="block text-sm font-medium text-gray-400 mb-1">
-                    Email
-                  </label>
+                <div className="relative">
+                  <AtSign className="absolute left-3 top-3 text-gray-400" size={16} />
                   <Input
-                    id="signup-email"
                     type="email"
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
-                    placeholder="new-admin@example.com"
-                    className="bg-gray-700 border-gray-600 text-white"
+                    placeholder="Enter your email"
+                    className="bg-gray-700 border-gray-600 text-white pl-10"
                     required
                   />
                 </div>
                 
-                <div>
-                  <label htmlFor="signup-password" className="block text-sm font-medium text-gray-400 mb-1">
-                    Password
-                  </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 text-gray-400" size={16} />
                   <Input
-                    id="signup-password"
                     type="password"
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="bg-gray-700 border-gray-600 text-white"
+                    placeholder="Create a password"
+                    className="bg-gray-700 border-gray-600 text-white pl-10"
                     required
                   />
                 </div>
                 
-                <div>
-                  <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-400 mb-1">
-                    Confirm Password
-                  </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 text-gray-400" size={16} />
                   <Input
-                    id="confirm-password"
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="bg-gray-700 border-gray-600 text-white"
+                    placeholder="Confirm your password"
+                    className="bg-gray-700 border-gray-600 text-white pl-10"
                     required
                   />
                 </div>
@@ -195,11 +230,21 @@ const AdminLogin = () => {
                   className="w-full bg-green-600 hover:bg-green-700"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Creating account..." : "Create Account"}
+                  {isLoading ? (
+                    <>
+                      <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Create Account
+                    </>
+                  )}
                 </Button>
                 
                 <div className="text-center text-xs text-gray-500">
-                  <p>Note: Signup feature requires Supabase integration.</p>
+                  <p>Note: New accounts need admin approval to access the dashboard.</p>
                 </div>
               </div>
             </form>
