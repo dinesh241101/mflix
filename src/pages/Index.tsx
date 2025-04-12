@@ -2,13 +2,16 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel";
-import { Card, CardContent } from "@/components/ui/card";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Film, Tv, Home, Video, X } from "lucide-react";
+import { Search, Home, Film, Tv, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LoadingScreen from "@/components/LoadingScreen";
 import { useToast } from "@/components/ui/use-toast";
+import MFlixLogo from "@/components/MFlixLogo";
+import MovieGrid from "@/components/MovieGrid";
+import MovieCarousel from "@/components/MovieCarousel";
+import ShortsPlayer from "@/components/ShortsPlayer";
 
 const Index = () => {
   const { toast } = useToast();
@@ -19,10 +22,9 @@ const Index = () => {
   const [animeShows, setAnimeShows] = useState<any[]>([]);
   const [shorts, setShorts] = useState<any[]>([]);
   const [showShorts, setShowShorts] = useState(false);
-  const [currentShortIndex, setCurrentShortIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Tracking analytics - simplified version
+  // Tracking analytics
   useEffect(() => {
     const trackVisit = async () => {
       try {
@@ -114,7 +116,6 @@ const Index = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      // In a real implementation, this would navigate to a search results page
       toast({
         title: "Search",
         description: `Searching for: ${searchQuery}`,
@@ -147,10 +148,7 @@ const Index = () => {
       <header className="bg-gray-800 shadow-md">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
-            <Link to="/" className="text-2xl font-bold flex items-center hover:text-blue-400 transition-colors">
-              <Film className="mr-2" />
-              MFlix
-            </Link>
+            <MFlixLogo />
             <nav>
               <ul className="flex space-x-6">
                 <li><Link to="/" className="hover:text-blue-400 flex items-center"><Home className="mr-1" size={16} /> Home</Link></li>
@@ -196,7 +194,7 @@ const Index = () => {
       {/* Hero Banner with Auto-Sliding Carousel */}
       <section className="py-8">
         <div className="container mx-auto px-4">
-          <Carousel className="w-full" opts={{ loop: true, duration: 5000 }} autoPlay interval={5000}>
+          <Carousel className="w-full" opts={{ loop: true, duration: 5000 }}>
             <CarouselContent>
               {featuredMovies.map((movie, index) => (
                 <CarouselItem key={movie.id || index} className="basis-full">
@@ -232,192 +230,34 @@ const Index = () => {
       </section>
 
       {/* Latest Uploads */}
-      <section className="py-8">
-        <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold mb-6">Latest Uploads</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {featuredMovies.map((movie, index) => (
-              <Link to={`/movie/${movie.id}`} key={movie.id || index} className="group">
-                <HoverCard>
-                  <HoverCardTrigger asChild>
-                    <Card className="bg-gray-800 border-gray-700 overflow-hidden transform transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer">
-                      <div className="relative">
-                        <img 
-                          src={movie.poster_url || "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5"} 
-                          alt={movie.title} 
-                          className="w-full h-[250px] object-cover"
-                        />
-                        <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-sm font-bold">
-                          {movie.imdb_rating || "N/A"}
-                        </div>
-                      </div>
-                      <CardContent className="p-4">
-                        <h3 className="font-bold text-lg mb-1">{movie.title}</h3>
-                        <div className="flex justify-between text-sm text-gray-400">
-                          <span>{movie.year} • {movie.genre && movie.genre[0]}</span>
-                          <span>{movie.downloads || 0} downloads</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </HoverCardTrigger>
-                  <HoverCardContent className="bg-gray-800 border-gray-700 text-white">
-                    <div className="flex flex-col">
-                      <h4 className="font-bold">{movie.title}</h4>
-                      <p className="text-sm text-gray-400 mb-1">{movie.year} • {movie.content_type}</p>
-                      <div className="flex gap-1 flex-wrap mb-2">
-                        {movie.genre && movie.genre.map((g: string, i: number) => (
-                          <span key={i} className="text-xs bg-gray-700 px-1.5 py-0.5 rounded">{g}</span>
-                        ))}
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-yellow-500">★ {movie.imdb_rating || "N/A"}</span>
-                        <span className="text-xs">{movie.downloads || 0} downloads</span>
-                      </div>
-                    </div>
-                  </HoverCardContent>
-                </HoverCard>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <MovieGrid 
+        movies={featuredMovies} 
+        title="Latest Uploads" 
+      />
 
       {/* Trending Movies with Carousel */}
-      <section className="py-8 bg-gray-800">
-        <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold mb-6">Trending Movies</h2>
-          <Carousel className="w-full" opts={{ align: "start" }}>
-            <CarouselContent>
-              {(trendingMovies.length ? trendingMovies : featuredMovies).map((movie, index) => (
-                <CarouselItem key={movie.id || index} className="md:basis-1/3 lg:basis-1/4">
-                  <Link to={`/movie/${movie.id}`} className="group block">
-                    <Card className="bg-gray-700 border-gray-600 overflow-hidden transform transition-all duration-300 hover:scale-105">
-                      <div className="relative">
-                        <img 
-                          src={movie.poster_url || "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5"} 
-                          alt={movie.title} 
-                          className="w-full h-[200px] object-cover"
-                        />
-                        <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-sm font-bold">
-                          {movie.imdb_rating || "N/A"}
-                        </div>
-                      </div>
-                      <CardContent className="p-4">
-                        <h3 className="font-bold text-lg mb-1">{movie.title}</h3>
-                        <div className="flex justify-between text-sm text-gray-400">
-                          <span>{movie.year} • {movie.genre && movie.genre[0]}</span>
-                          <span>{movie.downloads || 0} downloads</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="absolute -left-12 top-1/2 -translate-y-1/2" />
-            <CarouselNext className="absolute -right-12 top-1/2 -translate-y-1/2" />
-          </Carousel>
-        </div>
-      </section>
+      <MovieCarousel 
+        movies={trendingMovies.length ? trendingMovies : featuredMovies} 
+        title="Trending Movies" 
+        bgClass="bg-gray-800"
+      />
 
-      {/* Categorized Content Sections */}
-      <section className="py-8">
-        <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold mb-6">Web Series</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {(webSeries.length ? webSeries : featuredMovies).map((movie, index) => (
-              <Link to={`/movie/${movie.id}`} key={movie.id || index} className="group">
-                <Card className="bg-gray-800 border-gray-700 overflow-hidden transform transition-all duration-300 hover:scale-105">
-                  <div className="relative">
-                    <img 
-                      src={movie.poster_url || "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5"} 
-                      alt={movie.title} 
-                      className="w-full h-[250px] object-cover"
-                    />
-                    <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-sm font-bold">
-                      {movie.imdb_rating || "N/A"}
-                    </div>
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-bold text-lg mb-1">{movie.title}</h3>
-                    <div className="flex justify-between text-sm text-gray-400">
-                      <span>{movie.year} • {movie.genre && movie.genre[0]}</span>
-                      <span>{movie.downloads || 0} downloads</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Web Series */}
+      <MovieGrid 
+        movies={webSeries.length ? webSeries : featuredMovies} 
+        title="Web Series" 
+      />
 
       {/* Anime Section */}
-      <section className="py-8 bg-gray-800">
-        <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold mb-6">Anime</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {(animeShows.length ? animeShows : featuredMovies).map((movie, index) => (
-              <Link to={`/movie/${movie.id}`} key={movie.id || index} className="group">
-                <Card className="bg-gray-700 border-gray-600 overflow-hidden transform transition-all duration-300 hover:scale-105">
-                  <div className="relative">
-                    <img 
-                      src={movie.poster_url || "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5"} 
-                      alt={movie.title} 
-                      className="w-full h-[250px] object-cover"
-                    />
-                    <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-sm font-bold">
-                      {movie.imdb_rating || "N/A"}
-                    </div>
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-bold text-lg mb-1">{movie.title}</h3>
-                    <div className="flex justify-between text-sm text-gray-400">
-                      <span>{movie.year} • {movie.genre && movie.genre[0]}</span>
-                      <span>{movie.downloads || 0} downloads</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <MovieGrid 
+        movies={animeShows.length ? animeShows : featuredMovies} 
+        title="Anime" 
+        bgClass="bg-gray-800"
+      />
 
       {/* Shorts Player */}
       {showShorts && shorts.length > 0 && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center">
-          <div className="relative w-full max-w-3xl h-[80vh]">
-            <button 
-              onClick={() => setShowShorts(false)}
-              className="absolute -top-10 right-0 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full z-10"
-            >
-              <X size={24} />
-            </button>
-            
-            <div className="relative h-full bg-black rounded-lg overflow-hidden">
-              <iframe
-                src={shorts[currentShortIndex]?.video_url + "?autoplay=1"}
-                allow="autoplay; encrypted-media"
-                allowFullScreen
-                title={shorts[currentShortIndex]?.title}
-                className="absolute top-0 left-0 w-full h-full"
-              />
-            </div>
-            
-            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
-              {shorts.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentShortIndex(index)}
-                  className={`w-3 h-3 rounded-full ${
-                    index === currentShortIndex ? "bg-blue-500" : "bg-gray-500"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
+        <ShortsPlayer shorts={shorts} onClose={() => setShowShorts(false)} />
       )}
 
       {/* Footer */}
