@@ -14,8 +14,7 @@ export const fetchStateAnalytics = async (country: string): Promise<AnalyticsCou
     .select('state, count')
     .eq('country', country)
     .not('state', 'is', null)
-    .order('count', { ascending: false })
-    .groupBy('state');
+    .order('count', { ascending: false });
     
   if (error) throw error;
   
@@ -32,7 +31,6 @@ export const fetchCityAnalytics = async (country: string): Promise<AnalyticsCoun
     .eq('country', country)
     .not('city', 'is', null)
     .order('count', { ascending: false })
-    .groupBy('city')
     .limit(10);
     
   if (error) throw error;
@@ -48,7 +46,6 @@ export const fetchDeviceAnalytics = async (country: string): Promise<AnalyticsCo
     .from('analytics')
     .select('device, count')
     .eq('country', country)
-    .groupBy('device')
     .order('count', { ascending: false });
     
   if (error) throw error;
