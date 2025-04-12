@@ -1,11 +1,11 @@
-
 import { useState, useEffect } from "react";
 import { Bar, BarChart, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchStateAnalytics, fetchCityAnalytics, fetchDeviceAnalytics } from "@/utils/analyticsQueries";
+import type { AnalyticsCountResult } from "@/utils/analyticsQueries";
 
 interface CountryStatsProps {
   analytics: {
@@ -16,9 +16,9 @@ interface CountryStatsProps {
 }
 
 const CountryStats = ({ analytics, selectedCountry, setSelectedCountry }: CountryStatsProps) => {
-  const [stateData, setStateData] = useState<any[]>([]);
-  const [cityData, setCityData] = useState<any[]>([]);
-  const [deviceData, setDeviceData] = useState<any[]>([]);
+  const [stateData, setStateData] = useState<AnalyticsCountResult[]>([]);
+  const [cityData, setCityData] = useState<AnalyticsCountResult[]>([]);
+  const [deviceData, setDeviceData] = useState<AnalyticsCountResult[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
   
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3'];
@@ -30,42 +30,13 @@ const CountryStats = ({ analytics, selectedCountry, setSelectedCountry }: Countr
     const fetchDetailedData = async () => {
       setLoadingDetails(true);
       try {
-        // Fetch state distribution
-        const { data: stateResults, error: stateError } = await supabase
-          .from('analytics')
-          .select('state, count(*)')
-          .eq('country', selectedCountry.name)
-          .not('state', 'is', null)
-          .group('state')
-          .order('count', { ascending: false });
-          
-        if (stateError) throw stateError;
+        const states = await fetchStateAnalytics(selectedCountry.name);
+        const cities = await fetchCityAnalytics(selectedCountry.name);
+        const devices = await fetchDeviceAnalytics(selectedCountry.name);
         
-        // Fetch city distribution
-        const { data: cityResults, error: cityError } = await supabase
-          .from('analytics')
-          .select('city, count(*)')
-          .eq('country', selectedCountry.name)
-          .not('city', 'is', null)
-          .group('city')
-          .order('count', { ascending: false })
-          .limit(10);
-          
-        if (cityError) throw cityError;
-        
-        // Fetch device distribution
-        const { data: deviceResults, error: deviceError } = await supabase
-          .from('analytics')
-          .select('device, count(*)')
-          .eq('country', selectedCountry.name)
-          .group('device')
-          .order('count', { ascending: false });
-          
-        if (deviceError) throw deviceError;
-        
-        setStateData(stateResults || []);
-        setCityData(cityResults || []);
-        setDeviceData(deviceResults || []);
+        setStateData(states);
+        setCityData(cities);
+        setDeviceData(devices);
       } catch (error) {
         console.error("Error fetching detailed data:", error);
       } finally {
@@ -156,7 +127,7 @@ const CountryStats = ({ analytics, selectedCountry, setSelectedCountry }: Countr
                       cx="50%"
                       cy="50%"
                       labelLine={true}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      label={({ device, percent }) => `${device || 'Unknown'}: ${(percent * 100).toFixed(0)}%`}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="count"

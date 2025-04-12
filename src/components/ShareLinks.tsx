@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import { CopyCheck, Share2, Facebook, Twitter, Linkedin, Link, CheckCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
-interface ShareLinksProps {
+export interface ShareLinksProps {
   url: string;
   title: string;
+  customLinks?: { text: string; url: string }[];
 }
 
-const ShareLinks = ({ url, title }: ShareLinksProps) => {
+const ShareLinks = ({ url, title, customLinks = [] }: ShareLinksProps) => {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
   
@@ -84,6 +85,21 @@ const ShareLinks = ({ url, title }: ShareLinksProps) => {
           LinkedIn
         </Button>
       </div>
+
+      {customLinks && customLinks.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {customLinks.map((link, index) => (
+            <Button 
+              key={index}
+              onClick={() => window.open(link.url, '_blank')}
+              variant="outline" 
+              className="w-full flex items-center justify-center bg-gray-700 hover:bg-gray-600 border-none"
+            >
+              {link.text}
+            </Button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
