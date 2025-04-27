@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,13 +23,17 @@ const LoginForm = () => {
       });
 
       if (error) {
-        toast.error(error.message);
+        toast.error(error.message || "Invalid credentials");
       } else {
         toast.success("Logged in successfully!");
-        navigate("/dashboard");
+        navigate("/dashboard"); // You can also navigate based on admin later
       }
     } catch (error) {
-      toast.error(error.message || "An unexpected error occurred during login");
+      if (error instanceof Error) {
+        toast.error(error.message || "An unexpected error occurred during login");
+      } else {
+        toast.error("An unexpected error occurred during login");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -73,6 +77,13 @@ const LoginForm = () => {
             >
               {isLoading ? "Processing..." : "Login"}
             </Button>
+
+            <p className="text-sm text-center text-gray-600">
+              Don't have an account?{" "}
+              <Link to="/signup" className="text-brand-600 hover:underline font-medium">
+                Sign up
+              </Link>
+            </p>
           </CardFooter>
         </form>
       </Card>
