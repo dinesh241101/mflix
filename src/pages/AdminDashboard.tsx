@@ -111,7 +111,7 @@ const AdminDashboard = () => {
         const email = localStorage.getItem("adminEmail");
         
         if (!token) {
-          navigate("/admin/login");
+          // navigate("/admin/login");
           return;
         }
         
@@ -146,7 +146,7 @@ const AdminDashboard = () => {
         console.error("Auth error:", error);
         localStorage.removeItem("adminToken");
         localStorage.removeItem("adminEmail");
-        navigate("/admin/login");
+        // navigate("/admin/login");
       } finally {
         setLoading(false);
       }
@@ -899,26 +899,26 @@ const AdminDashboard = () => {
   };
   
   // For unauthorized access
-  if (!isLoggedIn && !loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center text-white">
-          <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
-          <p className="text-gray-400 mb-6">You need to log in to access the admin panel</p>
-          <Link 
-            to="/admin/login" 
-            className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
-          >
-            Go to Login
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  // if (!isLoggedIn && !loading) {
+  //   return (
+  //     <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+  //       <div className="text-center text-white">
+  //         <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
+  //         <p className="text-gray-400 mb-6">You need to log in to access the admin panel</p>
+  //         <Link 
+  //           to="/admin/login" 
+  //           className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+  //         >
+  //           Go to Login
+  //         </Link>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
-  if (loading) {
-    return <LoadingScreen message="Loading Admin Dashboard" />;
-  }
+  // if (loading) {
+  //   return <LoadingScreen message="Loading Admin Dashboard" />;
+  // }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">

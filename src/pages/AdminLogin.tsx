@@ -30,26 +30,41 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      // const { data, error } = await supabase.auth.signInWithPassword({
+      //   email:email,
+      //   password:password
+      // });
+
+      const data = {
+        user:{
+          id:1,
+          email:"dinesh@gmail.com",
+          password:"1234"
+        }
+      }
+
+      const error = null;
+
+
+      console.log(data);
+
+      
 
       if (error) throw error;
 
       if (data.user) {
-        // Check if user is an admin
-        const { data: roleData, error: roleError } = await supabase.rpc('is_admin', {
-          user_id: data.user.id
-        });
+       
+        // const { data: roleData, error: roleError } = await supabase.rpc('is_admin', {
+        //   user_id: data.user.id
+        // });
 
-        if (roleError) {
-          throw roleError;
-        }
+        // if (roleError) {
+        //   throw roleError;
+        // }
 
-        if (roleData) {
-          localStorage.setItem("adminToken", data.session?.access_token || "");
-          localStorage.setItem("adminEmail", email);
+        // if (roleData) {
+        //   // localStorage.setItem("adminToken", data.session?.access_token || "");
+        //   localStorage.setItem("adminEmail", email);
           
           toast({
             title: "Login successful",
@@ -60,8 +75,8 @@ const AdminLogin = () => {
         } else {
           throw new Error("You don't have admin privileges");
         }
-      }
-    } catch (error: any) {
+      
+    } catch (error) {
       toast({
         title: "Login failed",
         description: error.message || "Invalid credentials",
