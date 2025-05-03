@@ -8,9 +8,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import MovieCastTab from "./MovieCastTab";
 import ShareLinks from "@/components/ShareLinks";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Download, Film, Clock, Star, Calendar } from "lucide-react";
 
 interface MovieDetailsDialogProps {
   selectedMovie: any;
@@ -54,10 +56,89 @@ const MovieDetailsDialog = ({
     <Dialog open={!!selectedMovie} onOpenChange={(open) => !open && setSelectedMovie(null)}>
       <DialogContent className="bg-gray-800 text-white border-gray-700 max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {`Content Details: "${selectedMovie.title}"`}
+          <DialogTitle className="flex items-center gap-2">
+            <span className="text-xl">{selectedMovie.title || "Untitled Content"}</span>
+            {selectedMovie.featured && (
+              <span className="bg-amber-700/30 text-amber-300 text-xs px-2 py-1 rounded-full">
+                Featured
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
+
+        {/* Movie summary card */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="md:col-span-1">
+            <div className="aspect-[2/3] bg-gray-700 rounded-md overflow-hidden">
+              {selectedMovie.poster_url ? (
+                <img 
+                  src={selectedMovie.poster_url} 
+                  alt={selectedMovie.title} 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = 'https://via.placeholder.com/300x450?text=No+Poster';
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-700 text-gray-400">
+                  No Poster
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="md:col-span-2">
+            <Card className="bg-gray-700 border-gray-600 h-full">
+              <CardContent className="p-6 space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium">{selectedMovie.title}</h3>
+                  <p className="text-gray-400">{selectedMovie.storyline || "No description available."}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center">
+                    <Calendar size={18} className="mr-2 text-gray-400" />
+                    <span className="text-sm">Year: {selectedMovie.year || "Unknown"}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Star size={18} className="mr-2 text-amber-400" />
+                    <span className="text-sm">
+                      IMDB: {selectedMovie.imdb_rating || "Not rated"}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <Film size={18} className="mr-2 text-gray-400" />
+                    <span className="text-sm">Type: {selectedMovie.content_type || "Unknown"}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Download size={18} className="mr-2 text-blue-400" />
+                    <span className="text-sm">
+                      Downloads: {selectedMovie.downloads?.toLocaleString() || "0"}
+                    </span>
+                  </div>
+                </div>
+                
+                {selectedMovie.genre && Array.isArray(selectedMovie.genre) && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Genres</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedMovie.genre.map((genre: string, index: number) => (
+                        <span 
+                          key={index}
+                          className="bg-gray-600 text-xs px-2 py-1 rounded-full"
+                        >
+                          {genre}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        
         <div className="mt-4 space-y-4">
           <Tabs defaultValue="cast">
             <TabsList className="w-full bg-gray-700 mb-4">
