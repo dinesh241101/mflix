@@ -19,6 +19,7 @@ interface MoviesTabProps {
   setSelectedMovie: (movie: any) => void;
   handleSelectMovieForCast: (movieId: string) => void;
   movieCast: any[];
+  isEditing: boolean;
   castForm: {
     name: string;
     role: string;
