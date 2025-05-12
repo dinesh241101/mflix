@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -38,6 +39,7 @@ const AdminDashboard = () => {
   });
   const [movieCast, setMovieCast] = useState<any[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<any>(null);
+  const [isEditing, setIsEditing] = useState(false); // Add the missing state variable
   
   // Form states
   const [currentPassword, setCurrentPassword] = useState("");
@@ -948,7 +950,7 @@ const AdminDashboard = () => {
               handleCastSearch={handleCastSearch}
               castSearchResults={castSearchResults}
               selectCastFromSearch={selectCastFromSearch}
-              isEditing={isEditing} // Add the missing property
+              isEditing={isEditing}
             />
           </TabsContent>
           
