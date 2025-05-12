@@ -8,6 +8,10 @@ import Index from "./pages/Index";
 import MovieDetail from "./pages/MovieDetail";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import MoviesPage from "./pages/admin/MoviesPage";
+import WebSeriesPage from "./pages/admin/WebSeriesPage";
+import AnimePage from "./pages/admin/AnimePage";
+import ShortsPage from "./pages/admin/ShortsPage";
 import NotFound from "./pages/NotFound";
 import { useEffect, useState } from "react";
 
@@ -38,6 +42,11 @@ const App = () => {
             {isAdminDomain ? (
               <>
                 <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/admin/movies" element={<MoviesPage />} />
+                <Route path="/admin/web-series" element={<WebSeriesPage />} />
+                <Route path="/admin/anime" element={<AnimePage />} />
+                <Route path="/admin/shorts" element={<ShortsPage />} />
                 <Route path="/admin/*" element={<AdminDashboard />} />
                 <Route path="*" element={<Navigate to="/admin/login" replace />} />
               </>
@@ -46,6 +55,11 @@ const App = () => {
                 <Route path="/" element={<Index />} />
                 <Route path="/movie/:id" element={<MovieDetail />} />
                 <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/admin/movies" element={<MoviesPage />} />
+                <Route path="/admin/web-series" element={<WebSeriesPage />} />
+                <Route path="/admin/anime" element={<AnimePage />} />
+                <Route path="/admin/shorts" element={<ShortsPage />} />
                 <Route path="/admin/*" element={<AdminDashboard />} />
                 <Route path="*" element={<NotFound />} />
               </>
