@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Edit, Plus, Trash2, AlertCircle } from "lucide-react";
@@ -55,7 +54,8 @@ const MoviesTab = ({
   castSearchQuery,
   handleCastSearch,
   castSearchResults,
-  selectCastFromSearch
+  selectCastFromSearch,
+  isEditing
 }: MoviesTabProps) => {
   const [showContentManager, setShowContentManager] = useState(false);
   const [movieToDelete, setMovieToDelete] = useState<string | null>(null);
