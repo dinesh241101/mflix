@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -23,7 +23,18 @@ const Index = () => {
   const [shorts, setShorts] = useState<any[]>([]);
   const [showShorts, setShowShorts] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
+  
+  // Progressive loading state
+  const [visibleSections, setVisibleSections] = useState({
+    featured: true,
+    trending: false,
+    series: false,
+    anime: false
+  });
+  const trendingRef = useRef<HTMLDivElement>(null);
+  const seriesRef = useRef<HTMLDivElement>(null);
+  const animeRef = useRef<HTMLDivElement>(null);
+  
   // Tracking analytics
   useEffect(() => {
     const trackVisit = async () => {
@@ -42,11 +53,11 @@ const Index = () => {
     trackVisit();
   }, []);
 
-  // Fetch data from Supabase
+  // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch featured movies
+        // Fetch featured movies first to show content quickly
         const { data: featured, error: featuredError } = await supabase
           .from('movies')
           .select('id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
@@ -55,47 +66,8 @@ const Index = () => {
         
         if (featuredError) throw featuredError;
         
-        // Fetch trending movies (by downloads)
-        const { data: trending, error: trendingError } = await supabase
-          .from('movies')
-          .select('id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
-          .eq('content_type', 'movie')
-          .order('downloads', { ascending: false })
-          .limit(10);
-        
-        if (trendingError) throw trendingError;
-        
-        // Fetch web series
-        const { data: series, error: seriesError } = await supabase
-          .from('movies')
-          .select('id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
-          .eq('content_type', 'series')
-          .limit(8);
-        
-        if (seriesError) throw seriesError;
-        
-        // Fetch anime
-        const { data: anime, error: animeError } = await supabase
-          .from('movies')
-          .select('id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
-          .eq('content_type', 'anime')
-          .limit(8);
-        
-        if (animeError) throw animeError;
-        
-        // Fetch shorts
-        const { data: shortsData, error: shortsError } = await supabase
-          .from('shorts')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (shortsError) throw shortsError;
-        
         setFeaturedMovies(featured || []);
-        setTrendingMovies(trending || []);
-        setWebSeries(series || []);
-        setAnimeShows(anime || []);
-        setShorts(shortsData || []);
+        setLoading(false); // Stop loading after featured content is loaded
         
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -104,13 +76,124 @@ const Index = () => {
           description: "Failed to load content. Please try again later.",
           variant: "destructive"
         });
-      } finally {
         setLoading(false);
       }
     };
     
     fetchData();
   }, [toast]);
+
+  // Intersection observer for lazy loading sections
+  useEffect(() => {
+    const observerOptions = {
+      rootMargin: '100px',
+      threshold: 0.1
+    };
+
+    const observerCallback = (entries: IntersectionObserverEntry[], observer: IntersectionObserver) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const sectionId = entry.target.id;
+          
+          // Load content for the section that's coming into view
+          if (sectionId === 'trending-section' && !visibleSections.trending) {
+            loadTrendingMovies();
+            setVisibleSections(prev => ({ ...prev, trending: true }));
+          } 
+          else if (sectionId === 'series-section' && !visibleSections.series) {
+            loadWebSeries();
+            setVisibleSections(prev => ({ ...prev, series: true }));
+          }
+          else if (sectionId === 'anime-section' && !visibleSections.anime) {
+            loadAnimeShows();
+            setVisibleSections(prev => ({ ...prev, anime: true }));
+            // Also load shorts when we get to the bottom section
+            loadShorts();
+          }
+          
+          // Unobserve the element once it's been loaded
+          observer.unobserve(entry.target);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+    
+    // Observe refs
+    if (trendingRef.current) observer.observe(trendingRef.current);
+    if (seriesRef.current) observer.observe(seriesRef.current);
+    if (animeRef.current) observer.observe(animeRef.current);
+    
+    return () => observer.disconnect();
+  }, []);
+
+  // Load trending movies when section becomes visible
+  const loadTrendingMovies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('movies')
+        .select('id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
+        .eq('content_type', 'movie')
+        .order('downloads', { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      setTrendingMovies(data || []);
+      
+    } catch (error) {
+      console.error("Error loading trending movies:", error);
+    }
+  };
+
+  // Load web series when section becomes visible
+  const loadWebSeries = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('movies')
+        .select('id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
+        .eq('content_type', 'series')
+        .limit(8);
+      
+      if (error) throw error;
+      setWebSeries(data || []);
+      
+    } catch (error) {
+      console.error("Error loading web series:", error);
+    }
+  };
+
+  // Load anime shows when section becomes visible
+  const loadAnimeShows = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('movies')
+        .select('id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
+        .eq('content_type', 'anime')
+        .limit(8);
+      
+      if (error) throw error;
+      setAnimeShows(data || []);
+      
+    } catch (error) {
+      console.error("Error loading anime shows:", error);
+    }
+  };
+
+  // Load shorts
+  const loadShorts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('shorts')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setShorts(data || []);
+      
+    } catch (error) {
+      console.error("Error loading shorts:", error);
+    }
+  };
 
   // Handle search
   const handleSearch = (e: React.FormEvent) => {
@@ -235,25 +318,90 @@ const Index = () => {
         title="Latest Uploads" 
       />
 
-      {/* Trending Movies with Carousel */}
-      <MovieCarousel 
-        movies={trendingMovies.length ? trendingMovies : featuredMovies} 
-        title="Trending Movies" 
-        bgClass="bg-gray-800"
-      />
+      {/* Trending Movies with Carousel - Lazy Loaded */}
+      <div id="trending-section" ref={trendingRef}>
+        {visibleSections.trending ? (
+          <MovieCarousel 
+            movies={trendingMovies.length ? trendingMovies : featuredMovies} 
+            title="Trending Movies" 
+            bgClass="bg-gray-800"
+          />
+        ) : (
+          <div className="py-12 bg-gray-800">
+            <div className="container mx-auto px-4">
+              <h2 className="text-2xl font-bold mb-6">Trending Movies</h2>
+              <div className="flex justify-center">
+                <div className="animate-pulse w-full max-w-screen-xl">
+                  <div className="flex space-x-4 overflow-x-auto pb-4">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="flex-none w-64">
+                        <div className="h-40 bg-gray-700 rounded mb-2"></div>
+                        <div className="h-4 bg-gray-700 rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
-      {/* Web Series */}
-      <MovieGrid 
-        movies={webSeries.length ? webSeries : featuredMovies} 
-        title="Web Series" 
-      />
+      {/* Web Series - Lazy Loaded */}
+      <div id="series-section" ref={seriesRef}>
+        {visibleSections.series ? (
+          <MovieGrid 
+            movies={webSeries.length ? webSeries : []} 
+            title="Web Series" 
+          />
+        ) : (
+          <div className="py-12">
+            <div className="container mx-auto px-4">
+              <h2 className="text-2xl font-bold mb-6">Web Series</h2>
+              <div className="animate-pulse grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="bg-gray-800 rounded-lg overflow-hidden">
+                    <div className="h-56 bg-gray-700"></div>
+                    <div className="p-4">
+                      <div className="h-4 bg-gray-700 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
-      {/* Anime Section */}
-      <MovieGrid 
-        movies={animeShows.length ? animeShows : featuredMovies} 
-        title="Anime" 
-        bgClass="bg-gray-800"
-      />
+      {/* Anime Section - Lazy Loaded */}
+      <div id="anime-section" ref={animeRef}>
+        {visibleSections.anime ? (
+          <MovieGrid 
+            movies={animeShows.length ? animeShows : []} 
+            title="Anime" 
+            bgClass="bg-gray-800"
+          />
+        ) : (
+          <div className="py-12 bg-gray-800">
+            <div className="container mx-auto px-4">
+              <h2 className="text-2xl font-bold mb-6">Anime</h2>
+              <div className="animate-pulse grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="bg-gray-700 rounded-lg overflow-hidden">
+                    <div className="h-56 bg-gray-600"></div>
+                    <div className="p-4">
+                      <div className="h-4 bg-gray-600 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-gray-600 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Shorts Player */}
       {showShorts && shorts.length > 0 && (

@@ -180,7 +180,6 @@ const MoviesTab = ({
                 description: "Update functionality is not fully implemented yet.",
               });
             }}
-            isEditing={true}
           />
         </DialogContent>
       </Dialog>

@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,8 @@ import MovieCastTab from "./MovieCastTab";
 import ShareLinks from "@/components/ShareLinks";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, Film, Clock, Star, Calendar } from "lucide-react";
+import MediaClipsForm from "./MediaClipsForm";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MovieDetailsDialogProps {
   selectedMovie: any;
@@ -50,6 +53,42 @@ const MovieDetailsDialog = ({
   castSearchResults,
   selectCastFromSearch
 }: MovieDetailsDialogProps) => {
+  const [mediaClips, setMediaClips] = useState<any[]>([]);
+  
+  // Fetch media clips when selected movie changes
+  useEffect(() => {
+    const fetchMediaClips = async () => {
+      if (!selectedMovie) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('media_clips')
+          .select('*')
+          .eq('movie_id', selectedMovie.id);
+          
+        if (error) throw error;
+        
+        setMediaClips(data || []);
+      } catch (error) {
+        console.error("Error fetching media clips:", error);
+      }
+    };
+    
+    fetchMediaClips();
+  }, [selectedMovie]);
+  
+  const handleClipAdded = async () => {
+    if (!selectedMovie) return;
+    
+    // Refresh the media clips list
+    const { data } = await supabase
+      .from('media_clips')
+      .select('*')
+      .eq('movie_id', selectedMovie.id);
+      
+    setMediaClips(data || []);
+  };
+  
   if (!selectedMovie) return null;
 
   return (
@@ -144,8 +183,8 @@ const MovieDetailsDialog = ({
             <TabsList className="w-full bg-gray-700 mb-4">
               <TabsTrigger value="cast">Cast Members</TabsTrigger>
               <TabsTrigger value="downloads">Download Count</TabsTrigger>
+              <TabsTrigger value="mediaclips">Media Clips</TabsTrigger>
               <TabsTrigger value="share">Share Links</TabsTrigger>
-              <TabsTrigger value="clips">Media Clips</TabsTrigger>
             </TabsList>
             
             <TabsContent value="cast">
@@ -186,6 +225,20 @@ const MovieDetailsDialog = ({
               </div>
             </TabsContent>
             
+            <TabsContent value="mediaclips">
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Media Clips Management</h3>
+                <p className="text-gray-400">Add trailers, short clips, and 5-second autoplay previews for this content.</p>
+                
+                <MediaClipsForm 
+                  movieId={selectedMovie.id}
+                  onClipAdded={handleClipAdded}
+                  existingClips={mediaClips}
+                  onClipDeleted={handleClipAdded}
+                />
+              </div>
+            </TabsContent>
+            
             <TabsContent value="share">
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Shareable Links</h3>
@@ -200,42 +253,6 @@ const MovieDetailsDialog = ({
                       { text: "Telegram", url: `https://t.me/share/url?url=https://mflix.com/movie/${selectedMovie.id}&text=Check out ${selectedMovie.title} on MFlix!` }
                     ]}
                   />
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="clips">
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Media Clips</h3>
-                <p className="text-gray-400">Add YouTube trailers and clips for this content.</p>
-                
-                <form className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">YouTube URL</label>
-                    <div className="flex space-x-2">
-                      <Input 
-                        className="bg-gray-700 border-gray-600 flex-grow"
-                        placeholder="https://www.youtube.com/watch?v=..."
-                      />
-                      <Select defaultValue="trailer">
-                        <SelectTrigger className="w-36 bg-gray-700 border-gray-600">
-                          <SelectValue placeholder="Clip Type" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-gray-700 border-gray-600">
-                          <SelectItem value="trailer">Trailer</SelectItem>
-                          <SelectItem value="teaser">Teaser</SelectItem>
-                          <SelectItem value="clip">Clip</SelectItem>
-                          <SelectItem value="bts">Behind the Scenes</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button>Add Clip</Button>
-                    </div>
-                  </div>
-                </form>
-                
-                <div className="bg-gray-700 rounded-lg p-4">
-                  <h4 className="font-medium mb-2">Existing Clips</h4>
-                  <p className="text-gray-400">No clips added yet.</p>
                 </div>
               </div>
             </TabsContent>
