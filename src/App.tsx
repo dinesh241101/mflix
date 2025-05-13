@@ -13,11 +13,13 @@ import MoviesPage from "./pages/admin/MoviesPage";
 import WebSeriesPage from "./pages/admin/WebSeriesPage";
 import AnimePage from "./pages/admin/AnimePage";
 import ShortsPage from "./pages/admin/ShortsPage";
+import AdsManagementPage from "./pages/admin/AdsManagementPage";
 import ContentManagementPage from "./pages/admin/ContentManagementPage";
 import NotFound from "./pages/NotFound";
 import Movies from "./pages/Movies";
 import WebSeries from "./pages/WebSeries";
 import Anime from "./pages/Anime";
+import AdManager from "./components/ads/AdManager";
 
 const queryClient = new QueryClient();
 
@@ -28,10 +30,10 @@ const App = () => {
   // Handle custom domain for admin and check authentication
   useEffect(() => {
     const hostname = window.location.hostname;
-    const adminEmail = localStorage.getItem("adminEmail");
+    const isAuth = localStorage.getItem("isAuthenticated") === "true";
     
     setIsAdminDomain(hostname === "crmadmin.mflix");
-    setIsAuthenticated(!!adminEmail);
+    setIsAuthenticated(isAuth);
     
     if (hostname === "crmadmin.mflix" && 
         !window.location.pathname.startsWith("/admin")) {
@@ -45,6 +47,9 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          {/* Global ad manager */}
+          <AdManager />
+          
           <Routes>
             {/* Admin domain routing */}
             {isAdminDomain ? (
@@ -56,6 +61,7 @@ const App = () => {
                 <Route path="/admin/anime" element={isAuthenticated ? <AnimePage /> : <Navigate to="/admin/login" replace />} />
                 <Route path="/admin/shorts" element={isAuthenticated ? <ShortsPage /> : <Navigate to="/admin/login" replace />} />
                 <Route path="/admin/content" element={isAuthenticated ? <ContentManagementPage /> : <Navigate to="/admin/login" replace />} />
+                <Route path="/admin/ads" element={isAuthenticated ? <AdsManagementPage /> : <Navigate to="/admin/login" replace />} />
                 <Route path="/admin/*" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
                 <Route path="*" element={<Navigate to="/admin/login" replace />} />
               </>
@@ -73,6 +79,7 @@ const App = () => {
                 <Route path="/admin/anime" element={isAuthenticated ? <AnimePage /> : <Navigate to="/admin/login" replace />} />
                 <Route path="/admin/shorts" element={isAuthenticated ? <ShortsPage /> : <Navigate to="/admin/login" replace />} />
                 <Route path="/admin/content" element={isAuthenticated ? <ContentManagementPage /> : <Navigate to="/admin/login" replace />} />
+                <Route path="/admin/ads" element={isAuthenticated ? <AdsManagementPage /> : <Navigate to="/admin/login" replace />} />
                 <Route path="/admin/*" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
                 <Route path="*" element={<NotFound />} />
               </>

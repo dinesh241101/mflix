@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,68 +18,41 @@ const AdminLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   
   // Simulate page load
-  setTimeout(() => setPageLoading(false), 1000);
+  useEffect(() => {
+    const timer = setTimeout(() => setPageLoading(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Check if user is already logged in
-  useState(() => {
+  useEffect(() => {
     const adminEmail = localStorage.getItem("adminEmail");
     if (adminEmail) {
-      navigate("/admin");
+      navigate("/admin/dashboard");
     }
-  });
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // const { data, error } = await supabase.auth.signInWithPassword({
-      //   email:email,
-      //   password:password
-      // });
-
-      const data = {
-        user:{
-          id:1,
-          email:"dinesh@gmail.com",
-          password:"1234"
-        }
+      // Simulate authentication for demo
+      // In production, use real authentication
+      if (email.trim() && password.trim()) {
+        // Store authentication data
+        localStorage.setItem("adminEmail", email);
+        localStorage.setItem("isAuthenticated", "true");
+        
+        toast({
+          title: "Login successful",
+          description: "Redirecting to admin dashboard...",
+        });
+        
+        navigate("/admin/dashboard");
+      } else {
+        throw new Error("Please fill in all fields");
       }
-
-      const error = null;
-
-
-      console.log(data);
-
-      
-
-      if (error) throw error;
-
-      if (data.user) {
-       
-        // const { data: roleData, error: roleError } = await supabase.rpc('is_admin', {
-        //   user_id: data.user.id
-        // });
-
-        // if (roleError) {
-        //   throw roleError;
-        // }
-
-        // if (roleData) {
-        //   // localStorage.setItem("adminToken", data.session?.access_token || "");
-        //   localStorage.setItem("adminEmail", email);
-          
-          toast({
-            title: "Login successful",
-            description: "Redirecting to admin dashboard...",
-          });
-          
-          navigate("/admin");
-        } else {
-          throw new Error("You don't have admin privileges");
-        }
-      
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Login failed",
         description: error.message || "Invalid credentials",
@@ -137,12 +110,6 @@ const AdminLogin = () => {
               </button>
             </div>
             
-            <div className="text-right">
-              <a href="#" className="text-sm text-blue-400 hover:text-blue-300">
-                Forgot password?
-              </a>
-            </div>
-            
             <Button 
               type="submit" 
               className="w-full bg-blue-600 hover:bg-blue-700"
@@ -162,9 +129,7 @@ const AdminLogin = () => {
             </Button>
             
             <div className="text-center text-sm text-gray-500">
-              <p>Default admin credentials:</p>
-              <p>dinesh001kaushik@gmail.com</p>
-              <p>dinesh001</p>
+              <p>For demo: enter any email and password</p>
             </div>
           </div>
         </form>
