@@ -17,6 +17,7 @@ const MovieDetail = () => {
   const [clickCount, setClickCount] = useState(0);
   const [movie, setMovie] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [similarMovies, setSimilarMovies] = useState<any[]>([]);
   const [mediaClips, setMediaClips] = useState<any[]>([]);
   const [downloadLinks, setDownloadLinks] = useState<any[]>([]);
@@ -27,6 +28,7 @@ const MovieDetail = () => {
     const fetchMovieDetails = async () => {
       try {
         setLoading(true);
+        setError(null);
         
         // Fetch movie details
         const { data: movieData, error: movieError } = await supabase
@@ -35,7 +37,12 @@ const MovieDetail = () => {
           .eq('id', id)
           .single();
           
-        if (movieError) throw movieError;
+        if (movieError) {
+          console.error("Error fetching movie:", movieError);
+          setError("Could not find the requested movie. It may have been removed or is unavailable.");
+          setLoading(false);
+          return;
+        }
         
         if (movieData) {
           setMovie(movieData);
@@ -79,11 +86,7 @@ const MovieDetail = () => {
         }
       } catch (error) {
         console.error("Error fetching movie details:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load movie details. Please try again later.",
-          variant: "destructive"
-        });
+        setError("An error occurred while loading the movie details.");
       } finally {
         setLoading(false);
       }
@@ -118,11 +121,76 @@ const MovieDetail = () => {
     }
   };
 
-  // Placeholder data if not loaded yet
+  // Handle download click to record analytics
+  const handleDownloadClick = async (downloadId: string, quality: string) => {
+    // Update movie downloads count
+    try {
+      if (movie) {
+        // Update local state first for immediate feedback
+        setMovie({
+          ...movie,
+          downloads: (movie.downloads || 0) + 1
+        });
+        
+        // Update database
+        await supabase
+          .from('movies')
+          .update({ downloads: (movie.downloads || 0) + 1 })
+          .eq('id', movie.id);
+          
+        // Record download analytics
+        await supabase.from('analytics').insert({
+          page_visited: `download_movie_${movie.id}_quality_${quality}`,
+          browser: navigator.userAgent,
+          device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
+          os: navigator.platform
+        });
+      }
+    } catch (error) {
+      console.error("Error updating download count:", error);
+    }
+  };
+
+  // Placeholder for loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
         <div className="text-xl">Loading movie details...</div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white">
+        <header className="bg-gray-800 shadow-md mb-8">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex justify-between items-center">
+              <Link to="/">
+                <MFlixLogo />
+              </Link>
+              <nav>
+                <ul className="flex space-x-6">
+                  <li><Link to="/" className="hover:text-blue-400">Home</Link></li>
+                  <li><Link to="/movies" className="hover:text-blue-400">Movies</Link></li>
+                  <li><Link to="/web-series" className="hover:text-blue-400">Web Series</Link></li>
+                  <li><Link to="/anime" className="hover:text-blue-400">Anime</Link></li>
+                </ul>
+              </nav>
+            </div>
+          </div>
+        </header>
+        
+        <div className="container mx-auto px-4 py-8 text-center">
+          <div className="bg-gray-800 p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
+            <h1 className="text-2xl font-bold text-red-500 mb-4">Error</h1>
+            <p className="text-gray-300 mb-6">{error}</p>
+            <Button asChild>
+              <Link to="/">Back to Home</Link>
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -184,12 +252,14 @@ const MovieDetail = () => {
       <header className="bg-gray-800 shadow-md">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
-            <MFlixLogo />
+            <Link to="/">
+              <MFlixLogo />
+            </Link>
             <nav>
               <ul className="flex space-x-6">
                 <li><Link to="/" className="hover:text-blue-400">Home</Link></li>
                 <li><Link to="/movies" className="hover:text-blue-400">Movies</Link></li>
-                <li><Link to="/series" className="hover:text-blue-400">Web Series</Link></li>
+                <li><Link to="/web-series" className="hover:text-blue-400">Web Series</Link></li>
                 <li><Link to="/anime" className="hover:text-blue-400">Anime</Link></li>
               </ul>
             </nav>
@@ -374,7 +444,10 @@ const MovieDetail = () => {
                         <a 
                           href={download.url} 
                           className="block w-full bg-green-600 hover:bg-green-700 text-center py-2 rounded-lg font-bold transition-colors"
-                          onClick={handleClick}
+                          onClick={(e) => {
+                            handleClick(e);
+                            handleDownloadClick(download.id, download.quality);
+                          }}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
