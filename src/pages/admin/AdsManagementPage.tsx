@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdminHeader from "@/components/admin/AdminHeader";
 import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import AdsTab from "@/components/admin/ads/AdsTab";
-import { Affiliate, Ad } from "lucide-react";
+import { BanknoteIcon, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 
@@ -111,11 +111,11 @@ const AdsManagementPage = () => {
             <h1 className="text-2xl font-bold">Ad Management</h1>
             <div className="flex space-x-2">
               <Button variant="outline" className="flex items-center">
-                <Ad className="mr-2" size={16} />
+                <BanknoteIcon className="mr-2" size={16} />
                 Ad Statistics
               </Button>
               <Button className="flex items-center">
-                <Affiliate className="mr-2" size={16} />
+                <CreditCard className="mr-2" size={16} />
                 Create Campaign
               </Button>
             </div>

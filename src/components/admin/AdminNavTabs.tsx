@@ -1,7 +1,7 @@
 
 import { Link, useLocation } from 'react-router-dom';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Film, BarChart3, Settings, Users, Monitor, Tv2, VideoIcon, LibraryBig, Ad } from 'lucide-react';
+import { Film, BarChart3, Settings, Users, Monitor, Tv2, VideoIcon, LibraryBig, BanknoteIcon } from 'lucide-react';
 
 interface AdminNavTabsProps {
   activeTab?: string;
@@ -55,7 +55,7 @@ const AdminNavTabs = ({ activeTab }: AdminNavTabsProps) => {
         </TabsTrigger>
         <TabsTrigger value="ads" asChild className={currentTabValue === 'ads' ? 'data-[state=active]:bg-blue-500' : ''}>
           <Link to="/admin/ads" className="w-full">
-            <Ad className="h-4 w-4 mr-2" /> Ads
+            <BanknoteIcon className="h-4 w-4 mr-2" /> Ads
           </Link>
         </TabsTrigger>
         <TabsTrigger value="content" asChild className={currentTabValue === 'content' ? 'data-[state=active]:bg-blue-500' : ''}>
