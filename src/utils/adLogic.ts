@@ -2,6 +2,9 @@
 // Ad display tracking
 let downloadClickCount = 0;
 let navigationCount = 0;
+let sessionImpressions: Record<string, number> = {};
+let sessionClicks: Record<string, number> = {};
+let lastAdShownTimestamp: Record<string, number> = {};
 
 /**
  * Determines whether to show ad based on click count
@@ -31,6 +34,9 @@ export const shouldShowNavigationAd = (): boolean => {
 export const resetClickCounters = (): void => {
   downloadClickCount = 0;
   navigationCount = 0;
+  sessionImpressions = {};
+  sessionClicks = {};
+  lastAdShownTimestamp = {};
 };
 
 /**
@@ -47,4 +53,79 @@ export const getDownloadClickCount = (): number => {
  */
 export const getNavigationCount = (): number => {
   return navigationCount;
+};
+
+/**
+ * Determines whether to show an ad based on frequency capping
+ * @param adId Unique identifier for the ad
+ * @param frequency How often to show the ad (higher = more frequent)
+ * @returns boolean
+ */
+export const shouldShowAdWithFrequencyCapping = (adId: string, frequency: number = 1): boolean => {
+  const now = Date.now();
+  const lastShown = lastAdShownTimestamp[adId] || 0;
+  
+  // Base interval between ads is 10 minutes (600000ms)
+  // Frequency adjusts this interval (higher frequency = shorter interval)
+  const intervalMs = 600000 / (frequency || 1);
+  
+  // If enough time has passed since the last showing
+  if (now - lastShown >= intervalMs) {
+    lastAdShownTimestamp[adId] = now;
+    return true;
+  }
+  
+  return false;
+};
+
+/**
+ * Track an ad impression (view)
+ * @param adId Unique identifier for the ad
+ */
+export const trackAdImpression = (adId: string): void => {
+  if (!sessionImpressions[adId]) {
+    sessionImpressions[adId] = 0;
+  }
+  sessionImpressions[adId]++;
+  
+  // In a real app, send this to analytics backend
+  console.log(`Ad impression tracked. Ad ID: ${adId}, Total impressions: ${sessionImpressions[adId]}`);
+};
+
+/**
+ * Track an ad click
+ * @param adId Unique identifier for the ad
+ */
+export const trackAdClick = (adId: string): void => {
+  if (!sessionClicks[adId]) {
+    sessionClicks[adId] = 0;
+  }
+  sessionClicks[adId]++;
+  
+  // In a real app, send this to analytics backend
+  console.log(`Ad click tracked. Ad ID: ${adId}, Total clicks: ${sessionClicks[adId]}`);
+};
+
+/**
+ * Calculate CTR (Click-Through Rate) for an ad
+ * @param adId Unique identifier for the ad
+ * @returns number CTR as a percentage
+ */
+export const calculateCTR = (adId: string): number => {
+  const impressions = sessionImpressions[adId] || 0;
+  const clicks = sessionClicks[adId] || 0;
+  
+  if (impressions === 0) return 0;
+  return (clicks / impressions) * 100;
+};
+
+/**
+ * Get all session analytics data
+ * @returns Object with impressions and clicks by ad ID
+ */
+export const getSessionAnalytics = (): { impressions: Record<string, number>, clicks: Record<string, number> } => {
+  return {
+    impressions: { ...sessionImpressions },
+    clicks: { ...sessionClicks }
+  };
 };
