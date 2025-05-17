@@ -4,7 +4,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { LoaderCircle, AtSign, Lock, KeyRound, Eye, EyeOff } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
 import MFlixLogo from "@/components/MFlixLogo";
@@ -19,7 +18,7 @@ const AdminLogin = () => {
   
   // Simulate page load
   useEffect(() => {
-    const timer = setTimeout(() => setPageLoading(false), 1000);
+    const timer = setTimeout(() => setPageLoading(false), 500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -53,6 +52,7 @@ const AdminLogin = () => {
         localStorage.setItem("adminEmail", email);
         localStorage.setItem("isAuthenticated", "true");
         localStorage.setItem("adminLoginTime", new Date().toISOString());
+        localStorage.setItem("adminToken", "demo-token-" + Date.now());
         
         // Broadcast storage update to other tabs
         window.dispatchEvent(new Event("storage"));

@@ -34,13 +34,13 @@ const App = () => {
     const checkAuth = () => {
       const hostname = window.location.hostname;
       const adminToken = localStorage.getItem("adminToken");
-      const isAuth = !!adminToken;
+      const isAuth = localStorage.getItem("isAuthenticated") === "true";
       
-      setIsAdminDomain(hostname === "crmadmin.mflix");
-      setIsAuthenticated(isAuth);
+      setIsAdminDomain(hostname.includes("admin") || hostname === "crmadmin.mflix");
+      setIsAuthenticated(!!adminToken && isAuth);
       
       // Check if session is still valid (24 hours)
-      if (isAuth) {
+      if (isAuth && adminToken) {
         const loginTime = localStorage.getItem("adminLoginTime");
         if (loginTime) {
           const loginDate = new Date(loginTime);
@@ -51,6 +51,7 @@ const App = () => {
           if (hoursDiff > 24) {
             localStorage.removeItem("adminEmail");
             localStorage.removeItem("adminToken");
+            localStorage.removeItem("isAuthenticated");
             localStorage.removeItem("adminLoginTime");
             setIsAuthenticated(false);
           }
@@ -67,15 +68,6 @@ const App = () => {
     return () => window.removeEventListener("storage", checkAuth);
   }, []);
 
-  // Redirect to admin login if on admin domain but not on admin path
-  useEffect(() => {
-    if (isAdminDomain && 
-        !window.location.pathname.startsWith("/admin") && 
-        !isCheckingAuth) {
-      window.location.pathname = "/admin/login";
-    }
-  }, [isAdminDomain, isCheckingAuth]);
-  
   // Show loading while checking authentication
   if (isCheckingAuth) {
     return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Loading...</div>;
@@ -102,6 +94,8 @@ const App = () => {
                 <Route path="/admin/shorts" element={isAuthenticated ? <ShortsPage /> : <Navigate to="/admin/login" replace />} />
                 <Route path="/admin/content" element={isAuthenticated ? <ContentManagementPage /> : <Navigate to="/admin/login" replace />} />
                 <Route path="/admin/ads" element={isAuthenticated ? <AdsManagementPage /> : <Navigate to="/admin/login" replace />} />
+                <Route path="/admin/users" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
+                <Route path="/admin/settings" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
                 <Route path="/admin/*" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
                 <Route path="*" element={<Navigate to="/admin/login" replace />} />
               </>
@@ -121,6 +115,8 @@ const App = () => {
                 <Route path="/admin/shorts" element={isAuthenticated ? <ShortsPage /> : <Navigate to="/admin/login" replace />} />
                 <Route path="/admin/content" element={isAuthenticated ? <ContentManagementPage /> : <Navigate to="/admin/login" replace />} />
                 <Route path="/admin/ads" element={isAuthenticated ? <AdsManagementPage /> : <Navigate to="/admin/login" replace />} />
+                <Route path="/admin/users" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
+                <Route path="/admin/settings" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
                 <Route path="/admin/*" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
                 <Route path="*" element={<NotFound />} />
               </>
