@@ -13,8 +13,8 @@ const AdminNavTabs = ({ activeTab }: AdminNavTabsProps) => {
   const currentPath = location.pathname;
   const currentTabValue = activeTab || getTabValue(currentPath);
   
+  // Handle navigation without page reloads
   const handleNavigation = (path: string) => {
-    // Preserve any query parameters and state when navigating
     navigate(path, { 
       replace: true, // Use replace to avoid building up history stack
       state: { from: location.pathname } 

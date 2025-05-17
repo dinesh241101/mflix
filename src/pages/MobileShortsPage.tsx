@@ -14,6 +14,7 @@ const MobileShortsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPlayer, setShowPlayer] = useState(false);
+  const [currentShortId, setCurrentShortId] = useState<string | number | null>(null);
   const isMobile = useIsMobile();
   
   // Fetch shorts from Supabase
@@ -67,6 +68,12 @@ const MobileShortsPage = () => {
   if (!isMobile) {
     return null; // Will redirect in useEffect
   }
+
+  // Handle short click to open player
+  const handleShortClick = (shortId: string | number) => {
+    setCurrentShortId(shortId);
+    setShowPlayer(true);
+  };
   
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -109,7 +116,7 @@ const MobileShortsPage = () => {
               <div 
                 key={short.id} 
                 className="bg-gray-800 rounded-lg overflow-hidden"
-                onClick={() => setShowPlayer(true)}
+                onClick={() => handleShortClick(short.id)}
               >
                 <div className="relative aspect-[9/16] bg-gray-700">
                   {short.thumbnail_url ? (
@@ -141,7 +148,10 @@ const MobileShortsPage = () => {
       
       {/* Shorts Player */}
       {showPlayer && (
-        <ShortsPlayer shorts={shorts} onClose={() => setShowPlayer(false)} />
+        <ShortsPlayer 
+          shorts={currentShortId ? shorts.filter(s => s.id === currentShortId) : shorts} 
+          onClose={() => setShowPlayer(false)} 
+        />
       )}
     </div>
   );
