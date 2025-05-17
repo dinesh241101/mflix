@@ -1,17 +1,19 @@
 
 import { AdAnalytics } from "@/models/adModels";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { DateRange } from "react-day-picker";
 
 interface PerformanceOverTimeChartProps {
   analytics: AdAnalytics[];
-  dateRange: {
-    from: Date;
-    to: Date;
-  };
+  dateRange: DateRange;
 }
 
 // Helper function to create daily data points
-const createDailyData = (analytics: AdAnalytics[], dateRange: { from: Date; to: Date }) => {
+const createDailyData = (analytics: AdAnalytics[], dateRange: DateRange) => {
+  if (!dateRange.from || !dateRange.to) {
+    return [];
+  }
+
   const result = [];
   const currentDate = new Date(dateRange.from);
   const endDate = new Date(dateRange.to);
@@ -69,7 +71,7 @@ const PerformanceOverTimeChart = ({ analytics, dateRange }: PerformanceOverTimeC
           <YAxis yAxisId="right" orientation="right" stroke="#999" />
           <Tooltip 
             contentStyle={{ backgroundColor: '#333', borderColor: '#555', color: '#fff' }} 
-            formatter={(value, name) => {
+            formatter={(value, name: string) => {
               if (name === 'revenue') return [`$${value}`, 'Revenue'];
               return [value, name.charAt(0).toUpperCase() + name.slice(1)];
             }}

@@ -7,19 +7,21 @@ import { shouldShowAd, shouldShowNavigationAd } from '@/utils/adLogic';
 import { toast } from '@/components/ui/use-toast';
 import { trackAdImpression, trackAdClick } from '@/utils/adAnalyticsTracker';
 
+interface AdContent {
+  id?: string;
+  imageUrl?: string;
+  title?: string;
+  description?: string;
+  targetUrl?: string;
+  videoUrl?: string;
+}
+
 interface AdPlaceholderProps {
   type?: 'banner' | 'sidebar' | 'popup' | 'floating' | 'video' | 'native';
   position?: 'top' | 'bottom' | 'side' | 'center';
   onAdClick?: () => void;
   isNavigation?: boolean;
-  adContent?: {
-    id?: string;
-    imageUrl?: string;
-    title?: string;
-    description?: string;
-    targetUrl?: string;
-    videoUrl?: string;
-  };
+  adContent?: AdContent;
 }
 
 const AdPlaceholder = ({ 
@@ -85,7 +87,7 @@ const AdPlaceholder = ({
   };
 
   // Default ad content if none provided
-  const defaultContent = {
+  const defaultContent: AdContent = {
     id: "default-ad",
     imageUrl: "https://via.placeholder.com/600x200?text=Advertisement",
     title: "Special Offer",
@@ -143,7 +145,7 @@ const AdPlaceholder = ({
   }
 
   // Video ad
-  if (type === 'video' && content.videoUrl) {
+  if (type === 'video' && content?.videoUrl) {
     return (
       <div className="relative w-full bg-gray-800 border border-gray-700 rounded-lg shadow-lg overflow-hidden">
         <button 

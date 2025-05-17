@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { DateRange } from 'react-day-picker';
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdAnalytics } from "@/models/adModels";
@@ -15,7 +16,7 @@ interface AnalyticsDashboardProps {
 }
 
 const AnalyticsDashboard = ({ adAnalytics }: AnalyticsDashboardProps) => {
-  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
+  const [dateRange, setDateRange] = useState<DateRange>({
     from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
     to: new Date()
   });

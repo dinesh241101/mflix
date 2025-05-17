@@ -14,8 +14,8 @@ import {
 
 interface DatePickerWithRangeProps {
   className?: string;
-  date: DateRange;
-  setDate: (date: DateRange) => void;
+  date: DateRange | undefined;
+  setDate: (date: DateRange | undefined) => void;
 }
 
 export function DatePickerWithRange({
@@ -50,16 +50,15 @@ export function DatePickerWithRange({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
           <Calendar
             initialFocus
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={(selectedDate) => {
-              if (selectedDate) setDate(selectedDate);
-            }}
+            onSelect={setDate}
             numberOfMonths={2}
+            className="pointer-events-auto"
           />
         </PopoverContent>
       </Popover>

@@ -26,20 +26,58 @@ const queryClient = new QueryClient();
 const App = () => {
   const [isAdminDomain, setIsAdminDomain] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Handle custom domain for admin and check authentication
   useEffect(() => {
-    const hostname = window.location.hostname;
-    const isAuth = localStorage.getItem("isAuthenticated") === "true";
+    const checkAuth = () => {
+      const hostname = window.location.hostname;
+      const isAuth = localStorage.getItem("isAuthenticated") === "true";
+      
+      setIsAdminDomain(hostname === "crmadmin.mflix");
+      setIsAuthenticated(isAuth);
+      
+      // Check if session is still valid (24 hours)
+      if (isAuth) {
+        const loginTime = localStorage.getItem("adminLoginTime");
+        if (loginTime) {
+          const loginDate = new Date(loginTime);
+          const currentDate = new Date();
+          const hoursDiff = (currentDate.getTime() - loginDate.getTime()) / (1000 * 60 * 60);
+          
+          // If session is older than 24 hours, logout
+          if (hoursDiff > 24) {
+            localStorage.removeItem("adminEmail");
+            localStorage.removeItem("isAuthenticated");
+            localStorage.removeItem("adminLoginTime");
+            setIsAuthenticated(false);
+          }
+        }
+      }
+      
+      setIsCheckingAuth(false);
+    };
     
-    setIsAdminDomain(hostname === "crmadmin.mflix");
-    setIsAuthenticated(isAuth);
+    checkAuth();
     
-    if (hostname === "crmadmin.mflix" && 
-        !window.location.pathname.startsWith("/admin")) {
+    // Add event listener for storage changes (in case user logs in/out from another tab)
+    window.addEventListener("storage", checkAuth);
+    return () => window.removeEventListener("storage", checkAuth);
+  }, []);
+
+  // Redirect to admin login if on admin domain but not on admin path
+  useEffect(() => {
+    if (isAdminDomain && 
+        !window.location.pathname.startsWith("/admin") && 
+        !isCheckingAuth) {
       window.location.pathname = "/admin/login";
     }
-  }, []);
+  }, [isAdminDomain, isCheckingAuth]);
+  
+  // Show loading while checking authentication
+  if (isCheckingAuth) {
+    return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Loading...</div>;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

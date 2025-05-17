@@ -10,18 +10,23 @@ export const trackAdImpression = async (adId: string, metadata?: {
   userId?: string
 }) => {
   try {
-    const interaction: AdInteraction = {
-      id: crypto.randomUUID(),
-      adId,
-      type: 'impression',
-      timestamp: new Date().toISOString(),
-      ...metadata
+    // Store the interaction in analytics table
+    const analyticsData = {
+      page_visited: 'ad_impression',
+      country: metadata?.country,
+      device: metadata?.device,
+      browser: metadata?.browser,
+      // Additional fields for ad tracking
+      ad_id: adId,
+      interaction_type: 'impression'
     };
     
-    // In a real app, batch these for performance
-    await supabase.from('ad_interactions').insert(interaction);
+    // In production, we'd use a real database table specifically for ad interactions
+    console.log('Ad impression tracked:', adId, analyticsData);
     
-    console.log('Ad impression tracked:', adId);
+    // For demo purposes, we'll store in analytics table
+    await supabase.from('analytics').insert(analyticsData);
+    
     return true;
   } catch (error) {
     console.error('Failed to track ad impression:', error);
@@ -37,17 +42,22 @@ export const trackAdClick = async (adId: string, metadata?: {
   userId?: string
 }) => {
   try {
-    const interaction: AdInteraction = {
-      id: crypto.randomUUID(),
-      adId,
-      type: 'click',
-      timestamp: new Date().toISOString(),
-      ...metadata
+    // Store the interaction in analytics table
+    const analyticsData = {
+      page_visited: 'ad_click',
+      country: metadata?.country,
+      device: metadata?.device,
+      browser: metadata?.browser,
+      // Additional fields for ad tracking
+      ad_id: adId,
+      interaction_type: 'click'
     };
     
-    await supabase.from('ad_interactions').insert(interaction);
+    console.log('Ad click tracked:', adId, analyticsData);
     
-    console.log('Ad click tracked:', adId);
+    // For demo purposes, we'll store in analytics table
+    await supabase.from('analytics').insert(analyticsData);
+    
     return true;
   } catch (error) {
     console.error('Failed to track ad click:', error);
@@ -63,18 +73,23 @@ export const trackAdConversion = async (adId: string, value: number, metadata?: 
   userId?: string
 }) => {
   try {
-    const interaction: AdInteraction = {
-      id: crypto.randomUUID(),
-      adId,
-      type: 'conversion',
-      timestamp: new Date().toISOString(),
-      value,
-      ...metadata
+    // Store the interaction in analytics table
+    const analyticsData = {
+      page_visited: 'ad_conversion',
+      country: metadata?.country,
+      device: metadata?.device,
+      browser: metadata?.browser,
+      // Additional fields for ad tracking
+      ad_id: adId,
+      interaction_type: 'conversion',
+      conversion_value: value
     };
     
-    await supabase.from('ad_interactions').insert(interaction);
+    console.log('Ad conversion tracked:', adId, 'value:', value, analyticsData);
     
-    console.log('Ad conversion tracked:', adId, 'value:', value);
+    // For demo purposes, we'll store in analytics table
+    await supabase.from('analytics').insert(analyticsData);
+    
     return true;
   } catch (error) {
     console.error('Failed to track ad conversion:', error);

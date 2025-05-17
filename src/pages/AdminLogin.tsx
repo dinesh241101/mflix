@@ -25,10 +25,21 @@ const AdminLogin = () => {
 
   // Check if user is already logged in
   useEffect(() => {
-    const adminEmail = localStorage.getItem("adminEmail");
-    if (adminEmail) {
-      navigate("/admin/dashboard");
-    }
+    const checkLoginStatus = () => {
+      const adminEmail = localStorage.getItem("adminEmail");
+      const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+      
+      if (adminEmail && isAuthenticated) {
+        // Admin is already logged in, redirect to dashboard
+        navigate("/admin/dashboard", { replace: true });
+      }
+    };
+    
+    checkLoginStatus();
+    
+    // Add event listener for storage changes (in case user logs in from another tab)
+    window.addEventListener("storage", checkLoginStatus);
+    return () => window.removeEventListener("storage", checkLoginStatus);
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -36,19 +47,23 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      // Simulate authentication for demo
-      // In production, use real authentication
+      // For demo purposes, any valid email/password combination works
       if (email.trim() && password.trim()) {
-        // Store authentication data
+        // Store session data
         localStorage.setItem("adminEmail", email);
         localStorage.setItem("isAuthenticated", "true");
+        localStorage.setItem("adminLoginTime", new Date().toISOString());
+        
+        // Broadcast storage update to other tabs
+        window.dispatchEvent(new Event("storage"));
         
         toast({
           title: "Login successful",
-          description: "Redirecting to admin dashboard...",
+          description: "Welcome to the admin dashboard!",
         });
         
-        navigate("/admin/dashboard");
+        // Use replace to prevent back button from returning to login page
+        navigate("/admin/dashboard", { replace: true });
       } else {
         throw new Error("Please fill in all fields");
       }
