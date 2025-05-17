@@ -23,7 +23,8 @@ const MovieDetail = () => {
   const [downloadLinks, setDownloadLinks] = useState<any[]>([]);
   
   useEffect(() => {
-    document.title = "Movie Detail - MFlix";
+    // Default title while loading
+    document.title = "Loading Movie - MFlix";
     
     const fetchMovieDetails = async () => {
       try {
@@ -46,6 +47,7 @@ const MovieDetail = () => {
         
         if (movieData) {
           setMovie(movieData);
+          // Set page title to movie name
           document.title = `${movieData.title} - MFlix`;
           
           // Track view

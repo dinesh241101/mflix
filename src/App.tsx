@@ -19,6 +19,7 @@ import NotFound from "./pages/NotFound";
 import Movies from "./pages/Movies";
 import WebSeries from "./pages/WebSeries";
 import Anime from "./pages/Anime";
+import MobileShortsPage from "./pages/MobileShortsPage";
 import AdManager from "./components/ads/AdManager";
 
 const queryClient = new QueryClient();
@@ -32,7 +33,8 @@ const App = () => {
   useEffect(() => {
     const checkAuth = () => {
       const hostname = window.location.hostname;
-      const isAuth = localStorage.getItem("isAuthenticated") === "true";
+      const adminToken = localStorage.getItem("adminToken");
+      const isAuth = !!adminToken;
       
       setIsAdminDomain(hostname === "crmadmin.mflix");
       setIsAuthenticated(isAuth);
@@ -48,7 +50,7 @@ const App = () => {
           // If session is older than 24 hours, logout
           if (hoursDiff > 24) {
             localStorage.removeItem("adminEmail");
-            localStorage.removeItem("isAuthenticated");
+            localStorage.removeItem("adminToken");
             localStorage.removeItem("adminLoginTime");
             setIsAuthenticated(false);
           }
@@ -109,6 +111,7 @@ const App = () => {
                 <Route path="/movies" element={<Movies />} />
                 <Route path="/web-series" element={<WebSeries />} />
                 <Route path="/anime" element={<Anime />} />
+                <Route path="/shorts" element={<MobileShortsPage />} />
                 <Route path="/movie/:id" element={<MovieDetail />} />
                 <Route path="/admin/login" element={!isAuthenticated ? <AdminLogin /> : <Navigate to="/admin/dashboard" replace />} />
                 <Route path="/admin/dashboard" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />

@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminHeader from "@/components/admin/AdminHeader";
@@ -10,6 +10,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 
 const ShortsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [adminEmail, setAdminEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [shorts, setShorts] = useState<any[]>([]);
@@ -29,7 +30,7 @@ const ShortsPage = () => {
         const email = localStorage.getItem("adminEmail");
         
         if (!token) {
-          navigate("/admin/login");
+          navigate("/admin/login", { state: { from: location.pathname } });
           return;
         }
         
@@ -57,12 +58,12 @@ const ShortsPage = () => {
         console.error("Auth error:", error);
         localStorage.removeItem("adminToken");
         localStorage.removeItem("adminEmail");
-        navigate("/admin/login");
+        navigate("/admin/login", { state: { from: location.pathname } });
       }
     };
     
     checkAuth();
-  }, [navigate]);
+  }, [navigate, location.pathname]);
 
   // Fetch shorts data
   const fetchShorts = async () => {
@@ -179,6 +180,8 @@ const ShortsPage = () => {
       <AdminHeader adminEmail={adminEmail} onLogout={handleLogout} />
 
       <div className="container mx-auto px-4 py-8">
+        <AdminNavTabs activeTab="shorts" />
+        
         <ShortsTab 
           shorts={shorts}
           shortForm={shortForm}

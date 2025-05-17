@@ -1,5 +1,5 @@
 
-import { Link, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Film, BarChart3, Settings, Users, Monitor, Tv2, VideoIcon, LibraryBig, BanknoteIcon } from 'lucide-react';
 
@@ -9,17 +9,29 @@ interface AdminNavTabsProps {
 
 const AdminNavTabs = ({ activeTab }: AdminNavTabsProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
   const currentTabValue = activeTab || getTabValue(currentPath);
+  
+  const handleNavigation = (path: string) => {
+    // Preserve any query parameters and state when navigating
+    navigate(path, { 
+      replace: true, // Use replace to avoid building up history stack
+      state: { from: location.pathname } 
+    });
+  };
   
   return (
     <div className="mb-8">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <div className="flex flex-wrap gap-2">
-          <Link to="/admin/dashboard" className="text-sm text-gray-400 hover:text-white">
+          <button 
+            onClick={() => handleNavigation('/admin/dashboard')} 
+            className="text-sm text-gray-400 hover:text-white bg-transparent border-none cursor-pointer"
+          >
             Dashboard
-          </Link>
+          </button>
           <span className="text-gray-600">/</span>
           <span className="text-sm">
             {currentTabValue.charAt(0).toUpperCase() + currentTabValue.slice(1)}
@@ -28,50 +40,68 @@ const AdminNavTabs = ({ activeTab }: AdminNavTabsProps) => {
       </div>
       
       <TabsList className="w-full max-w-4xl">
-        <TabsTrigger value="analytics" asChild className={currentTabValue === 'analytics' ? 'data-[state=active]:bg-blue-500' : ''}>
-          <Link to="/admin/dashboard" className="w-full">
-            <BarChart3 className="h-4 w-4 mr-2" /> Analytics
-          </Link>
+        <TabsTrigger 
+          value="analytics" 
+          onClick={() => handleNavigation('/admin/dashboard')}
+          className={currentTabValue === 'analytics' ? 'data-[state=active]:bg-blue-500' : ''}
+        >
+          <BarChart3 className="h-4 w-4 mr-2" /> Analytics
         </TabsTrigger>
-        <TabsTrigger value="movies" asChild className={currentTabValue === 'movies' ? 'data-[state=active]:bg-blue-500' : ''}>
-          <Link to="/admin/movies" className="w-full">
-            <Film className="h-4 w-4 mr-2" /> Movies
-          </Link>
+        <TabsTrigger 
+          value="movies" 
+          onClick={() => handleNavigation('/admin/movies')}
+          className={currentTabValue === 'movies' ? 'data-[state=active]:bg-blue-500' : ''}
+        >
+          <Film className="h-4 w-4 mr-2" /> Movies
         </TabsTrigger>
-        <TabsTrigger value="webseries" asChild className={currentTabValue === 'webseries' ? 'data-[state=active]:bg-blue-500' : ''}>
-          <Link to="/admin/web-series" className="w-full">
-            <Tv2 className="h-4 w-4 mr-2" /> Web Series
-          </Link>
+        <TabsTrigger 
+          value="webseries" 
+          onClick={() => handleNavigation('/admin/web-series')}
+          className={currentTabValue === 'webseries' ? 'data-[state=active]:bg-blue-500' : ''}
+        >
+          <Tv2 className="h-4 w-4 mr-2" /> Web Series
         </TabsTrigger>
-        <TabsTrigger value="anime" asChild className={currentTabValue === 'anime' ? 'data-[state=active]:bg-blue-500' : ''}>
-          <Link to="/admin/anime" className="w-full">
-            <Monitor className="h-4 w-4 mr-2" /> Anime
-          </Link>
+        <TabsTrigger 
+          value="anime" 
+          onClick={() => handleNavigation('/admin/anime')}
+          className={currentTabValue === 'anime' ? 'data-[state=active]:bg-blue-500' : ''}
+        >
+          <Monitor className="h-4 w-4 mr-2" /> Anime
         </TabsTrigger>
-        <TabsTrigger value="shorts" asChild className={currentTabValue === 'shorts' ? 'data-[state=active]:bg-blue-500' : ''}>
-          <Link to="/admin/shorts" className="w-full">
-            <VideoIcon className="h-4 w-4 mr-2" /> Shorts
-          </Link>
+        <TabsTrigger 
+          value="shorts" 
+          onClick={() => handleNavigation('/admin/shorts')}
+          className={currentTabValue === 'shorts' ? 'data-[state=active]:bg-blue-500' : ''}
+        >
+          <VideoIcon className="h-4 w-4 mr-2" /> Shorts
         </TabsTrigger>
-        <TabsTrigger value="ads" asChild className={currentTabValue === 'ads' ? 'data-[state=active]:bg-blue-500' : ''}>
-          <Link to="/admin/ads" className="w-full">
-            <BanknoteIcon className="h-4 w-4 mr-2" /> Ads
-          </Link>
+        <TabsTrigger 
+          value="ads" 
+          onClick={() => handleNavigation('/admin/ads')}
+          className={currentTabValue === 'ads' ? 'data-[state=active]:bg-blue-500' : ''}
+        >
+          <BanknoteIcon className="h-4 w-4 mr-2" /> Ads
         </TabsTrigger>
-        <TabsTrigger value="content" asChild className={currentTabValue === 'content' ? 'data-[state=active]:bg-blue-500' : ''}>
-          <Link to="/admin/content" className="w-full">
-            <LibraryBig className="h-4 w-4 mr-2" /> Content
-          </Link>
+        <TabsTrigger 
+          value="content" 
+          onClick={() => handleNavigation('/admin/content')}
+          className={currentTabValue === 'content' ? 'data-[state=active]:bg-blue-500' : ''}
+        >
+          <LibraryBig className="h-4 w-4 mr-2" /> Content
         </TabsTrigger>
-        <TabsTrigger value="users" asChild className={currentTabValue === 'users' ? 'data-[state=active]:bg-blue-500' : ''}>
-          <Link to="/admin/users" className="w-full">
-            <Users className="h-4 w-4 mr-2" /> Users
-          </Link>
+        <TabsTrigger 
+          value="users" 
+          onClick={() => handleNavigation('/admin/users')}
+          className={currentTabValue === 'users' ? 'data-[state=active]:bg-blue-500' : ''}
+        >
+          <Users className="h-4 w-4 mr-2" /> Users
         </TabsTrigger>
-        <TabsTrigger value="settings" asChild className={currentTabValue === 'settings' ? 'data-[state=active]:bg-blue-500' : ''}>
-          <Link to="/admin/settings" className="w-full">
-            <Settings className="h-4 w-4 mr-2" /> Settings
-          </Link>
+        <TabsTrigger 
+          value="settings" 
+          onClick={() => handleNavigation('/admin/settings')}
+          className={currentTabValue === 'settings' ? 'data-[state=active]:bg-blue-500' : ''}
+        >
+          <Settings className="h-4 w-4 mr-2" /> Settings
         </TabsTrigger>
       </TabsList>
     </div>
