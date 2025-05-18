@@ -1,542 +1,351 @@
 
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Star, Download, Clock, Calendar, Film, Globe } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
+import LoadingScreen from "@/components/LoadingScreen";
 import MFlixLogo from "@/components/MFlixLogo";
+import { Download, Home, Star, Film, Tv, Video, Calendar, Flag, Trophy, Info, UserCheck } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AdBanner from "@/components/ads/AdBanner";
 
 const MovieDetail = () => {
-  const { id } = useParams();
-  const [showAd, setShowAd] = useState(false);
-  const [clickCount, setClickCount] = useState(0);
+  const { id } = useParams<{ id: string }>();
+  const { toast } = useToast();
   const [movie, setMovie] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [similarMovies, setSimilarMovies] = useState<any[]>([]);
-  const [mediaClips, setMediaClips] = useState<any[]>([]);
+  const [cast, setCast] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [downloadLinks, setDownloadLinks] = useState<any[]>([]);
-  
+  const [trailers, setTrailers] = useState<any[]>([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Check screen size
   useEffect(() => {
-    // Default title while loading
-    document.title = "Loading Movie - MFlix";
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  // Set document title based on movie title
+  useEffect(() => {
+    if (movie) {
+      document.title = `${movie.title} - MFlix`;
+    } else {
+      document.title = "Movie Details - MFlix";
+    }
     
+    // Restore original title when component unmounts
+    return () => {
+      document.title = "MFlix";
+    };
+  }, [movie]);
+
+  useEffect(() => {
     const fetchMovieDetails = async () => {
+      if (!id) return;
+      
       try {
-        setLoading(true);
-        setError(null);
+        setIsLoading(true);
         
-        // Fetch movie details
+        // Fetch movie
         const { data: movieData, error: movieError } = await supabase
           .from('movies')
           .select('*')
           .eq('id', id)
           .single();
-          
-        if (movieError) {
-          console.error("Error fetching movie:", movieError);
-          setError("Could not find the requested movie. It may have been removed or is unavailable.");
-          setLoading(false);
-          return;
-        }
         
-        if (movieData) {
-          setMovie(movieData);
-          // Set page title to movie name
-          document.title = `${movieData.title} - MFlix`;
-          
-          // Track view
-          await supabase.from('analytics').insert({
-            page_visited: `movie/${id}`,
-            browser: navigator.userAgent,
-            device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
-            os: navigator.platform
-          });
-          
-          // Fetch similar movies based on genre
-          if (movieData.genre && movieData.genre.length > 0) {
-            const { data: similarData } = await supabase
-              .from('movies')
-              .select('*')
-              .neq('id', id)
-              .contains('genre', movieData.genre)
-              .limit(4);
-              
-            setSimilarMovies(similarData || []);
-          }
-          
-          // Fetch download links
-          const { data: linksData } = await supabase
-            .from('download_links')
-            .select('*')
-            .eq('movie_id', id);
-            
-          setDownloadLinks(linksData || []);
-          
-          // Fetch media clips
-          const { data: clipsData } = await supabase
-            .from('media_clips')
-            .select('*')
-            .eq('movie_id', id);
-            
-          setMediaClips(clipsData || []);
-        }
-      } catch (error) {
-        console.error("Error fetching movie details:", error);
-        setError("An error occurred while loading the movie details.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchMovieDetails();
-  }, [id]);
-
-  // Handle click events to show ads on every odd number click
-  const handleClick = (e: React.MouseEvent) => {
-    const newClickCount = clickCount + 1;
-    setClickCount(newClickCount);
-    
-    // Show ad on odd-numbered clicks
-    if (newClickCount % 2 === 1) {
-      e.preventDefault();
-      setShowAd(true);
-      
-      // Record ad impression
-      supabase.from('analytics').insert({
-        page_visited: `ad_impression_movie_${id}`,
-        browser: navigator.userAgent,
-        device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
-        os: navigator.platform
-      }).then(() => {
-        console.log("Ad impression recorded");
-      });
-      
-      setTimeout(() => {
-        setShowAd(false);
-      }, 5000); // Hide ad after 5 seconds
-    }
-  };
-
-  // Handle download click to record analytics
-  const handleDownloadClick = async (downloadId: string, quality: string) => {
-    // Update movie downloads count
-    try {
-      if (movie) {
-        // Update local state first for immediate feedback
-        setMovie({
-          ...movie,
-          downloads: (movie.downloads || 0) + 1
-        });
+        if (movieError) throw movieError;
+        setMovie(movieData);
         
-        // Update database
-        await supabase
-          .from('movies')
-          .update({ downloads: (movie.downloads || 0) + 1 })
-          .eq('id', movie.id);
-          
-        // Record download analytics
+        // Fetch cast
+        const { data: castData, error: castError } = await supabase
+          .from('movie_cast')
+          .select('*')
+          .eq('movie_id', id);
+        
+        if (castError) throw castError;
+        setCast(castData || []);
+        
+        // Fetch download links
+        const { data: linksData, error: linksError } = await supabase
+          .from('download_links')
+          .select('*')
+          .eq('movie_id', id);
+        
+        if (linksError) throw linksError;
+        setDownloadLinks(linksData || []);
+        
+        // Fetch trailers
+        const { data: trailerData, error: trailerError } = await supabase
+          .from('media_clips')
+          .select('*')
+          .eq('movie_id', id)
+          .eq('type', 'trailer');
+        
+        if (trailerError) throw trailerError;
+        setTrailers(trailerData || []);
+        
+        // Track analytics
         await supabase.from('analytics').insert({
-          page_visited: `download_movie_${movie.id}_quality_${quality}`,
+          page_visited: 'movie-detail',
           browser: navigator.userAgent,
           device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
           os: navigator.platform
         });
-      }
-    } catch (error) {
-      console.error("Error updating download count:", error);
-    }
-  };
-
-  // Placeholder for loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <div className="text-xl">Loading movie details...</div>
-      </div>
-    );
-  }
-
-  // Show error state
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-white">
-        <header className="bg-gray-800 shadow-md mb-8">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex justify-between items-center">
-              <Link to="/">
-                <MFlixLogo />
-              </Link>
-              <nav>
-                <ul className="flex space-x-6">
-                  <li><Link to="/" className="hover:text-blue-400">Home</Link></li>
-                  <li><Link to="/movies" className="hover:text-blue-400">Movies</Link></li>
-                  <li><Link to="/web-series" className="hover:text-blue-400">Web Series</Link></li>
-                  <li><Link to="/anime" className="hover:text-blue-400">Anime</Link></li>
-                </ul>
-              </nav>
-            </div>
-          </div>
-        </header>
         
-        <div className="container mx-auto px-4 py-8 text-center">
-          <div className="bg-gray-800 p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
-            <h1 className="text-2xl font-bold text-red-500 mb-4">Error</h1>
-            <p className="text-gray-300 mb-6">{error}</p>
-            <Button asChild>
-              <Link to="/">Back to Home</Link>
-            </Button>
-          </div>
-        </div>
+        // Update downloads counter (just for analytics, not affecting DB)
+        if (movieData) {
+          await supabase
+            .from('movies')
+            .update({ downloads: (movieData.downloads || 0) + 1 })
+            .eq('id', id);
+        }
+        
+      } catch (error) {
+        console.error("Error fetching movie details:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load movie details. Please try again later.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchMovieDetails();
+  }, [id, toast]);
+  
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+  
+  if (!movie) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white">
+        <h1 className="text-3xl font-bold mb-4">Movie Not Found</h1>
+        <p className="text-gray-400 mb-8">Sorry, the movie you're looking for doesn't exist.</p>
+        <Link to="/">
+          <Button>Back to Home</Button>
+        </Link>
       </div>
     );
   }
-
-  // Use movie data or fallbacks
-  const movieData = movie || {
-    id: 1,
-    title: "Sample Movie",
-    poster_url: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5",
-    year: 2023,
-    imdb_rating: 8.5,
-    user_rating: 8.2,
-    genre: ["Action"],
-    downloads: 1250,
-    storyline: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-    director: "John Director",
-    production_house: "Sample Studios",
-    quality: "1080p",
-    country: "USA",
-    content_type: "Movie",
+  
+  // Format YouTube URL
+  const getEmbedUrl = (url: string) => {
+    if (!url) return '';
+    
+    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(youtubeRegex);
+    
+    if (match && match[1]) {
+      return `https://www.youtube.com/embed/${match[1]}`;
+    }
+    
+    return url;
+  };
+  
+  const handleDownload = (downloadLink: any) => {
+    // In a real app, you'd track this download
+    window.open(downloadLink.url, '_blank');
   };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      {/* Ad Popup - Only shows when triggered */}
-      {showAd && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-          <div className="bg-gray-800 p-6 rounded-lg max-w-2xl w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Advertisement</h3>
-              <button 
-                onClick={() => setShowAd(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                Close
-              </button>
-            </div>
-            <div className="bg-gray-700 p-4 rounded-lg text-center">
-              <p className="mb-4">Sponsored Content</p>
-              <img 
-                src="https://images.unsplash.com/photo-1611162616305-c69b3396f6d3" 
-                alt="Ad" 
-                className="w-full h-64 object-cover rounded-lg mb-4"
-              />
-              <a 
-                href="#ad-link" 
-                className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Learn More
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Header/Navigation */}
+      {/* Header */}
       <header className="bg-gray-800 shadow-md">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <Link to="/">
+          <div className={`flex ${isMobile ? 'flex-col gap-4' : 'justify-between items-center'}`}>
+            <Link to="/" className="flex justify-center">
               <MFlixLogo />
             </Link>
-            <nav>
-              <ul className="flex space-x-6">
-                <li><Link to="/" className="hover:text-blue-400">Home</Link></li>
-                <li><Link to="/movies" className="hover:text-blue-400">Movies</Link></li>
-                <li><Link to="/web-series" className="hover:text-blue-400">Web Series</Link></li>
-                <li><Link to="/anime" className="hover:text-blue-400">Anime</Link></li>
+            <nav className={isMobile ? "overflow-x-auto" : ""}>
+              <ul className={`flex ${isMobile ? 'justify-between space-x-4' : 'space-x-6'}`}>
+                <li><Link to="/" className="hover:text-blue-400 flex items-center whitespace-nowrap"><Home className="mr-1" size={16} /> Home</Link></li>
+                <li><Link to="/movies" className="hover:text-blue-400 flex items-center whitespace-nowrap"><Film className="mr-1" size={16} /> Movies</Link></li>
+                <li><Link to="/web-series" className="hover:text-blue-400 flex items-center whitespace-nowrap"><Tv className="mr-1" size={16} /> Web Series</Link></li>
+                <li><Link to="/anime" className="hover:text-blue-400 flex items-center whitespace-nowrap"><Tv className="mr-1" size={16} /> Anime</Link></li>
+                <li><Link to="/shorts" className="hover:text-blue-400 flex items-center whitespace-nowrap"><Video className="mr-1" size={16} /> Shorts</Link></li>
               </ul>
             </nav>
           </div>
         </div>
       </header>
-
-      {/* Movie Details */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Movie Poster */}
-          <div className="w-full lg:w-1/3">
-            <img 
-              src={movieData.poster_url || "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5"} 
-              alt={movieData.title} 
-              className="w-full h-auto rounded-lg shadow-lg"
-            />
-            
-            {/* Movie Ratings */}
-            <div className="mt-6 bg-gray-800 p-4 rounded-lg">
-              <h2 className="text-xl font-bold mb-3">Ratings</h2>
-              <div className="flex items-center mb-2">
-                <Star className="text-yellow-500 mr-2" size={20} />
-                <span className="font-semibold">IMDB:</span>
-                <span className="ml-2">{movieData.imdb_rating || "N/A"}/10</span>
-              </div>
-              <div className="flex items-center">
-                <Star className="text-blue-500 mr-2" size={20} />
-                <span className="font-semibold">User Rating:</span>
-                <span className="ml-2">{movieData.user_rating || "N/A"}/10</span>
+      
+      {/* Movie Hero Section */}
+      <div 
+        className="bg-cover bg-center pt-12 pb-6 relative"
+        style={{
+          backgroundImage: `linear-gradient(to bottom, rgba(17, 24, 39, 0.7), rgba(17, 24, 39, 1)), url(${movie.poster_url || 'https://via.placeholder.com/1200x600?text=No+Image'})`
+        }}
+      >
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Poster */}
+            <div className="w-full md:w-1/3 lg:w-1/4 flex-shrink-0">
+              <div className="rounded-lg overflow-hidden shadow-lg">
+                <img 
+                  src={movie.poster_url || 'https://via.placeholder.com/500x750?text=No+Poster'} 
+                  alt={movie.title}
+                  className="w-full h-auto"
+                />
               </div>
             </div>
             
-            {/* Movie Info */}
-            <div className="mt-6 bg-gray-800 p-4 rounded-lg">
-              <h2 className="text-xl font-bold mb-3">Movie Info</h2>
-              <div className="space-y-2">
+            {/* Details */}
+            <div className="w-full md:w-2/3 lg:w-3/4">
+              <h1 className="text-3xl md:text-4xl font-bold mb-2">{movie.title}</h1>
+              
+              <div className="flex flex-wrap gap-2 mb-4">
+                {movie.genre?.map((g: string) => (
+                  <span key={g} className="px-2 py-1 bg-blue-900/50 rounded-md text-sm">
+                    {g}
+                  </span>
+                ))}
+              </div>
+              
+              {/* Metadata */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
                 <div className="flex items-center">
-                  <Calendar className="text-gray-400 mr-2" size={16} />
-                  <span className="font-semibold mr-2">Year:</span>
-                  <span>{movieData.year || "Unknown"}</span>
+                  <Calendar className="mr-2 text-gray-400" size={16} />
+                  <span>{movie.year || 'Unknown'}</span>
                 </div>
                 <div className="flex items-center">
-                  <Film className="text-gray-400 mr-2" size={16} />
-                  <span className="font-semibold mr-2">Director:</span>
-                  <span>{movieData.director || "Unknown"}</span>
+                  <Star className="mr-2 text-yellow-500" size={16} />
+                  <span>{movie.imdb_rating || '?'}/10 IMDb</span>
                 </div>
                 <div className="flex items-center">
-                  <Globe className="text-gray-400 mr-2" size={16} />
-                  <span className="font-semibold mr-2">Production:</span>
-                  <span>{movieData.production_house || "Unknown"}</span>
+                  <Flag className="mr-2 text-gray-400" size={16} />
+                  <span>{movie.country || 'Unknown'}</span>
                 </div>
                 <div className="flex items-center">
-                  <Download className="text-gray-400 mr-2" size={16} />
-                  <span className="font-semibold mr-2">Downloads:</span>
-                  <span>{movieData.downloads || 0}</span>
+                  <Trophy className="mr-2 text-gray-400" size={16} />
+                  <span>{movie.quality || 'HD'}</span>
+                </div>
+                <div className="flex items-center">
+                  <UserCheck className="mr-2 text-gray-400" size={16} />
+                  <span>{movie.director || 'Unknown Director'}</span>
+                </div>
+                <div className="flex items-center">
+                  <Info className="mr-2 text-gray-400" size={16} />
+                  <span>{movie.production_house || 'Unknown Studio'}</span>
                 </div>
               </div>
-            </div>
-          </div>
-          
-          {/* Movie Info */}
-          <div className="w-full lg:w-2/3">
-            <h1 className="text-3xl font-bold mb-2">{movieData.title} ({movieData.year || "N/A"})</h1>
-            
-            <div className="flex flex-wrap gap-2 mb-6">
-              {movieData.imdb_rating && (
-                <div className="bg-yellow-600 px-3 py-1 rounded-full text-sm font-semibold">
-                  IMDB: {movieData.imdb_rating}
-                </div>
-              )}
-              {movieData.user_rating && (
-                <div className="bg-blue-600 px-3 py-1 rounded-full text-sm font-semibold">
-                  User: {movieData.user_rating}
-                </div>
-              )}
-              {movieData.genre && movieData.genre.map((genre: string, index: number) => (
-                <div key={index} className="bg-gray-700 px-3 py-1 rounded-full text-sm">
-                  {genre}
-                </div>
-              ))}
-              {movieData.quality && (
-                <div className="bg-gray-700 px-3 py-1 rounded-full text-sm">
-                  {movieData.quality}
-                </div>
-              )}
-              {movieData.country && (
-                <div className="bg-gray-700 px-3 py-1 rounded-full text-sm">
-                  {movieData.country}
-                </div>
-              )}
-              {movieData.content_type && (
-                <div className="bg-gray-700 px-3 py-1 rounded-full text-sm">
-                  {movieData.content_type}
-                </div>
-              )}
-            </div>
-            
-            <div className="mb-6">
-              <h2 className="text-xl font-bold mb-2">Storyline</h2>
-              <p className="text-gray-300">{movieData.storyline || "No storyline available."}</p>
-            </div>
-            
-            {/* Trailer and Clips */}
-            <div className="mb-6">
-              <Tabs defaultValue="trailer">
-                <TabsList className="bg-gray-800">
-                  <TabsTrigger value="trailer">Trailer</TabsTrigger>
-                  <TabsTrigger value="clips">Sample Clips</TabsTrigger>
-                </TabsList>
-                <TabsContent value="trailer" className="mt-4">
-                  {mediaClips.find(clip => clip.type === 'trailer') ? (
-                    <div className="bg-gray-800 rounded-lg overflow-hidden aspect-video">
-                      <iframe 
-                        src={mediaClips.find(clip => clip.type === 'trailer')?.video_url || ""} 
-                        title="Movie Trailer"
-                        className="w-full h-full"
-                        allowFullScreen
-                      ></iframe>
-                    </div>
-                  ) : (
-                    <div className="bg-gray-800 p-6 rounded-lg text-center text-gray-400">
-                      No trailer available for this movie.
-                    </div>
-                  )}
-                </TabsContent>
-                <TabsContent value="clips" className="mt-4">
-                  {mediaClips.filter(clip => clip.type === 'clip').length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {mediaClips.filter(clip => clip.type === 'clip').map((clip, index) => (
-                        <div key={clip.id} className="bg-gray-800 rounded-lg overflow-hidden">
-                          {clip.thumbnail_url ? (
-                            <img 
-                              src={clip.thumbnail_url} 
-                              alt={`Sample Clip ${index + 1}`} 
-                              className="w-full h-48 object-cover"
-                            />
-                          ) : (
-                            <video 
-                              src={clip.video_url} 
-                              className="w-full h-48 object-cover"
-                              autoPlay
-                              loop
-                              muted
-                              playsInline
-                            />
-                          )}
-                          <div className="p-3">
-                            <Button 
-                              onClick={handleClick}
-                              className="w-full"
-                            >
-                              Watch Clip {index + 1}
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="bg-gray-800 p-6 rounded-lg text-center text-gray-400">
-                      No sample clips available for this movie.
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </div>
-            
-            {/* Download Section */}
-            <div className="mb-6">
-              <h2 className="text-xl font-bold mb-4">Download Links</h2>
-              <div className="bg-gray-800 p-4 rounded-lg">
-                {downloadLinks.length > 0 ? (
-                  <div className="space-y-4">
-                    {downloadLinks.map((download, index) => (
-                      <div key={download.id} className="bg-gray-700 p-3 rounded-lg">
-                        <div className="flex justify-between items-center mb-2">
-                          <div>
-                            <span className="font-semibold">{download.quality}</span>
-                            <span className="text-gray-400 ml-2">({download.size})</span>
-                          </div>
-                        </div>
-                        <a 
-                          href={download.url} 
-                          className="block w-full bg-green-600 hover:bg-green-700 text-center py-2 rounded-lg font-bold transition-colors"
-                          onClick={(e) => {
-                            handleClick(e);
-                            handleDownloadClick(download.id, download.quality);
-                          }}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Download {download.quality}
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-4 text-gray-400">
-                    No download links available for this movie yet.
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Auto-playing clips feature */}
-            {mediaClips.filter(clip => clip.type === 'autoplay').length > 0 && (
+              
+              {/* Storyline */}
               <div className="mb-6">
-                <h2 className="text-xl font-bold mb-4">Previews</h2>
-                <div className="bg-gray-800 p-4 rounded-lg">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {mediaClips.filter(clip => clip.type === 'autoplay').map((clip) => (
-                      <div key={clip.id} className="bg-gray-700 rounded-lg overflow-hidden h-40">
-                        {clip.video_url ? (
-                          <video 
-                            src={clip.video_url} 
-                            className="w-full h-full object-cover"
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                          />
-                        ) : (
-                          <img 
-                            src={clip.thumbnail_url || "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5"} 
-                            alt={clip.title || "Preview clip"} 
-                            className="w-full h-full object-cover"
-                          />
+                <h3 className="text-lg font-semibold mb-2">Storyline</h3>
+                <p className="text-gray-300 leading-relaxed">
+                  {movie.storyline || 'No storyline available.'}
+                </p>
+              </div>
+              
+              {/* Cast */}
+              {cast.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-2">Cast</h3>
+                  <div className="flex flex-wrap gap-4">
+                    {cast.map((member) => (
+                      <div key={member.id} className="flex items-center bg-gray-800 rounded-full px-3 py-1">
+                        <span className="font-medium">{member.name}</span>
+                        {member.role && (
+                          <span className="text-gray-400 text-sm ml-2">as {member.role}</span>
                         )}
                       </div>
                     ))}
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-        
-        {/* Similar Movies */}
-        {similarMovies.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold mb-6">Similar Movies</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {similarMovies.map(movie => (
-                <Link to={`/movie/${movie.id}`} key={movie.id} className="group">
-                  <Card className="bg-gray-800 border-gray-700 overflow-hidden transform transition-transform hover:scale-105">
-                    <div className="relative">
-                      <img 
-                        src={movie.poster_url || "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5"} 
-                        alt={movie.title} 
-                        className="w-full h-[200px] object-cover"
-                        loading="lazy"
-                      />
-                      <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-sm font-bold">
-                        {movie.imdb_rating || "N/A"}
-                      </div>
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                        <div className="text-center px-4">
-                          <h3 className="font-bold text-lg mb-1">{movie.title}</h3>
-                          <p className="text-sm">{movie.year} • {movie.genre && movie.genre[0]}</p>
-                          <p className="mt-2 text-blue-400">Click to view details</p>
-                        </div>
-                      </div>
-                    </div>
-                    <CardContent className="p-4">
-                      <h3 className="font-bold text-lg mb-1">{movie.title}</h3>
-                      <div className="text-sm text-gray-400">
-                        <span>{movie.year} • {movie.genre && movie.genre[0]}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
+              )}
             </div>
           </div>
-        )}
+        </div>
+      </div>
+      
+      {/* Ad Banner */}
+      <div className="container mx-auto px-4 my-4">
+        <AdBanner 
+          position="details"
+          className="h-24 md:h-28"
+        />
+      </div>
+      
+      {/* Download and Trailer Section */}
+      <div className="container mx-auto px-4 py-6">
+        <Tabs defaultValue="download">
+          <TabsList className="w-full max-w-md mx-auto">
+            <TabsTrigger value="download" className="flex-1">Downloads</TabsTrigger>
+            <TabsTrigger value="trailer" className="flex-1">Trailer</TabsTrigger>
+            <TabsTrigger value="screenshots" className="flex-1">Screenshots</TabsTrigger>
+          </TabsList>
+          
+          {/* Download Links */}
+          <TabsContent value="download">
+            <div className="bg-gray-800 rounded-lg p-6 mt-4">
+              <h3 className="text-xl font-bold mb-4">Download {movie.title}</h3>
+              
+              {downloadLinks.length === 0 ? (
+                <p className="text-gray-400">No download links available right now.</p>
+              ) : (
+                <div className="space-y-4">
+                  {downloadLinks.map((link) => (
+                    <div 
+                      key={link.id} 
+                      className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 bg-gray-700 rounded-lg"
+                    >
+                      <div className="mb-2 md:mb-0">
+                        <div className="font-medium">{movie.title} - {link.quality}</div>
+                        <div className="text-sm text-gray-400">Size: {link.size}</div>
+                      </div>
+                      <Button 
+                        onClick={() => handleDownload(link)}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <Download className="mr-2" size={16} />
+                        Download
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          
+          {/* Trailer */}
+          <TabsContent value="trailer">
+            <div className="bg-gray-800 rounded-lg p-6 mt-4">
+              <h3 className="text-xl font-bold mb-4">{movie.title} - Trailer</h3>
+              
+              {trailers.length === 0 ? (
+                <p className="text-gray-400">No trailer available.</p>
+              ) : (
+                <div className="aspect-w-16 aspect-h-9">
+                  <iframe
+                    src={getEmbedUrl(trailers[0].video_url)}
+                    className="w-full h-96"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title={`${movie.title} Trailer`}
+                  ></iframe>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          
+          {/* Screenshots */}
+          <TabsContent value="screenshots">
+            <div className="bg-gray-800 rounded-lg p-6 mt-4">
+              <h3 className="text-xl font-bold mb-4">{movie.title} - Screenshots</h3>
+              <p className="text-gray-400">No screenshots available.</p>
+              {/* You could add screenshots here if available in your database */}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
       
       {/* Footer */}

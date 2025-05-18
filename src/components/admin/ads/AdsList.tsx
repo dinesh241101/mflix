@@ -1,69 +1,181 @@
 
-import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
+import { 
+  Table, 
+  TableBody, 
+  TableCaption, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2 } from "lucide-react";
-import { format } from "date-fns";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog";
+import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AdsListProps {
   ads: any[];
+  onEditAd: (ad: any) => void;
+  onRefreshList: () => void;
 }
 
-const AdsList = ({ ads }: AdsListProps) => {
+const AdsList = ({ ads, onEditAd, onRefreshList }: AdsListProps) => {
+  const [adToDelete, setAdToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteAd = async () => {
+    if (!adToDelete) return;
+    
+    try {
+      setIsDeleting(true);
+      
+      const { error } = await supabase
+        .from('ads')
+        .delete()
+        .eq('id', adToDelete);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Ad campaign deleted successfully!",
+      });
+      
+      // Close dialog and refresh list
+      setAdToDelete(null);
+      onRefreshList();
+      
+    } catch (error: any) {
+      console.error("Error deleting ad:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete ad campaign",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const toggleAdStatus = async (id: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('ads')
+        .update({ is_active: !currentStatus })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: `Ad campaign ${!currentStatus ? "activated" : "deactivated"} successfully!`,
+      });
+      
+      onRefreshList();
+    } catch (error: any) {
+      console.error("Error updating ad status:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update ad status",
+        variant: "destructive"
+      });
+    }
+  };
+
+  if (!ads || ads.length === 0) {
+    return (
+      <div className="text-center p-6 bg-gray-800 rounded-lg mt-6">
+        <p className="text-gray-400">No ad campaigns found.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {ads.filter(ad => ad.ad_type !== 'affiliate').map(ad => (
-        <Card key={ad.id} className="bg-gray-700 border-gray-600">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="font-medium text-lg">{ad.name}</h3>
-                <p className="text-gray-400 text-sm">{ad.ad_type} · {ad.position}</p>
-              </div>
-              <div className="flex">
-                <Button variant="ghost" size="sm" className="text-blue-400">
-                  <Edit size={16} />
-                </Button>
-                <Button variant="ghost" size="sm" className="text-red-400">
-                  <Trash2 size={16} />
-                </Button>
-              </div>
-            </div>
-            
-            <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-              <div className="bg-gray-800 p-2 rounded">
-                <span className="text-gray-400 block">Target:</span>
-                <span className="truncate block">{ad.target_url}</span>
-              </div>
-              <div className="bg-gray-800 p-2 rounded">
-                <span className="text-gray-400 block">Frequency:</span>
-                <span className="block">{ad.display_frequency}x</span>
-              </div>
-            </div>
-            
-            {ad.content_url && (
-              <div className="mt-4 bg-gray-800 rounded overflow-hidden h-24">
-                <img 
-                  src={ad.content_url}
-                  alt={ad.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = 'https://via.placeholder.com/400x100?text=Ad+Preview';
-                  }}
-                />
-              </div>
-            )}
-            
-            <div className="mt-4 flex justify-between text-sm text-gray-400">
-              <span>Created: {format(new Date(ad.created_at), 'MMM d, yyyy')}</span>
-              <span className={ad.is_active ? 'text-green-400' : 'text-red-400'}>
-                {ad.is_active ? 'Active' : 'Inactive'}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <>
+      <Table className="bg-gray-800 rounded-lg mt-6">
+        <TableCaption>List of all ad campaigns</TableCaption>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Position</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Frequency</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {ads.map((ad) => (
+            <TableRow key={ad.id}>
+              <TableCell className="font-medium">{ad.name}</TableCell>
+              <TableCell>{ad.ad_type}</TableCell>
+              <TableCell>{ad.position}</TableCell>
+              <TableCell>
+                <Badge 
+                  className={ad.is_active ? "bg-green-500" : "bg-red-500"} 
+                  onClick={() => toggleAdStatus(ad.id, ad.is_active)}
+                >
+                  {ad.is_active ? "Active" : "Inactive"}
+                </Badge>
+              </TableCell>
+              <TableCell>{ad.display_frequency}x</TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => onEditAd(ad)}
+                  >
+                    <Edit size={16} />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => setAdToDelete(ad.id)}
+                    className="text-red-500 hover:text-red-600"
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      
+      <AlertDialog open={!!adToDelete} onOpenChange={(open) => !open && setAdToDelete(null)}>
+        <AlertDialogContent className="bg-gray-800 text-white border-gray-700">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Are you sure you want to delete this ad campaign? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteAd}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

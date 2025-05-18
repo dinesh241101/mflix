@@ -8,6 +8,7 @@ import { Search, Home, Film, Tv, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MFlixLogo from "@/components/MFlixLogo";
 import MovieGrid from "@/components/MovieGrid";
+import { Input } from "@/components/ui/input";
 
 const WebSeries = () => {
   const { toast } = useToast();
@@ -17,6 +18,18 @@ const WebSeries = () => {
   const [selectedGenre, setSelectedGenre] = useState("All");
   const [genres, setGenres] = useState<string[]>([]);
   const [showShorts, setShowShorts] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Check screen size
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   // Fetch web series data
   useEffect(() => {
@@ -92,6 +105,29 @@ const WebSeries = () => {
     }
   };
 
+  // Reset search
+  const handleResetSearch = async () => {
+    setSearchQuery("");
+    
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('movies')
+        .select('*')
+        .eq('content_type', 'series')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      setSeries(data || []);
+      setSelectedGenre("All");
+    } catch (error) {
+      console.error("Error resetting search:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return <LoadingScreen />;
   }
@@ -101,23 +137,20 @@ const WebSeries = () => {
       {/* Header/Navigation */}
       <header className="bg-gray-800 shadow-md">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <Link to="/">
+          <div className={`flex ${isMobile ? 'flex-col gap-4' : 'justify-between items-center'}`}>
+            <Link to="/" className="flex justify-center">
               <MFlixLogo />
             </Link>
-            <nav>
-              <ul className="flex space-x-6">
-                <li><Link to="/" className="hover:text-blue-400 flex items-center"><Home className="mr-1" size={16} /> Home</Link></li>
-                <li><Link to="/movies" className="hover:text-blue-400 flex items-center"><Film className="mr-1" size={16} /> Movies</Link></li>
-                <li><Link to="/web-series" className="text-blue-400 flex items-center"><Tv className="mr-1" size={16} /> Web Series</Link></li>
-                <li><Link to="/anime" className="hover:text-blue-400 flex items-center"><Tv className="mr-1" size={16} /> Anime</Link></li>
+            <nav className={isMobile ? "overflow-x-auto" : ""}>
+              <ul className={`flex ${isMobile ? 'justify-between space-x-4' : 'space-x-6'}`}>
+                <li><Link to="/" className="hover:text-blue-400 flex items-center whitespace-nowrap"><Home className="mr-1" size={16} /> Home</Link></li>
+                <li><Link to="/movies" className="hover:text-blue-400 flex items-center whitespace-nowrap"><Film className="mr-1" size={16} /> Movies</Link></li>
+                <li><Link to="/web-series" className="text-blue-400 flex items-center whitespace-nowrap"><Tv className="mr-1" size={16} /> Web Series</Link></li>
+                <li><Link to="/anime" className="hover:text-blue-400 flex items-center whitespace-nowrap"><Tv className="mr-1" size={16} /> Anime</Link></li>
                 <li>
-                  <button 
-                    onClick={() => setShowShorts(true)} 
-                    className="hover:text-blue-400 flex items-center"
-                  >
+                  <Link to="/shorts" className="hover:text-blue-400 flex items-center whitespace-nowrap">
                     <Video className="mr-1" size={16} /> Shorts
-                  </button>
+                  </Link>
                 </li>
               </ul>
             </nav>
@@ -130,19 +163,31 @@ const WebSeries = () => {
         <div className="container mx-auto px-4">
           <form onSubmit={handleSearch} className="relative">
             <Search className="absolute left-3 top-3 text-gray-400" size={18} />
-            <input 
+            <Input 
               type="text" 
               placeholder="Search web series by title, description..." 
               className="w-full py-2 pl-10 pr-20 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <Button 
-              type="submit"
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 px-4 py-1 rounded-md"
-            >
-              Search
-            </Button>
+            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-2">
+              {searchQuery && (
+                <Button 
+                  type="button"
+                  onClick={handleResetSearch}
+                  variant="ghost"
+                  size="sm"
+                >
+                  Clear
+                </Button>
+              )}
+              <Button 
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-1 rounded-md"
+              >
+                Search
+              </Button>
+            </div>
           </form>
         </div>
       </section>
@@ -150,7 +195,7 @@ const WebSeries = () => {
       {/* Genre Filter */}
       <section className="py-4 container mx-auto px-4">
         <h2 className="text-xl font-bold mb-3">Filter by Genre</h2>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
           {genres.map((genre) => (
             <Button
               key={genre}
@@ -165,10 +210,28 @@ const WebSeries = () => {
       </section>
 
       {/* Web Series Grid */}
-      <MovieGrid 
-        movies={filteredSeries} 
-        title="All Web Series" 
-      />
+      <div className="container mx-auto px-4">
+        <MovieGrid 
+          movies={filteredSeries} 
+          title="All Web Series" 
+        />
+        
+        {filteredSeries.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12">
+            <p className="text-gray-400 text-lg mb-4">No web series found</p>
+            <Button onClick={handleResetSearch} variant="outline">
+              Reset Filters
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Ads Placement Example */}
+      <div className="container mx-auto px-4 my-6">
+        <div className="bg-blue-900/30 border border-blue-800/50 rounded-lg p-4 flex justify-center items-center h-28">
+          <p className="text-blue-300">Banner Ad Placement</p>
+        </div>
+      </div>
 
       {/* Footer */}
       <footer className="bg-gray-800 py-8 mt-12">

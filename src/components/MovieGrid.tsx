@@ -1,76 +1,107 @@
 
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Star } from "lucide-react";
+import AdBanner from "./ads/AdBanner";
 
-interface Movie {
-  id: string | number;
-  title: string;
-  poster_url?: string;
-  year?: number;
-  imdb_rating?: number;
-  genre?: string[];
-  downloads?: number;
-  content_type?: string;
+interface MovieProps {
+  movies: any[];
+  title?: string;
+  showFilters?: boolean;
 }
 
-interface MovieGridProps {
-  movies: Movie[];
-  title: string;
-  bgClass?: string;
-}
-
-const MovieGrid = ({ movies, title, bgClass = "" }: MovieGridProps) => {
+const MovieGrid = ({ movies, title = "Movies", showFilters = false }: MovieProps) => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
   return (
-    <section className={`py-8 ${bgClass}`}>
-      <div className="container mx-auto px-4">
-        <h2 className="text-2xl font-bold mb-6">{title}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {movies.map((movie, index) => (
-            <Link to={`/movie/${movie.id}`} key={movie.id || index} className="group">
-              <HoverCard>
-                <HoverCardTrigger asChild>
-                  <Card className="bg-gray-800 border-gray-700 overflow-hidden transform transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer">
-                    <div className="relative">
+    <div className="py-6">
+      <h2 className="text-2xl font-bold mb-6">{title}</h2>
+      
+      {movies.length === 0 ? (
+        <div className="bg-gray-800 rounded-lg p-12 text-center">
+          <p className="text-gray-400 text-lg">No movies found.</p>
+        </div>
+      ) : (
+        <div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6">
+            {movies.map((movie, index) => (
+              <>
+                {/* Insert ad banner every 10 items */}
+                {index > 0 && index % 10 === 0 && (
+                  <div key={`ad-${index}`} className={`${isMobile ? 'col-span-2' : 'sm:col-span-3 md:col-span-4 lg:col-span-5'} h-24 my-2`}>
+                    <AdBanner position="home" className="w-full h-full" />
+                  </div>
+                )}
+              
+                <Link 
+                  key={movie.id} 
+                  to={`/movie/${movie.id}`}
+                  className="group"
+                >
+                  <div className="bg-gray-800 rounded-lg overflow-hidden shadow-lg transition-transform transform hover:scale-105 hover:shadow-xl">
+                    {/* Movie poster */}
+                    <div className="relative aspect-[2/3]">
                       <img 
-                        src={movie.poster_url || "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5"} 
-                        alt={movie.title} 
-                        className="w-full h-[250px] object-cover"
+                        src={movie.poster_url || 'https://via.placeholder.com/300x450?text=No+Image'} 
+                        alt={movie.title}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
                       />
-                      <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-sm font-bold">
-                        {movie.imdb_rating || "N/A"}
+                      
+                      {/* Quality badge */}
+                      <span className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
+                        {movie.quality || 'HD'}
+                      </span>
+                      
+                      {/* Rating */}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2">
+                        <div className="flex items-center">
+                          <Star size={14} className="text-yellow-500 mr-1" />
+                          <span className="text-white text-sm">
+                            {movie.imdb_rating || '?'}/10
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Hover overlay */}
+                      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <div className="text-center p-4">
+                          <span className="inline-block bg-blue-600 text-white text-sm px-2 py-1 rounded mb-2">
+                            View Details
+                          </span>
+                          <p className="text-gray-200 text-sm hidden sm:block">
+                            {movie.year ? `${movie.year} | ` : ''}{(movie.genre && movie.genre[0]) || ''}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    <CardContent className="p-4">
-                      <h3 className="font-bold text-lg mb-1">{movie.title}</h3>
-                      <div className="flex justify-between text-sm text-gray-400">
-                        <span>{movie.year} • {movie.genre && movie.genre[0]}</span>
-                        <span>{movie.downloads || 0} downloads</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </HoverCardTrigger>
-                <HoverCardContent className="bg-gray-800 border-gray-700 text-white">
-                  <div className="flex flex-col">
-                    <h4 className="font-bold">{movie.title}</h4>
-                    <p className="text-sm text-gray-400 mb-1">{movie.year} • {movie.content_type}</p>
-                    <div className="flex gap-1 flex-wrap mb-2">
-                      {movie.genre && movie.genre.map((g: string, i: number) => (
-                        <span key={i} className="text-xs bg-gray-700 px-1.5 py-0.5 rounded">{g}</span>
-                      ))}
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-yellow-500">★ {movie.imdb_rating || "N/A"}</span>
-                      <span className="text-xs">{movie.downloads || 0} downloads</span>
+                    
+                    {/* Movie info */}
+                    <div className="p-3">
+                      <h3 className="text-white text-sm sm:text-base font-semibold line-clamp-2 leading-tight">
+                        {movie.title}
+                      </h3>
+                      <p className="text-gray-400 text-xs sm:text-sm mt-1">
+                        {movie.year || ''} {movie.year && movie.content_type ? '•' : ''} {movie.content_type === 'movie' ? 'Movie' : movie.content_type === 'series' ? 'Series' : movie.content_type}
+                      </p>
                     </div>
                   </div>
-                </HoverCardContent>
-              </HoverCard>
-            </Link>
-          ))}
+                </Link>
+              </>
+            ))}
+          </div>
         </div>
-      </div>
-    </section>
+      )}
+    </div>
   );
 };
 

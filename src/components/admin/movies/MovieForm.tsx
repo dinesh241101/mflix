@@ -1,3 +1,4 @@
+
 import {useState} from "react";
 import {Input} from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
@@ -7,6 +8,7 @@ import {Switch} from "@/components/ui/switch";
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
+import ImageUploader from "./ImageUploader";
 import * as React from "react";
 
 interface MovieFormProps {
@@ -175,15 +177,11 @@ const MovieForm = ({onSubmit, movieForm, setMovieForm, isEditing}: MovieFormProp
             </div>
 
             <div className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">Poster URL</label>
-                    <Input
-                        value={movieForm.posterUrl}
-                        onChange={(e) => setMovieForm({...movieForm, posterUrl: e.target.value})}
-                        className="bg-gray-700 border-gray-600"
-                        placeholder="https://example.com/poster.jpg"
-                    />
-                </div>
+                <ImageUploader 
+                  currentImageUrl={movieForm.posterUrl}
+                  onImageUrlChange={(url) => setMovieForm({...movieForm, posterUrl: url})}
+                  label="Poster Image"
+                />
 
                 <div>
                     <label className="block text-sm font-medium text-gray-400 mb-1">YouTube Trailer URL</label>
@@ -238,7 +236,7 @@ Quality: 720p, Size: 1.3GB, URL: https://example.com/download-720"
 
                 <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
                     <Upload className="mr-2" size={16}/>
-                    Add Movie
+                    {isEditing ? "Update Movie" : "Add Movie"}
                 </Button>
             </div>
         </form>

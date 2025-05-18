@@ -1,158 +1,225 @@
 
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { Button } from "@/components/ui/button";
-import ShortsPlayer from "@/components/ShortsPlayer";
-import MFlixLogo from "@/components/MFlixLogo";
-import LoadingScreen from "@/components/LoadingScreen";
-import { VideoIcon } from "lucide-react";
+import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, Volume2, VolumeX, Heart } from 'lucide-react';
+import LoadingScreen from '@/components/LoadingScreen';
+import MFlixLogo from '@/components/MFlixLogo';
+import AdBanner from '@/components/ads/AdBanner';
 
 const MobileShortsPage = () => {
+  const { toast } = useToast();
   const [shorts, setShorts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showPlayer, setShowPlayer] = useState(false);
-  const [currentShortId, setCurrentShortId] = useState<string | number | null>(null);
-  const isMobile = useIsMobile();
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [muted, setMuted] = useState(true);
+  const videoRefs = useRef<{ [key: number]: HTMLVideoElement }>({});
+  const [liked, setLiked] = useState<{[key: string]: boolean}>({});
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isPortrait, setIsPortrait] = useState(window.innerHeight > window.innerWidth);
   
-  // Fetch shorts from Supabase
+  // Check screen orientation and size
   useEffect(() => {
-    document.title = "Shorts - MFlix";
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      setIsPortrait(window.innerHeight > window.innerWidth);
+    };
     
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Fetch shorts data
+  useEffect(() => {
     const fetchShorts = async () => {
       try {
-        setLoading(true);
-        setError(null);
-        
         const { data, error } = await supabase
           .from('shorts')
           .select('*')
           .order('created_at', { ascending: false });
-          
-        if (error) throw error;
         
+        if (error) throw error;
         setShorts(data || []);
-      } catch (err: any) {
-        console.error("Error fetching shorts:", err);
-        setError(err.message || "Error fetching shorts");
+      } catch (error) {
+        console.error('Error fetching shorts:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load shorts. Please try again later.',
+          variant: 'destructive'
+        });
       } finally {
         setLoading(false);
       }
     };
     
     fetchShorts();
-    
-    // Track page view
-    supabase.from('analytics').insert({
-      page_visited: 'shorts',
-      browser: navigator.userAgent,
-      device: 'mobile',
-      os: navigator.platform
-    }).then(() => console.log("Analytics tracked"));
-    
-  }, []);
+  }, [toast]);
   
-  // Redirect desktop users to the home page
+  // Handle video playback when active index changes
   useEffect(() => {
-    if (isMobile === false) {
-      window.location.href = "/";
+    if (shorts.length > 0) {
+      // Pause all videos
+      Object.values(videoRefs.current).forEach(videoEl => {
+        if (videoEl) videoEl.pause();
+      });
+      
+      // Play the current video
+      const currentVideo = videoRefs.current[activeIndex];
+      if (currentVideo) {
+        currentVideo.currentTime = 0;
+        const playPromise = currentVideo.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.error('Error playing video:', error);
+          });
+        }
+      }
     }
-  }, [isMobile]);
+  }, [activeIndex, shorts]);
   
-  if (loading) {
-    return <LoadingScreen message="Loading Shorts" />;
-  }
-  
-  if (!isMobile) {
-    return null; // Will redirect in useEffect
-  }
-
-  // Handle short click to open player
-  const handleShortClick = (shortId: string | number) => {
-    setCurrentShortId(shortId);
-    setShowPlayer(true);
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (loading || shorts.length === 0) return;
+    
+    const container = e.currentTarget;
+    const scrollPosition = container.scrollTop;
+    const itemHeight = container.clientHeight;
+    
+    // Calculate which short should be active
+    const newIndex = Math.round(scrollPosition / itemHeight);
+    if (newIndex !== activeIndex && newIndex >= 0 && newIndex < shorts.length) {
+      setActiveIndex(newIndex);
+    }
   };
   
-  return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      {/* Header */}
-      <header className="bg-gray-800 shadow-md">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
+  const toggleMute = () => {
+    setMuted(!muted);
+    
+    // Apply mute state to all videos
+    Object.values(videoRefs.current).forEach(videoEl => {
+      if (videoEl) videoEl.muted = !muted;
+    });
+  };
+  
+  const toggleLike = (shortId: string) => {
+    setLiked(prev => ({ 
+      ...prev, 
+      [shortId]: !prev[shortId] 
+    }));
+  };
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+  
+  // Show message for desktop users
+  if (!isMobile && !isPortrait) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
+        <div className="max-w-md text-center">
+          <h1 className="text-3xl font-bold mb-6">Mobile Shorts</h1>
+          <p className="text-lg mb-8">This feature is optimized for mobile devices in portrait mode.</p>
+          <div className="mb-8">
+            <img 
+              src="https://via.placeholder.com/300x600?text=Mobile+Preview"
+              alt="Mobile Preview"
+              className="mx-auto rounded-3xl border-4 border-gray-700 shadow-lg"
+            />
+          </div>
+          <p className="text-gray-400 mb-6">For the best experience, please visit this page on your mobile device or resize your browser window to portrait orientation.</p>
+          <div className="flex justify-center">
             <Link to="/">
-              <MFlixLogo />
+              <Button>
+                <ChevronLeft className="mr-2" size={16} />
+                Back to Home
+              </Button>
             </Link>
-            <nav>
-              <ul className="flex space-x-4">
-                <li><Link to="/" className="hover:text-blue-400">Home</Link></li>
-                <li><Link to="/shorts" className="text-blue-400">Shorts</Link></li>
-                <li><Link to="/movies" className="hover:text-blue-400">Movies</Link></li>
-              </ul>
-            </nav>
           </div>
         </div>
-      </header>
-      
-      {/* Main content */}
-      <div className="container mx-auto px-4 py-6">
-        <h1 className="text-2xl font-bold mb-6">Trending Shorts</h1>
-        
-        {error ? (
-          <div className="bg-red-900/30 border border-red-500 p-4 rounded-lg text-center">
-            <p>{error}</p>
-            <Button onClick={() => window.location.reload()} className="mt-2">
-              Try Again
-            </Button>
-          </div>
-        ) : shorts.length === 0 ? (
-          <div className="bg-gray-800 p-6 rounded-lg text-center">
-            <p>No shorts available at the moment.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-4">
-            {shorts.map((short) => (
-              <div 
-                key={short.id} 
-                className="bg-gray-800 rounded-lg overflow-hidden"
-                onClick={() => handleShortClick(short.id)}
-              >
-                <div className="relative aspect-[9/16] bg-gray-700">
-                  {short.thumbnail_url ? (
-                    <img 
-                      src={short.thumbnail_url} 
-                      alt={short.title} 
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <VideoIcon size={48} className="text-gray-500" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                    <div className="bg-white/20 backdrop-blur-sm p-2 rounded-full">
-                      <VideoIcon size={24} className="text-white" />
-                    </div>
-                  </div>
-                </div>
-                <div className="p-2">
-                  <h3 className="font-medium text-sm truncate">{short.title}</h3>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      </div>
+    );
+  }
+  
+  return (
+    <div className="bg-black min-h-screen text-white">
+      {/* Top navigation bar */}
+      <div className="fixed top-0 left-0 right-0 z-10 bg-gradient-to-b from-black via-black/80 to-transparent p-4 flex justify-between items-center">
+        <Link to="/" className="text-white flex items-center">
+          <ChevronLeft className="mr-1" size={20} />
+          Back
+        </Link>
+        <div>
+          <MFlixLogo />
+        </div>
+        <div className="w-8">
+          {/* Empty div for flex spacing */}
+        </div>
       </div>
       
-      {/* Shorts Player */}
-      {showPlayer && (
-        <ShortsPlayer 
-          shorts={currentShortId ? shorts.filter(s => s.id === currentShortId) : shorts} 
-          onClose={() => setShowPlayer(false)} 
-        />
-      )}
+      {/* Shorts content */}
+      <div 
+        className="h-screen overflow-y-scroll snap-y snap-mandatory" 
+        onScroll={handleScroll}
+      >
+        {shorts.length === 0 ? (
+          <div className="h-screen flex items-center justify-center">
+            <p className="text-center text-gray-400">No shorts available</p>
+          </div>
+        ) : (
+          shorts.map((short, index) => (
+            <div key={short.id} className="h-screen w-full snap-start snap-always relative">
+              {/* Video container */}
+              <div className="absolute inset-0 bg-black">
+                <video
+                  ref={el => el && (videoRefs.current[index] = el)}
+                  src={short.video_url}
+                  poster={short.thumbnail_url}
+                  className="h-full w-full object-contain"
+                  playsInline
+                  loop
+                  muted={muted}
+                  controls={false}
+                />
+              </div>
+              
+              {/* Video info overlay */}
+              <div className="absolute bottom-20 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
+                <h3 className="text-xl font-bold mb-2">{short.title}</h3>
+              </div>
+              
+              {/* Side controls */}
+              <div className="absolute right-4 bottom-32 flex flex-col gap-6">
+                <button 
+                  className="h-10 w-10 rounded-full bg-gray-800/60 flex items-center justify-center"
+                  onClick={() => toggleLike(short.id)}
+                >
+                  <Heart 
+                    size={24} 
+                    className={liked[short.id] ? "fill-red-500 text-red-500" : "text-white"} 
+                  />
+                </button>
+                
+                <button 
+                  className="h-10 w-10 rounded-full bg-gray-800/60 flex items-center justify-center"
+                  onClick={toggleMute}
+                >
+                  {muted ? (
+                    <VolumeX size={24} className="text-white" />
+                  ) : (
+                    <Volume2 size={24} className="text-white" />
+                  )}
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+        
+        {/* Ad banner at end */}
+        <div className="h-20 w-full">
+          <AdBanner position="shorts" className="h-full w-full" />
+        </div>
+      </div>
     </div>
   );
 };

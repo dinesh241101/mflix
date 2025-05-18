@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
@@ -132,23 +131,30 @@ const MoviesPage = () => {
     try {
       setLoading(true);
       
+      // Validate inputs
+      if (!movieForm.title.trim()) {
+        throw new Error("Movie title is required");
+      }
+
       // Convert form data for Supabase
       const movieData = {
-        title: movieForm.title,
-        year: parseInt(movieForm.year),
-        content_type: "movie",
-        genre: movieForm.genre.split(',').map(g => g.trim()),
-        quality: movieForm.quality,
-        country: movieForm.country,
-        director: movieForm.director,
-        production_house: movieForm.productionHouse,
-        imdb_rating: parseFloat(movieForm.imdbRating),
-        storyline: movieForm.storyline,
-        seo_tags: movieForm.seoTags.split(',').map(t => t.trim()),
-        poster_url: movieForm.posterUrl,
-        featured: movieForm.featured,
+        title: movieForm.title.trim(),
+        year: movieForm.year ? parseInt(movieForm.year) : null,
+        content_type: movieForm.contentType || "movie",
+        genre: movieForm.genre ? movieForm.genre.split(',').map(g => g.trim()) : [],
+        quality: movieForm.quality || "1080p",
+        country: movieForm.country || "",
+        director: movieForm.director || "",
+        production_house: movieForm.productionHouse || "",
+        imdb_rating: movieForm.imdbRating ? parseFloat(movieForm.imdbRating) : null,
+        storyline: movieForm.storyline || "",
+        seo_tags: movieForm.seoTags ? movieForm.seoTags.split(',').map(t => t.trim()) : [],
+        poster_url: movieForm.posterUrl || "",
+        featured: movieForm.featured || false,
         downloads: 0
       };
+      
+      console.log("Sending movie data:", movieData);
       
       // Insert movie data
       const { data: movie, error: movieError } = await supabase
@@ -157,12 +163,15 @@ const MoviesPage = () => {
         .select('id')
         .single();
       
-      if (movieError) throw movieError;
+      if (movieError) {
+        console.error("Supabase error:", movieError);
+        throw new Error(`Failed to upload movie: ${movieError.message}`);
+      }
       
       // If movie created successfully, add download links
       if (movie && movie.id) {
         // Process download links if any
-        if (movieForm.downloadLinks.trim()) {
+        if (movieForm.downloadLinks?.trim()) {
           const links = movieForm.downloadLinks.split('\n').filter(link => link.trim());
           
           for (const link of links) {
@@ -171,7 +180,7 @@ const MoviesPage = () => {
             if (match && match.length >= 4) {
               const [_, quality, size, url] = match;
               
-              await supabase
+              const { error: linkError } = await supabase
                 .from('download_links')
                 .insert({
                   movie_id: movie.id,
@@ -179,13 +188,17 @@ const MoviesPage = () => {
                   size: size.trim(),
                   url: url.trim()
                 });
+              
+              if (linkError) {
+                console.warn("Failed to add download link:", linkError);
+              }
             }
           }
         }
         
         // Add YouTube trailer if provided
-        if (movieForm.youtubeTrailer.trim()) {
-          await supabase
+        if (movieForm.youtubeTrailer?.trim()) {
+          const { error: trailerError } = await supabase
             .from('media_clips')
             .insert({
               movie_id: movie.id,
@@ -193,6 +206,10 @@ const MoviesPage = () => {
               type: 'trailer',
               video_url: movieForm.youtubeTrailer.trim()
             });
+          
+          if (trailerError) {
+            console.warn("Failed to add trailer:", trailerError);
+          }
         }
         
         toast({
@@ -235,7 +252,7 @@ const MoviesPage = () => {
       setLoading(false);
     }
   };
-
+  
   // Handle movie select for cast management
   const handleSelectMovieForCast = async (movieId: string) => {
     try {

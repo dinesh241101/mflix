@@ -15,10 +15,7 @@ const AdminNavTabs = ({ activeTab }: AdminNavTabsProps) => {
   
   // Handle navigation without page reloads
   const handleNavigation = (path: string) => {
-    navigate(path, { 
-      replace: true, // Use replace to avoid building up history stack
-      state: { from: location.pathname } 
-    });
+    navigate(path, { replace: true }); // Use replace to avoid building up history stack
   };
   
   return (
@@ -39,7 +36,7 @@ const AdminNavTabs = ({ activeTab }: AdminNavTabsProps) => {
         </div>
       </div>
       
-      <TabsList className="w-full max-w-4xl">
+      <TabsList className="w-full max-w-4xl overflow-x-auto">
         <TabsTrigger 
           value="analytics" 
           onClick={() => handleNavigation('/admin/dashboard')}
