@@ -33,17 +33,23 @@ const ImageUploader = ({ currentImageUrl, onImageUrlChange, label = "Poster Imag
         return;
       }
       
-      // Direct upload to image URL
+      // Read the file as data URL (base64)
       const fileReader = new FileReader();
+      
       fileReader.onload = function(event) {
-        const imageUrl = event.target?.result as string;
-        onImageUrlChange(imageUrl);
-        toast({
-          title: "Image uploaded",
-          description: "Image has been prepared for upload.",
-        });
+        if (event.target?.result) {
+          const imageUrl = event.target.result as string;
+          onImageUrlChange(imageUrl);
+          
+          toast({
+            title: "Image uploaded",
+            description: "Image has been prepared for upload.",
+          });
+        }
       };
+      
       fileReader.readAsDataURL(file);
+      
     } catch (error: any) {
       console.error("Error uploading image:", error);
       toast({

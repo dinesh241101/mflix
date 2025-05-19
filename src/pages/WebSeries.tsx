@@ -2,130 +2,110 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
-import LoadingScreen from "@/components/LoadingScreen";
-import { Search, Home, Film, Tv, Video } from "lucide-react";
+import { Tv, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import MFlixLogo from "@/components/MFlixLogo";
-import MovieGrid from "@/components/MovieGrid";
-import { Input } from "@/components/ui/input";
+import LoadingScreen from "@/components/LoadingScreen";
+import AdBanner from "@/components/ads/AdBanner";
+
+const ITEMS_PER_PAGE = 12;
 
 const WebSeries = () => {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [series, setSeries] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedGenre, setSelectedGenre] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [genres, setGenres] = useState<string[]>([]);
-  const [showShorts, setShowShorts] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
 
-  // Check screen size
+  // Load web series
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
-
-  // Fetch web series data
-  useEffect(() => {
-    const fetchSeries = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from('movies')
-          .select('*')
-          .eq('content_type', 'series')
-          .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        setSeries(data || []);
-        
-        // Extract unique genres
-        const allGenres = data?.flatMap(series => series.genre || []) || [];
-        const uniqueGenres = [...new Set(allGenres)];
-        setGenres(["All", ...uniqueGenres]);
-        
-        // Track analytics
-        await supabase.from('analytics').insert({
-          page_visited: 'web-series',
-          browser: navigator.userAgent,
-          device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
-          os: navigator.platform
-        });
+        await fetchSeries(1, selectedGenre);
+        await fetchGenres();
       } catch (error) {
-        console.error("Error fetching web series:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load web series. Please try again later.",
-          variant: "destructive"
-        });
+        console.error("Error loading web series:", error);
       } finally {
         setLoading(false);
       }
     };
-    
-    fetchSeries();
-  }, [toast]);
 
-  // Filter series by genre
-  const filteredSeries = selectedGenre === "All"
-    ? series
-    : series.filter(s => s.genre?.includes(selectedGenre));
+    fetchData();
+  }, [selectedGenre]);
 
-  // Handle search
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    
-    toast({
-      title: "Search",
-      description: `Searching for: ${searchQuery}`,
-    });
-    
-    // Filter series by search query
-    const results = series.filter(s => 
-      s.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (s.storyline && s.storyline.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-    
-    if (results.length === 0) {
-      toast({
-        title: "No Results",
-        description: `No web series found matching '${searchQuery}'`,
-      });
-    } else {
-      setSeries(results);
-      setSelectedGenre("All");
+  // Fetch web series with pagination
+  const fetchSeries = async (page = 1, genre: string | null = null) => {
+    try {
+      const from = (page - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+      
+      let query = supabase
+        .from('movies')
+        .select('id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
+        .eq('content_type', 'series');
+        
+      if (genre) {
+        query = query.contains('genre', [genre]);
+      }
+      
+      // Get total count for pagination
+      const { count, error: countError } = await query.select('id', { count: 'exact' });
+        
+      if (countError) throw countError;
+      
+      // Calculate total pages
+      const totalPageCount = Math.ceil((count || 0) / ITEMS_PER_PAGE);
+      setTotalPages(totalPageCount || 1);
+      
+      // Fetch paginated data
+      const { data, error } = await query.range(from, to);
+      
+      if (error) throw error;
+      setSeries(data || []);
+      setCurrentPage(page);
+      
+    } catch (error) {
+      console.error("Error loading web series:", error);
     }
   };
 
-  // Reset search
-  const handleResetSearch = async () => {
-    setSearchQuery("");
-    
+  // Fetch unique genres
+  const fetchGenres = async () => {
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('movies')
-        .select('*')
-        .eq('content_type', 'series')
-        .order('created_at', { ascending: false });
-      
+        .select('genre')
+        .eq('content_type', 'series');
+        
       if (error) throw error;
       
-      setSeries(data || []);
-      setSelectedGenre("All");
+      // Extract and flatten all genres
+      const allGenres = data?.flatMap(item => item.genre || []) || [];
+      
+      // Get unique genres
+      const uniqueGenres = [...new Set(allGenres)].filter(Boolean).sort();
+      setGenres(uniqueGenres);
+      
     } catch (error) {
-      console.error("Error resetting search:", error);
-    } finally {
-      setLoading(false);
+      console.error("Error fetching genres:", error);
     }
+  };
+
+  // Handle search form submission
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    // In a real app, implement search functionality here
+    console.log("Searching for:", searchQuery);
+  };
+
+  // Handle genre selection
+  const handleGenreSelect = (genre: string | null) => {
+    setSelectedGenre(genre);
+    setCurrentPage(1);
   };
 
   if (loading) {
@@ -134,26 +114,27 @@ const WebSeries = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      {/* Header/Navigation */}
+      {/* Header */}
       <header className="bg-gray-800 shadow-md">
         <div className="container mx-auto px-4 py-4">
-          <div className={`flex ${isMobile ? 'flex-col gap-4' : 'justify-between items-center'}`}>
-            <Link to="/" className="flex justify-center">
-              <MFlixLogo />
-            </Link>
-            <nav className={isMobile ? "overflow-x-auto" : ""}>
-              <ul className={`flex ${isMobile ? 'justify-between space-x-4' : 'space-x-6'}`}>
-                <li><Link to="/" className="hover:text-blue-400 flex items-center whitespace-nowrap"><Home className="mr-1" size={16} /> Home</Link></li>
-                <li><Link to="/movies" className="hover:text-blue-400 flex items-center whitespace-nowrap"><Film className="mr-1" size={16} /> Movies</Link></li>
-                <li><Link to="/web-series" className="text-blue-400 flex items-center whitespace-nowrap"><Tv className="mr-1" size={16} /> Web Series</Link></li>
-                <li><Link to="/anime" className="hover:text-blue-400 flex items-center whitespace-nowrap"><Tv className="mr-1" size={16} /> Anime</Link></li>
-                <li>
-                  <Link to="/shorts" className="hover:text-blue-400 flex items-center whitespace-nowrap">
-                    <Video className="mr-1" size={16} /> Shorts
-                  </Link>
-                </li>
+          <div className="flex justify-between items-center">
+            <MFlixLogo />
+            <nav className="hidden md:block">
+              <ul className="flex space-x-6">
+                <li><Link to="/" className="hover:text-blue-400">Home</Link></li>
+                <li><Link to="/movies" className="hover:text-blue-400">Movies</Link></li>
+                <li><Link to="/series" className="hover:text-blue-400 font-bold text-blue-400">Web Series</Link></li>
+                <li><Link to="/anime" className="hover:text-blue-400">Anime</Link></li>
               </ul>
             </nav>
+            <div className="md:hidden">
+              <button className="text-white">
+                <span className="sr-only">Open menu</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -163,74 +144,171 @@ const WebSeries = () => {
         <div className="container mx-auto px-4">
           <form onSubmit={handleSearch} className="relative">
             <Search className="absolute left-3 top-3 text-gray-400" size={18} />
-            <Input 
+            <input 
               type="text" 
-              placeholder="Search web series by title, description..." 
+              placeholder="Search web series..." 
               className="w-full py-2 pl-10 pr-20 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-2">
-              {searchQuery && (
-                <Button 
-                  type="button"
-                  onClick={handleResetSearch}
-                  variant="ghost"
-                  size="sm"
-                >
-                  Clear
-                </Button>
-              )}
-              <Button 
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-1 rounded-md"
-              >
-                Search
-              </Button>
-            </div>
+            <Button 
+              type="submit"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 px-4 py-1 rounded-md"
+            >
+              Search
+            </Button>
           </form>
         </div>
       </section>
 
-      {/* Genre Filter */}
-      <section className="py-4 container mx-auto px-4">
-        <h2 className="text-xl font-bold mb-3">Filter by Genre</h2>
-        <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
-          {genres.map((genre) => (
-            <Button
-              key={genre}
-              variant={selectedGenre === genre ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedGenre(genre)}
+      {/* Ad banner top */}
+      <div className="container mx-auto px-4 my-4">
+        <AdBanner position="series_top" />
+      </div>
+
+      {/* Genres Filter */}
+      <section className="py-4 overflow-x-auto">
+        <div className="container mx-auto px-4">
+          <div className="flex space-x-2">
+            <button
+              onClick={() => handleGenreSelect(null)}
+              className={`px-3 py-1.5 rounded-md text-sm whitespace-nowrap ${
+                selectedGenre === null ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'
+              }`}
             >
-              {genre}
-            </Button>
-          ))}
+              All Series
+            </button>
+            
+            {genres.map((genre) => (
+              <button
+                key={genre}
+                onClick={() => handleGenreSelect(genre)}
+                className={`px-3 py-1.5 rounded-md text-sm whitespace-nowrap ${
+                  selectedGenre === genre ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'
+                }`}
+              >
+                {genre}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Web Series Grid */}
-      <div className="container mx-auto px-4">
-        <MovieGrid 
-          movies={filteredSeries} 
-          title="All Web Series" 
-        />
-        
-        {filteredSeries.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12">
-            <p className="text-gray-400 text-lg mb-4">No web series found</p>
-            <Button onClick={handleResetSearch} variant="outline">
-              Reset Filters
-            </Button>
-          </div>
-        )}
+      {/* Page Title */}
+      <div className="container mx-auto px-4 py-4">
+        <h1 className="text-3xl font-bold">
+          {selectedGenre ? `${selectedGenre} Web Series` : 'Web Series'}
+        </h1>
+        <p className="text-gray-400 mt-2">
+          Watch the latest and most popular web series online
+        </p>
       </div>
 
-      {/* Ads Placement Example */}
-      <div className="container mx-auto px-4 my-6">
-        <div className="bg-blue-900/30 border border-blue-800/50 rounded-lg p-4 flex justify-center items-center h-28">
-          <p className="text-blue-300">Banner Ad Placement</p>
+      {/* Web Series Grid */}
+      <section className="py-8">
+        <div className="container mx-auto px-4">
+          {series.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {series.map((item) => (
+                <Link key={item.id} to={`/movie/${item.id}`}>
+                  <div className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-750 transition-colors">
+                    <div className="h-56 bg-gray-700 relative">
+                      {item.poster_url ? (
+                        <img 
+                          src={item.poster_url} 
+                          alt={item.title} 
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Tv size={32} className="text-gray-500" />
+                        </div>
+                      )}
+                      {item.imdb_rating && (
+                        <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-xs font-bold">
+                          IMDb {item.imdb_rating}
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-bold text-white truncate">{item.title}</h3>
+                      <div className="flex items-center justify-between mt-2 text-sm text-gray-400">
+                        <div>
+                          {item.year && <span>{item.year}</span>}
+                        </div>
+                        {item.downloads > 0 && (
+                          <div>{item.downloads.toLocaleString()} downloads</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Tv size={48} className="mx-auto mb-4 text-gray-500" />
+              <h3 className="text-xl">No web series found</h3>
+              <p className="text-gray-400 mt-2">
+                {selectedGenre 
+                  ? `No web series found in the ${selectedGenre} genre.` 
+                  : 'Try adjusting your filters or search'}
+              </p>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <Pagination className="mt-8">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => fetchSeries(Math.max(1, currentPage - 1), selectedGenre)}
+                    className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  // Show pages around current page
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <PaginationItem key={i}>
+                      <PaginationLink 
+                        onClick={() => fetchSeries(pageNum, selectedGenre)}
+                        isActive={currentPage === pageNum}
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => fetchSeries(Math.min(totalPages, currentPage + 1), selectedGenre)}
+                    className={currentPage >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </div>
+      </section>
+
+      {/* Ad banner bottom */}
+      <div className="container mx-auto px-4 my-4">
+        <AdBanner position="series_bottom" />
       </div>
 
       {/* Footer */}

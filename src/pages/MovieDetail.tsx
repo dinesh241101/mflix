@@ -1,353 +1,505 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/use-toast";
+import { Film, Star, Calendar, Clock, Download, Globe, PlayCircle } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
 import MFlixLogo from "@/components/MFlixLogo";
-import { Download, Home, Star, Film, Tv, Video, Calendar, Flag, Trophy, Info, UserCheck } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ShareLinks from "@/components/ShareLinks";
+import AutoplayClip from "@/components/AutoplayClip";
 import AdBanner from "@/components/ads/AdBanner";
 
 const MovieDetail = () => {
-  const { id } = useParams<{ id: string }>();
-  const { toast } = useToast();
-  const [movie, setMovie] = useState<any>(null);
-  const [cast, setCast] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { id } = useParams();
+  const [movie, setMovie] = useState<any | null>(null);
+  const [trailerUrl, setTrailerUrl] = useState("");
+  const [screenshots, setScreenshots] = useState([]);
   const [downloadLinks, setDownloadLinks] = useState<any[]>([]);
-  const [trailers, setTrailers] = useState<any[]>([]);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [loading, setLoading] = useState(true);
+  const [cast, setCast] = useState<any[]>([]);
+  const [relatedMovies, setRelatedMovies] = useState<any[]>([]);
+  const videoRef = useRef<HTMLDivElement>(null);
+  
+  // Scroll to video section
+  const scrollToVideo = () => {
+    if (videoRef.current) {
+      videoRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
-  // Check screen size
+  // Update document title when movie data is loaded
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
-
-  // Set document title based on movie title
-  useEffect(() => {
-    if (movie) {
+    if (movie?.title) {
       document.title = `${movie.title} - MFlix`;
     } else {
       document.title = "Movie Details - MFlix";
     }
     
-    // Restore original title when component unmounts
+    // Reset title when component unmounts
     return () => {
       document.title = "MFlix";
     };
-  }, [movie]);
+  }, [movie?.title]);
 
+  // Fetch movie data
   useEffect(() => {
-    const fetchMovieDetails = async () => {
-      if (!id) return;
-      
+    const fetchMovieData = async () => {
       try {
-        setIsLoading(true);
+        setLoading(true);
         
-        // Fetch movie
+        // Get movie details
         const { data: movieData, error: movieError } = await supabase
-          .from('movies')
-          .select('*')
-          .eq('id', id)
+          .from("movies")
+          .select("*")
+          .eq("id", id)
           .single();
         
         if (movieError) throw movieError;
+        if (!movieData) throw new Error("Movie not found");
+        
         setMovie(movieData);
         
-        // Fetch cast
-        const { data: castData, error: castError } = await supabase
-          .from('movie_cast')
-          .select('*')
-          .eq('movie_id', id);
-        
-        if (castError) throw castError;
-        setCast(castData || []);
-        
-        // Fetch download links
-        const { data: linksData, error: linksError } = await supabase
-          .from('download_links')
-          .select('*')
-          .eq('movie_id', id);
-        
-        if (linksError) throw linksError;
-        setDownloadLinks(linksData || []);
-        
-        // Fetch trailers
+        // Get trailer
         const { data: trailerData, error: trailerError } = await supabase
-          .from('media_clips')
-          .select('*')
-          .eq('movie_id', id)
-          .eq('type', 'trailer');
+          .from("media_clips")
+          .select("*")
+          .eq("movie_id", id)
+          .eq("type", "trailer")
+          .limit(1)
+          .single();
         
-        if (trailerError) throw trailerError;
-        setTrailers(trailerData || []);
+        if (trailerData && !trailerError) {
+          setTrailerUrl(trailerData.video_url);
+        }
         
-        // Track analytics
+        // Get cast
+        const { data: castData, error: castError } = await supabase
+          .from("movie_cast")
+          .select("*")
+          .eq("movie_id", id);
+        
+        if (!castError) {
+          setCast(castData || []);
+        }
+        
+        // Get download links
+        const { data: downloadData, error: downloadError } = await supabase
+          .from("download_links")
+          .select("*")
+          .eq("movie_id", id);
+        
+        if (!downloadError) {
+          setDownloadLinks(downloadData || []);
+        }
+        
+        // Get related movies by genre
+        if (movieData.genre && movieData.genre.length > 0) {
+          const { data: relatedData, error: relatedError } = await supabase
+            .from("movies")
+            .select("id, title, poster_url, year, imdb_rating, genre")
+            .contains("genre", [movieData.genre[0]])
+            .neq("id", id)
+            .limit(4);
+          
+          if (!relatedError) {
+            setRelatedMovies(relatedData || []);
+          }
+        }
+        
+        // Track view
         await supabase.from('analytics').insert({
-          page_visited: 'movie-detail',
+          page_visited: `movie/${id}`,
           browser: navigator.userAgent,
           device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
           os: navigator.platform
         });
         
-        // Update downloads counter (just for analytics, not affecting DB)
-        if (movieData) {
-          await supabase
-            .from('movies')
-            .update({ downloads: (movieData.downloads || 0) + 1 })
-            .eq('id', id);
-        }
-        
       } catch (error) {
-        console.error("Error fetching movie details:", error);
+        console.error("Error fetching movie data:", error);
         toast({
           title: "Error",
           description: "Failed to load movie details. Please try again later.",
           variant: "destructive"
         });
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
     
-    fetchMovieDetails();
+    if (id) {
+      fetchMovieData();
+    }
   }, [id, toast]);
-  
-  if (isLoading) {
+
+  // Handle download click
+  const handleDownloadClick = async (downloadLink: any) => {
+    try {
+      // Update downloads count
+      const { error } = await supabase
+        .from("movies")
+        .update({ downloads: (movie.downloads || 0) + 1 })
+        .eq("id", id);
+      
+      if (error) throw error;
+      
+      // Track analytics
+      await supabase.from('analytics').insert({
+        page_visited: `download/${id}`,
+        browser: navigator.userAgent,
+        device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
+        os: navigator.platform
+      });
+      
+      // Open link in new tab
+      window.open(downloadLink.url, "_blank");
+      
+    } catch (error) {
+      console.error("Error tracking download:", error);
+    }
+  };
+
+  if (loading) {
     return <LoadingScreen />;
   }
-  
+
   if (!movie) {
     return (
-      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white">
-        <h1 className="text-3xl font-bold mb-4">Movie Not Found</h1>
-        <p className="text-gray-400 mb-8">Sorry, the movie you're looking for doesn't exist.</p>
-        <Link to="/">
-          <Button>Back to Home</Button>
-        </Link>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">
+        <div className="text-center">
+          <Film size={64} className="mx-auto mb-6 text-gray-600" />
+          <h1 className="text-3xl font-bold mb-4">Movie Not Found</h1>
+          <p className="mb-6 text-gray-400">The movie you're looking for doesn't exist or has been removed.</p>
+          <Link to="/" className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-medium">
+            Return to Homepage
+          </Link>
+        </div>
       </div>
     );
   }
-  
-  // Format YouTube URL
-  const getEmbedUrl = (url: string) => {
-    if (!url) return '';
-    
-    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-    const match = url.match(youtubeRegex);
-    
-    if (match && match[1]) {
-      return `https://www.youtube.com/embed/${match[1]}`;
-    }
-    
-    return url;
+
+  // Extract YouTube video ID from URL
+  const getYoutubeVideoId = (url: string) => {
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : "";
   };
   
-  const handleDownload = (downloadLink: any) => {
-    // In a real app, you'd track this download
-    window.open(downloadLink.url, '_blank');
-  };
+  const youtubeId = trailerUrl ? getYoutubeVideoId(trailerUrl) : "";
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
       <header className="bg-gray-800 shadow-md">
         <div className="container mx-auto px-4 py-4">
-          <div className={`flex ${isMobile ? 'flex-col gap-4' : 'justify-between items-center'}`}>
-            <Link to="/" className="flex justify-center">
-              <MFlixLogo />
-            </Link>
-            <nav className={isMobile ? "overflow-x-auto" : ""}>
-              <ul className={`flex ${isMobile ? 'justify-between space-x-4' : 'space-x-6'}`}>
-                <li><Link to="/" className="hover:text-blue-400 flex items-center whitespace-nowrap"><Home className="mr-1" size={16} /> Home</Link></li>
-                <li><Link to="/movies" className="hover:text-blue-400 flex items-center whitespace-nowrap"><Film className="mr-1" size={16} /> Movies</Link></li>
-                <li><Link to="/web-series" className="hover:text-blue-400 flex items-center whitespace-nowrap"><Tv className="mr-1" size={16} /> Web Series</Link></li>
-                <li><Link to="/anime" className="hover:text-blue-400 flex items-center whitespace-nowrap"><Tv className="mr-1" size={16} /> Anime</Link></li>
-                <li><Link to="/shorts" className="hover:text-blue-400 flex items-center whitespace-nowrap"><Video className="mr-1" size={16} /> Shorts</Link></li>
+          <div className="flex justify-between items-center">
+            <MFlixLogo />
+            <nav className="hidden md:block">
+              <ul className="flex space-x-6">
+                <li><Link to="/" className="hover:text-blue-400">Home</Link></li>
+                <li><Link to="/movies" className="hover:text-blue-400">Movies</Link></li>
+                <li><Link to="/series" className="hover:text-blue-400">Web Series</Link></li>
+                <li><Link to="/anime" className="hover:text-blue-400">Anime</Link></li>
               </ul>
             </nav>
+            <button className="md:hidden text-white">
+              <span className="sr-only">Open menu</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
           </div>
         </div>
       </header>
-      
+
+      {/* Ad banner top */}
+      <div className="container mx-auto px-4 py-4">
+        <AdBanner position="movie_detail_top" />
+      </div>
+
       {/* Movie Hero Section */}
-      <div 
-        className="bg-cover bg-center pt-12 pb-6 relative"
-        style={{
-          backgroundImage: `linear-gradient(to bottom, rgba(17, 24, 39, 0.7), rgba(17, 24, 39, 1)), url(${movie.poster_url || 'https://via.placeholder.com/1200x600?text=No+Image'})`
-        }}
-      >
+      <section className="py-8 lg:py-12">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row gap-8">
-            {/* Poster */}
+            {/* Movie Poster */}
             <div className="w-full md:w-1/3 lg:w-1/4 flex-shrink-0">
-              <div className="rounded-lg overflow-hidden shadow-lg">
-                <img 
-                  src={movie.poster_url || 'https://via.placeholder.com/500x750?text=No+Poster'} 
-                  alt={movie.title}
-                  className="w-full h-auto"
-                />
+              <div className="bg-gray-800 rounded-lg overflow-hidden">
+                {movie.poster_url ? (
+                  <img 
+                    src={movie.poster_url} 
+                    alt={movie.title} 
+                    className="w-full h-auto object-cover"
+                  />
+                ) : (
+                  <div className="aspect-[2/3] flex items-center justify-center bg-gray-700">
+                    <Film size={64} className="text-gray-500" />
+                  </div>
+                )}
+              </div>
+              
+              {/* Movie Ratings for Mobile */}
+              <div className="md:hidden mt-4 flex items-center space-x-4">
+                {movie.imdb_rating && (
+                  <div className="flex items-center">
+                    <Star className="text-yellow-500 mr-1" size={18} />
+                    <span className="font-bold">{movie.imdb_rating}</span>
+                    <span className="text-gray-400 text-sm ml-1">/10</span>
+                  </div>
+                )}
+                {movie.downloads > 0 && (
+                  <div className="text-gray-400">
+                    <span>{movie.downloads.toLocaleString()}</span> downloads
+                  </div>
+                )}
               </div>
             </div>
             
-            {/* Details */}
-            <div className="w-full md:w-2/3 lg:w-3/4">
+            {/* Movie Details */}
+            <div className="flex-1">
               <h1 className="text-3xl md:text-4xl font-bold mb-2">{movie.title}</h1>
               
               <div className="flex flex-wrap gap-2 mb-4">
-                {movie.genre?.map((g: string) => (
-                  <span key={g} className="px-2 py-1 bg-blue-900/50 rounded-md text-sm">
-                    {g}
+                {movie.year && (
+                  <span className="bg-gray-700 px-2 py-1 rounded text-sm inline-flex items-center">
+                    <Calendar size={14} className="mr-1" /> {movie.year}
                   </span>
-                ))}
+                )}
+                {movie.quality && (
+                  <span className="bg-blue-600 px-2 py-1 rounded text-sm">{movie.quality}</span>
+                )}
+                {movie.content_type && (
+                  <span className="bg-purple-600 px-2 py-1 rounded text-sm capitalize">{movie.content_type}</span>
+                )}
               </div>
               
-              {/* Metadata */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-                <div className="flex items-center">
-                  <Calendar className="mr-2 text-gray-400" size={16} />
-                  <span>{movie.year || 'Unknown'}</span>
-                </div>
-                <div className="flex items-center">
-                  <Star className="mr-2 text-yellow-500" size={16} />
-                  <span>{movie.imdb_rating || '?'}/10 IMDb</span>
-                </div>
-                <div className="flex items-center">
-                  <Flag className="mr-2 text-gray-400" size={16} />
-                  <span>{movie.country || 'Unknown'}</span>
-                </div>
-                <div className="flex items-center">
-                  <Trophy className="mr-2 text-gray-400" size={16} />
-                  <span>{movie.quality || 'HD'}</span>
-                </div>
-                <div className="flex items-center">
-                  <UserCheck className="mr-2 text-gray-400" size={16} />
-                  <span>{movie.director || 'Unknown Director'}</span>
-                </div>
-                <div className="flex items-center">
-                  <Info className="mr-2 text-gray-400" size={16} />
-                  <span>{movie.production_house || 'Unknown Studio'}</span>
-                </div>
-              </div>
-              
-              {/* Storyline */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-2">Storyline</h3>
-                <p className="text-gray-300 leading-relaxed">
-                  {movie.storyline || 'No storyline available.'}
-                </p>
-              </div>
-              
-              {/* Cast */}
-              {cast.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-2">Cast</h3>
-                  <div className="flex flex-wrap gap-4">
-                    {cast.map((member) => (
-                      <div key={member.id} className="flex items-center bg-gray-800 rounded-full px-3 py-1">
-                        <span className="font-medium">{member.name}</span>
-                        {member.role && (
-                          <span className="text-gray-400 text-sm ml-2">as {member.role}</span>
-                        )}
-                      </div>
-                    ))}
+              {/* Movie Ratings for Desktop */}
+              <div className="hidden md:flex items-center space-x-4 mb-6">
+                {movie.imdb_rating && (
+                  <div className="flex items-center">
+                    <Star className="text-yellow-500 mr-1" size={20} />
+                    <span className="font-bold text-lg">{movie.imdb_rating}</span>
+                    <span className="text-gray-400 text-sm ml-1">/10</span>
                   </div>
-                </div>
+                )}
+                {movie.downloads > 0 && (
+                  <div className="text-gray-400">
+                    <Download className="inline mr-1" size={18} />
+                    <span>{movie.downloads.toLocaleString()}</span> downloads
+                  </div>
+                )}
+              </div>
+              
+              {/* Watch Trailer Button */}
+              {youtubeId && (
+                <Button 
+                  className="mb-6 bg-red-600 hover:bg-red-700"
+                  onClick={scrollToVideo}
+                >
+                  <PlayCircle className="mr-2" size={18} />
+                  Watch Trailer
+                </Button>
               )}
+              
+              {/* Movie Information */}
+              <div className="space-y-4">
+                {movie.genre && movie.genre.length > 0 && (
+                  <div>
+                    <h3 className="text-gray-400 text-sm">Genres</h3>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {movie.genre.map((genre: string, index: number) => (
+                        <Link 
+                          key={index}
+                          to={`/movies?genre=${genre}`}
+                          className="bg-gray-700 px-2 py-1 rounded text-sm hover:bg-gray-600"
+                        >
+                          {genre}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {movie.director && (
+                  <div>
+                    <h3 className="text-gray-400 text-sm">Director</h3>
+                    <p>{movie.director}</p>
+                  </div>
+                )}
+                
+                {movie.country && (
+                  <div className="flex items-start">
+                    <h3 className="text-gray-400 text-sm mr-2">Country</h3>
+                    <div className="flex items-center">
+                      <Globe size={14} className="mr-1 mt-0.5" />
+                      <span>{movie.country}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Share Links */}
+              <div className="mt-6">
+                <h3 className="text-gray-400 text-sm mb-2">Share</h3>
+                <ShareLinks url={window.location.href} title={movie.title} />
+              </div>
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Ad banner before storyline */}
+      <div className="container mx-auto px-4 mb-8">
+        <AdBanner position="movie_detail_middle" />
       </div>
-      
-      {/* Ad Banner */}
-      <div className="container mx-auto px-4 my-4">
-        <AdBanner 
-          position="details"
-          className="h-24 md:h-28"
-        />
-      </div>
-      
-      {/* Download and Trailer Section */}
-      <div className="container mx-auto px-4 py-6">
-        <Tabs defaultValue="download">
-          <TabsList className="w-full max-w-md mx-auto">
-            <TabsTrigger value="download" className="flex-1">Downloads</TabsTrigger>
-            <TabsTrigger value="trailer" className="flex-1">Trailer</TabsTrigger>
-            <TabsTrigger value="screenshots" className="flex-1">Screenshots</TabsTrigger>
-          </TabsList>
-          
-          {/* Download Links */}
-          <TabsContent value="download">
-            <div className="bg-gray-800 rounded-lg p-6 mt-4">
-              <h3 className="text-xl font-bold mb-4">Download {movie.title}</h3>
-              
-              {downloadLinks.length === 0 ? (
-                <p className="text-gray-400">No download links available right now.</p>
-              ) : (
-                <div className="space-y-4">
-                  {downloadLinks.map((link) => (
-                    <div 
-                      key={link.id} 
-                      className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 bg-gray-700 rounded-lg"
-                    >
-                      <div className="mb-2 md:mb-0">
-                        <div className="font-medium">{movie.title} - {link.quality}</div>
-                        <div className="text-sm text-gray-400">Size: {link.size}</div>
-                      </div>
-                      <Button 
-                        onClick={() => handleDownload(link)}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <Download className="mr-2" size={16} />
-                        Download
-                      </Button>
+
+      {/* Storyline Section */}
+      <section className="py-8 bg-gray-800">
+        <div className="container mx-auto px-4">
+          <h2 className="text-2xl font-bold mb-4">Storyline</h2>
+          <p className="whitespace-pre-line">{movie.storyline || "No storyline available for this title."}</p>
+        </div>
+      </section>
+
+      {/* Trailer Section */}
+      {youtubeId && (
+        <section className="py-8" ref={videoRef}>
+          <div className="container mx-auto px-4">
+            <h2 className="text-2xl font-bold mb-6">Trailer</h2>
+            <div className="aspect-video bg-gray-800 rounded-lg overflow-hidden">
+              <iframe 
+                width="100%" 
+                height="100%" 
+                src={`https://www.youtube.com/embed/${youtubeId}`}
+                title={`${movie.title} - Trailer`}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Cast Section */}
+      {cast.length > 0 && (
+        <section className="py-8 bg-gray-800">
+          <div className="container mx-auto px-4">
+            <h2 className="text-2xl font-bold mb-6">Cast</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {cast.map((person) => (
+                <div key={person.id} className="bg-gray-700 rounded-lg p-4 text-center">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-gray-600 flex items-center justify-center mb-2">
+                    {person.profile_pic ? (
+                      <img 
+                        src={person.profile_pic}
+                        alt={person.name}
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zm-4 7a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    )}
+                  </div>
+                  <h3 className="font-medium">{person.name}</h3>
+                  {person.role && (
+                    <p className="text-sm text-gray-400">{person.role}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Download Section */}
+      {downloadLinks.length > 0 && (
+        <section className="py-8">
+          <div className="container mx-auto px-4">
+            <h2 className="text-2xl font-bold mb-6">Download Links</h2>
+            <div className="space-y-4">
+              {downloadLinks.map((link) => (
+                <div 
+                  key={link.id}
+                  className="bg-gray-800 rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between"
+                >
+                  <div className="mb-4 md:mb-0">
+                    <div className="flex items-center mb-1">
+                      <span className="font-bold mr-2">Quality:</span>
+                      <span className="bg-blue-600 px-2 py-0.5 rounded text-sm">{link.quality}</span>
                     </div>
-                  ))}
+                    <div className="flex items-center">
+                      <span className="font-bold mr-2">Size:</span>
+                      <span>{link.size}</span>
+                    </div>
+                  </div>
+                  <Button 
+                    className="bg-green-600 hover:bg-green-700"
+                    onClick={() => handleDownloadClick(link)}
+                  >
+                    <Download className="mr-2" size={16} />
+                    Download
+                  </Button>
                 </div>
-              )}
+              ))}
             </div>
-          </TabsContent>
-          
-          {/* Trailer */}
-          <TabsContent value="trailer">
-            <div className="bg-gray-800 rounded-lg p-6 mt-4">
-              <h3 className="text-xl font-bold mb-4">{movie.title} - Trailer</h3>
-              
-              {trailers.length === 0 ? (
-                <p className="text-gray-400">No trailer available.</p>
-              ) : (
-                <div className="aspect-w-16 aspect-h-9">
-                  <iframe
-                    src={getEmbedUrl(trailers[0].video_url)}
-                    className="w-full h-96"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    title={`${movie.title} Trailer`}
-                  ></iframe>
-                </div>
-              )}
+            
+            {/* Download disclaimer */}
+            <div className="mt-8 bg-gray-800 rounded-lg p-4 text-sm text-gray-400">
+              <p>Disclaimer: MFlix does not host any files on its servers. All content is provided by non-affiliated third parties.</p>
             </div>
-          </TabsContent>
-          
-          {/* Screenshots */}
-          <TabsContent value="screenshots">
-            <div className="bg-gray-800 rounded-lg p-6 mt-4">
-              <h3 className="text-xl font-bold mb-4">{movie.title} - Screenshots</h3>
-              <p className="text-gray-400">No screenshots available.</p>
-              {/* You could add screenshots here if available in your database */}
-            </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </section>
+      )}
+
+      {/* Ad banner before related movies */}
+      <div className="container mx-auto px-4 mb-4">
+        <AdBanner position="movie_detail_bottom" />
       </div>
       
+      {/* Related Movies */}
+      {relatedMovies.length > 0 && (
+        <section className="py-8 bg-gray-800">
+          <div className="container mx-auto px-4">
+            <h2 className="text-2xl font-bold mb-6">Related {movie.content_type === 'movie' ? 'Movies' : movie.content_type === 'series' ? 'Series' : 'Content'}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {relatedMovies.map((relatedMovie) => (
+                <Link key={relatedMovie.id} to={`/movie/${relatedMovie.id}`}>
+                  <div className="bg-gray-700 rounded-lg overflow-hidden hover:bg-gray-650 transition-colors">
+                    <div className="h-56 bg-gray-600 relative">
+                      {relatedMovie.poster_url ? (
+                        <img 
+                          src={relatedMovie.poster_url} 
+                          alt={relatedMovie.title} 
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Film size={32} className="text-gray-500" />
+                        </div>
+                      )}
+                      {relatedMovie.imdb_rating && (
+                        <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-xs font-bold">
+                          IMDb {relatedMovie.imdb_rating}
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-bold text-white truncate">{relatedMovie.title}</h3>
+                      <div className="mt-2 text-sm text-gray-400">
+                        {relatedMovie.year && <span>{relatedMovie.year}</span>}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Footer */}
       <footer className="bg-gray-800 py-8 mt-12">
         <div className="container mx-auto px-4">

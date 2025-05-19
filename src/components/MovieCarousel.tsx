@@ -1,59 +1,79 @@
 
 import { Link } from "react-router-dom";
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel";
-import { Card, CardContent } from "@/components/ui/card";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Film } from "lucide-react";
 
-interface Movie {
-  id: string | number;
+export interface MovieProps {
+  movies: any[];
   title: string;
-  poster_url?: string;
-  year?: number;
-  imdb_rating?: number;
-  genre?: string[];
-  downloads?: number;
+  bgClass?: string; // Make bgClass optional
 }
 
-interface MovieCarouselProps {
-  movies: Movie[];
-  title: string;
-  bgClass?: string;
-}
+const MovieCarousel = ({ movies, title, bgClass = "" }: MovieProps) => {
+  if (!movies || movies.length === 0) {
+    return null;
+  }
 
-const MovieCarousel = ({ movies, title, bgClass = "" }: MovieCarouselProps) => {
   return (
-    <section className={`py-8 ${bgClass}`}>
+    <section className={`py-12 ${bgClass}`}>
       <div className="container mx-auto px-4">
         <h2 className="text-2xl font-bold mb-6">{title}</h2>
-        <Carousel className="w-full" opts={{ align: "start" }}>
+        <Carousel 
+          opts={{
+            align: "start",
+            loop: true,
+            duration: 10,
+          }}
+          className="w-full"
+        >
           <CarouselContent>
             {movies.map((movie, index) => (
-              <CarouselItem key={movie.id || index} className="md:basis-1/3 lg:basis-1/4">
-                <Link to={`/movie/${movie.id}`} className="group block">
-                  <Card className="bg-gray-700 border-gray-600 overflow-hidden transform transition-all duration-300 hover:scale-105">
-                    <div className="relative">
-                      <img 
-                        src={movie.poster_url || "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5"} 
-                        alt={movie.title} 
-                        className="w-full h-[200px] object-cover"
-                      />
-                      <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-sm font-bold">
-                        {movie.imdb_rating || "N/A"}
+              <CarouselItem key={movie.id || index} className="basis-full md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                <Link to={`/movie/${movie.id}`}>
+                  <HoverCard>
+                    <HoverCardTrigger asChild>
+                      <div className="h-64 bg-gray-800 rounded-lg overflow-hidden transform transition-all duration-300 hover:scale-105 cursor-pointer">
+                        {movie.poster_url ? (
+                          <img 
+                            src={movie.poster_url} 
+                            alt={movie.title} 
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Film className="text-gray-500" size={48} />
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    <CardContent className="p-4">
-                      <h3 className="font-bold text-lg mb-1">{movie.title}</h3>
-                      <div className="flex justify-between text-sm text-gray-400">
-                        <span>{movie.year} • {movie.genre && movie.genre[0]}</span>
-                        <span>{movie.downloads || 0} downloads</span>
+                    </HoverCardTrigger>
+                    <HoverCardContent side="top" className="w-64 bg-gray-800 border-gray-700">
+                      <div className="space-y-2">
+                        <h3 className="font-bold">{movie.title}</h3>
+                        <div className="flex items-center text-xs gap-2">
+                          {movie.year && <span className="bg-blue-600 px-2 py-1 rounded">{movie.year}</span>}
+                          {movie.genre && movie.genre[0] && (
+                            <span className="bg-gray-700 px-2 py-1 rounded">{movie.genre[0]}</span>
+                          )}
+                          {movie.imdb_rating && (
+                            <span className="bg-yellow-500 text-black px-2 py-1 rounded font-bold">
+                              IMDb {movie.imdb_rating}
+                            </span>
+                          )}
+                        </div>
+                        {movie.downloads > 0 && (
+                          <p className="text-sm text-gray-300">{movie.downloads.toLocaleString()} downloads</p>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
+                    </HoverCardContent>
+                  </HoverCard>
                 </Link>
               </CarouselItem>
             ))}
           </CarouselContent>
-          <CarouselPrevious className="absolute -left-12 top-1/2 -translate-y-1/2" />
-          <CarouselNext className="absolute -right-12 top-1/2 -translate-y-1/2" />
+          <CarouselPrevious className="hidden md:flex" />
+          <CarouselNext className="hidden md:flex" />
         </Carousel>
       </div>
     </section>
