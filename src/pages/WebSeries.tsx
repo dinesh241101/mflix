@@ -1,13 +1,15 @@
+
 import { useEffect, useState, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Tv, Search, Filter, X, ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/use-toast";
-import MFlixLogo from "@/components/MFlixLogo";
 import LoadingScreen from "@/components/LoadingScreen";
+import { Search, Home, Film, Tv, Video } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import MFlixLogo from "@/components/MFlixLogo";
+import MovieGrid from "@/components/MovieGrid";
 import AdBanner from "@/components/ads/AdBanner";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -20,12 +22,12 @@ const WebSeries = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
+  const [selectedGenre, setSelectedGenre] = useState("All");
+  const [genres, setGenres] = useState<string[]>([]);
+  const [showShorts, setShowShorts] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [genres, setGenres] = useState<string[]>([]);
-  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get query from URL if exists
@@ -35,33 +37,40 @@ const WebSeries = () => {
     
     if (query) {
       setSearchQuery(query);
-      setIsSearching(true);
     }
     
-    if (genre) {
+    if (genre && genre !== "All") {
       setSelectedGenre(genre);
     }
   }, [searchParams]);
 
-  // Load all web series initially
+  // Fetch series data
   useEffect(() => {
-    const fetchAllSeries = async () => {
+    const fetchSeries = async () => {
       try {
         setLoading(true);
-        
         const { data, error } = await supabase
           .from('movies')
           .select('*')
-          .eq('content_type', 'series');
-          
+          .eq('content_type', 'series')
+          .order('created_at', { ascending: false });
+        
         if (error) throw error;
         
         setAllSeries(data || []);
         
+        // Apply pagination
+        const totalItems = data?.length || 0;
+        setTotalPages(Math.ceil(totalItems / ITEMS_PER_PAGE));
+        
+        // Apply initial pagination
+        const paginatedSeries = data?.slice(0, ITEMS_PER_PAGE) || [];
+        setSeries(paginatedSeries);
+        
         // Extract unique genres
-        const allGenres = data?.flatMap(item => item.genre || []) || [];
-        const uniqueGenres = [...new Set(allGenres)].filter(Boolean).sort();
-        setGenres(uniqueGenres);
+        const allGenres = data?.flatMap(series => series.genre || []) || [];
+        const uniqueGenres = [...new Set(allGenres)];
+        setGenres(["All", ...uniqueGenres]);
         
         // Track analytics
         await supabase.from('analytics').insert({
@@ -70,15 +79,8 @@ const WebSeries = () => {
           device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
           os: navigator.platform
         });
-        
-        // Apply initial pagination
-        const totalItems = data?.length || 0;
-        setTotalPages(Math.ceil(totalItems / ITEMS_PER_PAGE));
-        
-        const initialSeries = data?.slice(0, ITEMS_PER_PAGE) || [];
-        setSeries(initialSeries);
       } catch (error) {
-        console.error("Error loading web series:", error);
+        console.error("Error fetching series:", error);
         toast({
           title: "Error",
           description: "Failed to load web series. Please try again later.",
@@ -89,43 +91,65 @@ const WebSeries = () => {
         setInitialLoading(false);
       }
     };
-
-    fetchAllSeries();
+    
+    fetchSeries();
   }, [toast]);
 
-  // Filter and paginate series whenever filters change
+  // Handle pagination
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    const startIndex = (page - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    
+    // If we're searching or filtering by genre, paginate the filtered results
+    let dataToSlice = allSeries;
+    
+    if (selectedGenre !== "All") {
+      dataToSlice = allSeries.filter(series => series.genre?.includes(selectedGenre));
+    }
+    
+    if (searchQuery && isSearching) {
+      dataToSlice = allSeries.filter(series => 
+        series.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (series.storyline && series.storyline.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (series.genre && series.genre.some((g: string) => g.toLowerCase().includes(searchQuery.toLowerCase()))) ||
+        (series.seo_tags && series.seo_tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase())))
+      );
+    }
+    
+    const paginatedSeries = dataToSlice.slice(startIndex, endIndex);
+    setSeries(paginatedSeries);
+    
+    // Scroll to top
+    window.scrollTo(0, 0);
+  };
+
+  // Filter series by genre
   useEffect(() => {
     if (initialLoading) return;
     
     let filteredSeries = [...allSeries];
     
-    // Apply genre filter
-    if (selectedGenre) {
-      filteredSeries = filteredSeries.filter(item => 
-        item.genre && item.genre.includes(selectedGenre)
-      );
+    if (selectedGenre !== "All") {
+      filteredSeries = filteredSeries.filter(series => series.genre?.includes(selectedGenre));
     }
     
-    // Apply search filter
     if (searchQuery && isSearching) {
-      filteredSeries = filteredSeries.filter(item => 
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        (item.storyline && item.storyline.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (item.genre && item.genre.some((g: string) => g.toLowerCase().includes(searchQuery.toLowerCase()))) ||
-        (item.seo_tags && item.seo_tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase())))
+      filteredSeries = filteredSeries.filter(series => 
+        series.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (series.storyline && series.storyline.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (series.genre && series.genre.some((g: string) => g.toLowerCase().includes(searchQuery.toLowerCase()))) ||
+        (series.seo_tags && series.seo_tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase())))
       );
     }
     
-    // Update total pages
-    const totalItems = filteredSeries.length;
-    setTotalPages(Math.ceil(totalItems / ITEMS_PER_PAGE));
+    const totalFilteredItems = filteredSeries.length;
+    setTotalPages(Math.ceil(totalFilteredItems / ITEMS_PER_PAGE));
     
-    // Apply pagination
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    const paginatedSeries = filteredSeries.slice(startIndex, endIndex);
-    setSeries(paginatedSeries);
-  }, [selectedGenre, searchQuery, isSearching, currentPage, initialLoading, allSeries]);
+    // Reset to first page when filters change
+    setCurrentPage(1);
+    setSeries(filteredSeries.slice(0, ITEMS_PER_PAGE));
+  }, [selectedGenre, isSearching, searchQuery, initialLoading, allSeries]);
 
   // Handle search suggestions
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,12 +177,41 @@ const WebSeries = () => {
           setSearchSuggestions(localSuggestions);
           
           // Then fetch from API for more comprehensive results
-          const { data: searchResults, error } = await supabase.rpc<any>('search_series', { 
+          const { data: searchResults, error } = await supabase.rpc('search_series', { 
             search_term: query.toLowerCase()
           });
           
-          if (!error && searchResults && Array.isArray(searchResults)) {
-            setSearchSuggestions(searchResults.slice(0, 5));
+          if (error) {
+            console.error("Error in search suggestions:", error);
+            return;
+          }
+          
+          if (searchResults && Array.isArray(searchResults)) {
+            // Search for series by title
+            const titleMatches = searchResults.filter(series => 
+              series.title.toLowerCase().includes(query.toLowerCase())
+            ).slice(0, 5);
+            
+            // Search for series by genre
+            const genreMatches = searchResults.filter(series =>
+              series.genre && series.genre.some((g: string) => g.toLowerCase().includes(query.toLowerCase()))
+            ).slice(0, 3);
+            
+            // Search for series by content_type
+            const typeMatches = searchResults.filter(series =>
+              series.content_type.toLowerCase().includes(query.toLowerCase())
+            ).slice(0, 3);
+            
+            // Search for series by seo_tags
+            const tagMatches = searchResults.filter(series =>
+              series.seo_tags && series.seo_tags.some((tag: string) => tag.toLowerCase().includes(query.toLowerCase()))
+            ).slice(0, 3);
+            
+            // Combine results, remove duplicates by id
+            const allMatches = [...titleMatches, ...genreMatches, ...typeMatches, ...tagMatches];
+            const uniqueMatches = Array.from(new Map(allMatches.map(item => [item.id, item])).values());
+            
+            setSearchSuggestions(uniqueMatches.slice(0, 5));
           }
         } catch (error) {
           console.error("Error searching series:", error);
@@ -173,16 +226,10 @@ const WebSeries = () => {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Update search params in URL
     if (searchQuery.trim()) {
-      // Update search params in URL
-      if (selectedGenre) {
-        setSearchParams({ q: searchQuery, genre: selectedGenre });
-      } else {
-        setSearchParams({ q: searchQuery });
-      }
-      
+      setSearchParams({ q: searchQuery });
       setIsSearching(true);
-      setCurrentPage(1);
       
       try {
         setLoading(true);
@@ -199,61 +246,52 @@ const WebSeries = () => {
         if (error) {
           console.error("Search error:", error);
           
-          // Fallback to client-side filtering
-          const results = allSeries.filter(item => 
-            item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-            (item.storyline && item.storyline.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            (item.genre && item.genre.some((g: string) => g.toLowerCase().includes(searchQuery.toLowerCase()))) ||
-            (item.seo_tags && item.seo_tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase())))
+          // Fallback to client-side filtering if API fails
+          const results = allSeries.filter(series => 
+            series.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            (series.storyline && series.storyline.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (series.genre && series.genre.some((g: string) => g.toLowerCase().includes(searchQuery.toLowerCase()))) ||
+            (series.seo_tags && series.seo_tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase())))
           );
           
-          // Apply genre filter if selected
-          let filteredResults = results;
-          if (selectedGenre) {
-            filteredResults = results.filter(item => 
-              item.genre && item.genre.includes(selectedGenre)
-            );
-          }
+          setSeries(results.slice(0, ITEMS_PER_PAGE));
+          setTotalPages(Math.ceil(results.length / ITEMS_PER_PAGE));
           
-          setSeries(filteredResults.slice(0, ITEMS_PER_PAGE));
-          setTotalPages(Math.ceil(filteredResults.length / ITEMS_PER_PAGE));
-          
-          if (filteredResults.length === 0) {
+          if (results.length === 0) {
             toast({
               title: "No Results",
-              description: `No web series found matching '${searchQuery}' ${selectedGenre ? `in ${selectedGenre} genre` : ''}`,
-            });
-          }
-        } else if (searchResults && Array.isArray(searchResults)) {
-          // Use API results
-          let filteredData = searchResults;
-          
-          // Apply genre filter if selected
-          if (selectedGenre) {
-            filteredData = searchResults.filter((item: any) => 
-              item.genre && item.genre.includes(selectedGenre)
-            );
-          }
-          
-          setSeries(filteredData.slice(0, ITEMS_PER_PAGE));
-          setTotalPages(Math.ceil(filteredData.length / ITEMS_PER_PAGE));
-          
-          if (filteredData.length === 0) {
-            toast({
-              title: "No Results",
-              description: selectedGenre 
-                ? `No web series found matching '${searchQuery}' in ${selectedGenre} genre`
-                : `No web series found matching '${searchQuery}'`,
+              description: `No web series found matching '${searchQuery}'`,
             });
           } else {
             toast({
               title: "Search Results",
-              description: `Found ${filteredData.length} results for "${searchQuery}"`,
+              description: `Found ${results.length} results for "${searchQuery}"`,
+            });
+          }
+        } else if (searchResults && Array.isArray(searchResults)) {
+          // Use API results
+          setSeries(searchResults.slice(0, ITEMS_PER_PAGE));
+          setTotalPages(Math.ceil(searchResults.length / ITEMS_PER_PAGE));
+          
+          if (searchResults.length === 0) {
+            toast({
+              title: "No Results",
+              description: `No web series found matching '${searchQuery}'`,
+            });
+          } else {
+            toast({
+              title: "Search Results",
+              description: `Found ${searchResults.length} results for "${searchQuery}"`,
             });
           }
         }
       } catch (error) {
         console.error("Search error:", error);
+        toast({
+          title: "Search Error",
+          description: "Failed to perform search. Please try again.",
+          variant: "destructive"
+        });
       } finally {
         setLoading(false);
         setSearchSuggestions([]);
@@ -261,50 +299,23 @@ const WebSeries = () => {
     }
   };
 
-  // Handle pagination
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo(0, 0);
-  };
-  
-  // Handle genre selection
-  const handleGenreSelect = (genre: string | null) => {
+  // Handle genre filter change
+  const handleGenreChange = (genre: string) => {
     setSelectedGenre(genre);
-    setCurrentPage(1);
-    
-    // Update URL params
-    if (genre) {
-      if (searchQuery) {
-        setSearchParams({ q: searchQuery, genre });
-      } else {
-        setSearchParams({ genre });
-      }
-    } else if (searchQuery) {
-      setSearchParams({ q: searchQuery });
+    if (genre !== "All") {
+      setSearchParams({ genre: genre });
     } else {
       setSearchParams({});
     }
+    setCurrentPage(1);
   };
 
   // Clear search
   const clearSearch = () => {
     setSearchQuery("");
     setIsSearching(false);
-    if (selectedGenre) {
-      setSearchParams({ genre: selectedGenre });
-    } else {
-      setSearchParams({});
-    }
-    setCurrentPage(1);
-  };
-
-  // Clear all filters
-  const clearAllFilters = () => {
-    setSearchQuery("");
-    setIsSearching(false);
-    setSelectedGenre(null);
     setSearchParams({});
-    setCurrentPage(1);
+    handlePageChange(1);
   };
 
   if (initialLoading) {
@@ -313,29 +324,29 @@ const WebSeries = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      {/* Header */}
+      {/* Header/Navigation */}
       <header className="bg-gray-800 shadow-md">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <Link to="/">
               <MFlixLogo />
             </Link>
-            <nav className="hidden md:block">
+            <nav>
               <ul className="flex space-x-6">
-                <li><Link to="/" className="hover:text-blue-400">Home</Link></li>
-                <li><Link to="/movies" className="hover:text-blue-400">Movies</Link></li>
-                <li><Link to="/web-series" className="hover:text-blue-400 font-bold text-blue-400">Web Series</Link></li>
-                <li><Link to="/anime" className="hover:text-blue-400">Anime</Link></li>
+                <li><Link to="/" className="hover:text-blue-400 flex items-center"><Home className="mr-1" size={16} /> Home</Link></li>
+                <li><Link to="/movies" className="hover:text-blue-400 flex items-center"><Film className="mr-1" size={16} /> Movies</Link></li>
+                <li><Link to="/web-series" className="text-blue-400 flex items-center"><Tv className="mr-1" size={16} /> Web Series</Link></li>
+                <li><Link to="/anime" className="hover:text-blue-400 flex items-center"><Tv className="mr-1" size={16} /> Anime</Link></li>
+                <li>
+                  <button 
+                    onClick={() => setShowShorts(true)} 
+                    className="hover:text-blue-400 flex items-center"
+                  >
+                    <Video className="mr-1" size={16} /> Shorts
+                  </button>
+                </li>
               </ul>
             </nav>
-            <div className="md:hidden">
-              <button className="text-white">
-                <span className="sr-only">Open menu</span>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </div>
           </div>
         </div>
       </header>
@@ -347,7 +358,7 @@ const WebSeries = () => {
             <Search className="absolute left-3 top-3 text-gray-400" size={18} />
             <input 
               type="text" 
-              placeholder="Search web series by title, genre, tags..." 
+              placeholder="Search web series by title, description..." 
               className="w-full py-2 pl-10 pr-20 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={searchQuery}
               onChange={handleSearchInputChange}
@@ -383,7 +394,7 @@ const WebSeries = () => {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Tv size={16} className="text-gray-500" />
+                          <Film size={16} className="text-gray-500" />
                         </div>
                       )}
                     </div>
@@ -414,114 +425,51 @@ const WebSeries = () => {
         </div>
       </section>
 
-      {/* Ad banner top */}
+      {/* Ad Banner */}
       <div className="container mx-auto px-4 my-4">
         <AdBanner position="series_top" />
       </div>
 
-      {/* Page Title & Filters */}
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">
-            {isSearching ? `Results for: "${searchQuery}"` : selectedGenre ? `${selectedGenre} Web Series` : 'Web Series'}
-          </h1>
-          
-          {/* Mobile Filter Toggle */}
-          <button 
-            className="md:hidden flex items-center gap-1 bg-gray-700 px-3 py-1 rounded-lg"
-            onClick={() => setFiltersOpen(!filtersOpen)}
-          >
-            <Filter size={18} />
-            <span>Filters</span>
-            <ChevronDown size={16} className={`transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
-          </button>
-        </div>
-        <p className="text-gray-400 mt-2">
-          Watch the latest and most popular web series online
-        </p>
-      </div>
-
-      {/* Genres Filter - Mobile Variant */}
-      <section className={`md:hidden py-4 overflow-x-auto ${filtersOpen ? 'block' : 'hidden'}`}>
-        <div className="container mx-auto px-4">
-          <h3 className="text-lg font-semibold mb-2">Select Genre</h3>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => handleGenreSelect(null)}
-              className={`px-3 py-2 rounded-md text-sm whitespace-nowrap ${
-                selectedGenre === null ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'
-              }`}
+      {/* Genre Filter */}
+      <section className="py-4 container mx-auto px-4">
+        <h2 className="text-xl font-bold mb-3">Filter by Genre</h2>
+        <div className="flex flex-wrap gap-2">
+          {genres.map((genre) => (
+            <Button
+              key={genre}
+              variant={selectedGenre === genre ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleGenreChange(genre)}
             >
-              All Series
-            </button>
-            
-            {genres.map((genre) => (
-              <button
-                key={genre}
-                onClick={() => handleGenreSelect(genre)}
-                className={`px-3 py-2 rounded-md text-sm whitespace-nowrap ${
-                  selectedGenre === genre ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'
-                }`}
-              >
-                {genre}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Genres Filter - Desktop */}
-      <section className="hidden md:block py-4 overflow-x-auto">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => handleGenreSelect(null)}
-              className={`px-3 py-1.5 rounded-md text-sm whitespace-nowrap ${
-                selectedGenre === null ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'
-              }`}
-            >
-              All Series
-            </button>
-            
-            {genres.map((genre) => (
-              <button
-                key={genre}
-                onClick={() => handleGenreSelect(genre)}
-                className={`px-3 py-1.5 rounded-md text-sm whitespace-nowrap ${
-                  selectedGenre === genre ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'
-                }`}
-              >
-                {genre}
-              </button>
-            ))}
-          </div>
+              {genre}
+            </Button>
+          ))}
         </div>
       </section>
 
       {/* Active Filters */}
-      {(isSearching || selectedGenre !== null) && (
+      {(isSearching || selectedGenre !== "All") && (
         <section className="container mx-auto px-4 py-2">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             <span className="text-gray-400">Active filters:</span>
             {isSearching && (
               <div className="bg-blue-900/50 text-blue-300 px-2 py-1 rounded flex items-center gap-1">
                 <span>Search: {searchQuery}</span>
-                <button onClick={clearSearch} className="ml-1 text-blue-300 hover:text-white">
-                  <X size={14} />
-                </button>
+                <button onClick={clearSearch} className="ml-1 text-blue-300 hover:text-white">×</button>
               </div>
             )}
-            {selectedGenre && (
+            {selectedGenre !== "All" && (
               <div className="bg-blue-900/50 text-blue-300 px-2 py-1 rounded flex items-center gap-1">
                 <span>Genre: {selectedGenre}</span>
-                <button onClick={() => handleGenreSelect(null)} className="ml-1 text-blue-300 hover:text-white">
-                  <X size={14} />
-                </button>
+                <button onClick={() => handleGenreChange("All")} className="ml-1 text-blue-300 hover:text-white">×</button>
               </div>
             )}
-            {(isSearching || selectedGenre) && (
+            {(isSearching || selectedGenre !== "All") && (
               <button 
-                onClick={clearAllFilters} 
+                onClick={() => {
+                  clearSearch();
+                  handleGenreChange("All");
+                }} 
                 className="text-sm text-blue-400 hover:underline"
               >
                 Clear all filters
@@ -532,7 +480,7 @@ const WebSeries = () => {
       )}
 
       {/* Loading indicator */}
-      {loading && !initialLoading && (
+      {loading && (
         <div className="container mx-auto px-4 py-8">
           <div className="flex justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
@@ -540,84 +488,32 @@ const WebSeries = () => {
         </div>
       )}
 
-      {/* Web Series Grid */}
-      <section className="py-8">
-        <div className="container mx-auto px-4">
-          {series.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {series.map((item, index) => (
-                <React.Fragment key={item.id || index}>
-                  {/* Insert ad banner after every 3 items */}
-                  {index > 0 && index % 3 === 0 && (
-                    <div className="col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 h-24 my-2">
-                      <AdBanner position={`series_after_${index}`} className="w-full h-full" />
-                    </div>
-                  )}
-                
-                  <Link to={`/movie/${item.id}`}>
-                    <div className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-750 transition-colors">
-                      <div className="h-56 bg-gray-700 relative">
-                        {item.poster_url ? (
-                          <img 
-                            src={item.poster_url} 
-                            alt={item.title} 
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Tv size={32} className="text-gray-500" />
-                          </div>
-                        )}
-                        {item.imdb_rating && (
-                          <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-xs font-bold">
-                            IMDb {item.imdb_rating}
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-bold text-white truncate">{item.title}</h3>
-                        <div className="flex items-center justify-between mt-2 text-sm text-gray-400">
-                          <div>
-                            {item.year && <span>{item.year}</span>}
-                          </div>
-                          {item.downloads > 0 && (
-                            <div>{item.downloads.toLocaleString()} downloads</div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                </React.Fragment>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <Tv size={48} className="mx-auto mb-4 text-gray-500" />
-              <h3 className="text-xl">No web series found</h3>
-              <p className="text-gray-400 mt-2">
-                {selectedGenre 
-                  ? `No web series found in the ${selectedGenre} genre.` 
-                  : isSearching 
-                    ? `No results found for "${searchQuery}".` 
-                    : 'Try adjusting your filters or search'}
-              </p>
-            </div>
-          )}
+      {/* Series Grid */}
+      <div className="container mx-auto px-4">
+        <MovieGrid 
+          movies={series} 
+          title={isSearching ? `Search Results for "${searchQuery}"` : selectedGenre !== "All" ? `${selectedGenre} Web Series` : "All Web Series"} 
+        />
 
-          {/* Pagination */}
-          {!loading && totalPages > 1 && (
-            <Pagination className="mt-8">
+        {/* Ad Banner */}
+        <div className="my-8">
+          <AdBanner position="series_grid" />
+        </div>
+
+        {/* Pagination */}
+        {!loading && totalPages > 1 && (
+          <div className="py-8">
+            <Pagination>
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious 
                     onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                    className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} 
                   />
                 </PaginationItem>
                 
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  // Show pages around current page
+                  // Calculate which page numbers to show
                   let pageNum;
                   if (totalPages <= 5) {
                     pageNum = i + 1;
@@ -632,7 +528,7 @@ const WebSeries = () => {
                   return (
                     <PaginationItem key={i}>
                       <PaginationLink 
-                        onClick={() => handlePageChange(pageNum)}
+                        onClick={() => handlePageChange(pageNum)} 
                         isActive={currentPage === pageNum}
                       >
                         {pageNum}
@@ -657,18 +553,18 @@ const WebSeries = () => {
                 <PaginationItem>
                   <PaginationNext 
                     onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                    className={currentPage >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    className={currentPage >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"} 
                   />
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
-          )}
-        </div>
-      </section>
+          </div>
+        )}
 
-      {/* Ad banner bottom */}
-      <div className="container mx-auto px-4 my-4">
-        <AdBanner position="series_bottom" />
+        {/* Ad Banner */}
+        <div className="mb-8">
+          <AdBanner position="series_bottom" />
+        </div>
       </div>
 
       {/* Footer */}

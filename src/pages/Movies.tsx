@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -176,7 +177,7 @@ const Movies = () => {
           setSearchSuggestions(localSuggestions);
           
           // Then fetch from API for more comprehensive results
-          const { data: searchResults, error } = await supabase.rpc<any>('search_movies', { 
+          const { data: searchResults, error } = await supabase.rpc('search_movies', { 
             search_term: query.toLowerCase()
           });
           
