@@ -1,12 +1,10 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdsForm from "./AdsForm";
-import AdsList from "./AdsList";
 import { Edit, Trash2 } from "lucide-react";
 import ImageUploader from "../../admin/movies/ImageUploader";
 
@@ -58,7 +56,7 @@ const AdsTab = ({
           content_url: adForm.contentUrl,
           target_url: adForm.targetUrl,
           display_frequency: parseInt(adForm.displayFrequency.toString()),
-          updated_at: new Date()
+          updated_at: new Date().toISOString()
         })
         .eq('id', selectedAd.id);
       
@@ -143,7 +141,11 @@ const AdsTab = ({
           </h3>
           
           <form onSubmit={isEditing ? handleUpdateAd : handleUploadAd}>
-            <AdsForm adForm={adForm} setAdForm={setAdForm} />
+            <AdsForm 
+              adForm={adForm} 
+              setAdForm={setAdForm} 
+              onSubmit={isEditing ? handleUpdateAd : handleUploadAd}
+            />
             
             <div className="mt-6">
               <ImageUploader 

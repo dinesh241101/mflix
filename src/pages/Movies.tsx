@@ -177,46 +177,42 @@ const Movies = () => {
           setSearchSuggestions(localSuggestions);
           
           // Then fetch from API for more comprehensive results
-          const { data: titleMatches, error: titleError } = await supabase
-            .from('movies')
-            .select('id, title, content_type, year, poster_url')
-            .ilike('title', `%${query}%`)
-            .limit(5);
+          const { data: searchResults, error } = await supabase.rpc<any[]>('search_movies', { 
+            search_term: query.toLowerCase()
+          });
+          
+          if (error) {
+            console.error("Error in search suggestions:", error);
+            return;
+          }
+          
+          if (searchResults && Array.isArray(searchResults)) {
+            // Search for movies by title
+            const titleMatches = searchResults.filter(movie => 
+              movie.title.toLowerCase().includes(query.toLowerCase())
+            ).slice(0, 5);
             
-          if (titleError) throw titleError;
-          
-          // Search for movies by genre
-          const { data: genreMatches, error: genreError } = await supabase
-            .from('movies')
-            .select('id, title, content_type, year, poster_url, genre')
-            .contains('genre', [query])
-            .limit(3);
+            // Search for movies by genre
+            const genreMatches = searchResults.filter(movie =>
+              movie.genre && movie.genre.some((g: string) => g.toLowerCase().includes(query.toLowerCase()))
+            ).slice(0, 3);
             
-          if (genreError) throw genreError;
-          
-          // Search for movies by content_type
-          const { data: typeMatches, error: typeError } = await supabase
-            .from('movies')
-            .select('id, title, content_type, year, poster_url')
-            .eq('content_type', query.toLowerCase())
-            .limit(3);
+            // Search for movies by content_type
+            const typeMatches = searchResults.filter(movie =>
+              movie.content_type.toLowerCase().includes(query.toLowerCase())
+            ).slice(0, 3);
             
-          if (typeError) throw typeError;
-          
-          // Search for movies by seo_tags
-          const { data: tagMatches, error: tagError } = await supabase
-            .from('movies')
-            .select('id, title, content_type, year, poster_url, seo_tags')
-            .contains('seo_tags', [query])
-            .limit(3);
+            // Search for movies by seo_tags
+            const tagMatches = searchResults.filter(movie =>
+              movie.seo_tags && movie.seo_tags.some((tag: string) => tag.toLowerCase().includes(query.toLowerCase()))
+            ).slice(0, 3);
             
-          if (tagError) throw tagError;
-          
-          // Combine results, remove duplicates by id
-          const allMatches = [...(titleMatches || []), ...(genreMatches || []), ...(typeMatches || []), ...(tagMatches || [])];
-          const uniqueMatches = Array.from(new Map(allMatches.map(item => [item.id, item])).values());
-          
-          setSearchSuggestions(uniqueMatches);
+            // Combine results, remove duplicates by id
+            const allMatches = [...titleMatches, ...genreMatches, ...typeMatches, ...tagMatches];
+            const uniqueMatches = Array.from(new Map(allMatches.map(item => [item.id, item])).values());
+            
+            setSearchSuggestions(uniqueMatches.slice(0, 5));
+          }
         } catch (error) {
           console.error("Error searching movies:", error);
         }
@@ -227,7 +223,7 @@ const Movies = () => {
   };
 
   // Handle search form submission
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Update search params in URL
@@ -235,75 +231,71 @@ const Movies = () => {
       setSearchParams({ q: searchQuery });
       setIsSearching(true);
       
-      // API call for search
-      const performSearch = async () => {
-        try {
-          setLoading(true);
-          toast({
-            title: "Searching",
-            description: `Finding results for: "${searchQuery}"`,
-          });
-          
-          const { data, error } = await supabase.rpc('search_movies', { 
-            search_term: searchQuery.toLowerCase()
-          });
-          
-          if (error) {
-            console.error("Search error:", error);
-            
-            // Fallback to client-side filtering if API fails
-            const results = allMovies.filter(movie => 
-              movie.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-              (movie.storyline && movie.storyline.toLowerCase().includes(searchQuery.toLowerCase())) ||
-              (movie.genre && movie.genre.some((g: string) => g.toLowerCase().includes(searchQuery.toLowerCase()))) ||
-              (movie.seo_tags && movie.seo_tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase())))
-            );
-            
-            setMovies(results.slice(0, ITEMS_PER_PAGE));
-            setTotalPages(Math.ceil(results.length / ITEMS_PER_PAGE));
-            
-            if (results.length === 0) {
-              toast({
-                title: "No Results",
-                description: `No movies found matching '${searchQuery}'`,
-              });
-            } else {
-              toast({
-                title: "Search Results",
-                description: `Found ${results.length} results for "${searchQuery}"`,
-              });
-            }
-          } else {
-            // Use API results
-            setMovies(data.slice(0, ITEMS_PER_PAGE));
-            setTotalPages(Math.ceil(data.length / ITEMS_PER_PAGE));
-            
-            if (data.length === 0) {
-              toast({
-                title: "No Results",
-                description: `No movies found matching '${searchQuery}'`,
-              });
-            } else {
-              toast({
-                title: "Search Results",
-                description: `Found ${data.length} results for "${searchQuery}"`,
-              });
-            }
-          }
-        } catch (error) {
+      try {
+        setLoading(true);
+        toast({
+          title: "Searching",
+          description: `Finding results for: "${searchQuery}"`,
+        });
+        
+        // API call for search using the stored procedure
+        const { data: searchResults, error } = await supabase.rpc<any[]>('search_movies', { 
+          search_term: searchQuery.toLowerCase()
+        });
+        
+        if (error) {
           console.error("Search error:", error);
-          toast({
-            title: "Search Error",
-            description: "Failed to perform search. Please try again.",
-            variant: "destructive"
-          });
-        } finally {
-          setLoading(false);
-          setSearchSuggestions([]);
+          
+          // Fallback to client-side filtering if API fails
+          const results = allMovies.filter(movie => 
+            movie.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            (movie.storyline && movie.storyline.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (movie.genre && movie.genre.some((g: string) => g.toLowerCase().includes(searchQuery.toLowerCase()))) ||
+            (movie.seo_tags && movie.seo_tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase())))
+          );
+          
+          setMovies(results.slice(0, ITEMS_PER_PAGE));
+          setTotalPages(Math.ceil(results.length / ITEMS_PER_PAGE));
+          
+          if (results.length === 0) {
+            toast({
+              title: "No Results",
+              description: `No movies found matching '${searchQuery}'`,
+            });
+          } else {
+            toast({
+              title: "Search Results",
+              description: `Found ${results.length} results for "${searchQuery}"`,
+            });
+          }
+        } else if (searchResults && Array.isArray(searchResults)) {
+          // Use API results
+          setMovies(searchResults.slice(0, ITEMS_PER_PAGE));
+          setTotalPages(Math.ceil(searchResults.length / ITEMS_PER_PAGE));
+          
+          if (searchResults.length === 0) {
+            toast({
+              title: "No Results",
+              description: `No movies found matching '${searchQuery}'`,
+            });
+          } else {
+            toast({
+              title: "Search Results",
+              description: `Found ${searchResults.length} results for "${searchQuery}"`,
+            });
+          }
         }
-      };
-      
-      performSearch();
+      } catch (error) {
+        console.error("Search error:", error);
+        toast({
+          title: "Search Error",
+          description: "Failed to perform search. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+        setSearchSuggestions([]);
+      }
     }
   };
 

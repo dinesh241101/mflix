@@ -306,6 +306,52 @@ export type Database = {
         Args: { user_id: string }
         Returns: boolean
       }
+      search_movies: {
+        Args: { search_term: string }
+        Returns: {
+          content_type: string
+          country: string | null
+          created_at: string | null
+          director: string | null
+          downloads: number | null
+          featured: boolean | null
+          genre: string[] | null
+          id: string
+          imdb_rating: number | null
+          poster_url: string | null
+          production_house: string | null
+          quality: string | null
+          seo_tags: string[] | null
+          storyline: string | null
+          title: string
+          updated_at: string | null
+          user_rating: number | null
+          year: number | null
+        }[]
+      }
+      search_series: {
+        Args: { search_term: string }
+        Returns: {
+          content_type: string
+          country: string | null
+          created_at: string | null
+          director: string | null
+          downloads: number | null
+          featured: boolean | null
+          genre: string[] | null
+          id: string
+          imdb_rating: number | null
+          poster_url: string | null
+          production_house: string | null
+          quality: string | null
+          seo_tags: string[] | null
+          storyline: string | null
+          title: string
+          updated_at: string | null
+          user_rating: number | null
+          year: number | null
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

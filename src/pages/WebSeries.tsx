@@ -154,11 +154,11 @@ const WebSeries = () => {
           setSearchSuggestions(localSuggestions);
           
           // Then fetch from API for more comprehensive results
-          const { data: seriesResults, error } = await supabase.rpc('search_series', { 
+          const { data: seriesResults, error } = await supabase.rpc<any[]>('search_series', { 
             search_term: query.toLowerCase() 
           });
           
-          if (!error && seriesResults) {
+          if (!error && seriesResults && Array.isArray(seriesResults)) {
             setSearchSuggestions(seriesResults.slice(0, 5));
           }
         } catch (error) {
@@ -171,7 +171,7 @@ const WebSeries = () => {
   };
 
   // Handle search form submission
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (searchQuery.trim()) {
@@ -185,92 +185,80 @@ const WebSeries = () => {
       setIsSearching(true);
       setCurrentPage(1);
       
-      const performSearch = async () => {
-        try {
-          setLoading(true);
-          toast({
-            title: "Searching",
-            description: `Finding results for: "${searchQuery}"`,
-          });
-          
-          const { data, error } = await supabase.rpc('search_series', { 
-            search_term: searchQuery.toLowerCase() 
-          });
-          
-          if (error) {
-            console.error("Search error:", error);
-            
-            // Fallback to client-side filtering
-            const results = allSeries.filter(item => 
-              item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-              (item.storyline && item.storyline.toLowerCase().includes(searchQuery.toLowerCase())) ||
-              (item.genre && item.genre.some((g: string) => g.toLowerCase().includes(searchQuery.toLowerCase()))) ||
-              (item.seo_tags && item.seo_tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase())))
-            );
-            
-            // Apply genre filter if selected
-            if (selectedGenre) {
-              const filteredResults = results.filter(item => 
-                item.genre && item.genre.includes(selectedGenre)
-              );
-              
-              setSeries(filteredResults.slice(0, ITEMS_PER_PAGE));
-              setTotalPages(Math.ceil(filteredResults.length / ITEMS_PER_PAGE));
-              
-              if (filteredResults.length === 0) {
-                toast({
-                  title: "No Results",
-                  description: `No web series found matching '${searchQuery}' in ${selectedGenre} genre`,
-                });
-              }
-            } else {
-              setSeries(results.slice(0, ITEMS_PER_PAGE));
-              setTotalPages(Math.ceil(results.length / ITEMS_PER_PAGE));
-              
-              if (results.length === 0) {
-                toast({
-                  title: "No Results",
-                  description: `No web series found matching '${searchQuery}'`,
-                });
-              }
-            }
-          } else {
-            // Use API results
-            let filteredData = data;
-            
-            // Apply genre filter if selected
-            if (selectedGenre) {
-              filteredData = data.filter((item: any) => 
-                item.genre && item.genre.includes(selectedGenre)
-              );
-            }
-            
-            setSeries(filteredData.slice(0, ITEMS_PER_PAGE));
-            setTotalPages(Math.ceil(filteredData.length / ITEMS_PER_PAGE));
-            
-            if (filteredData.length === 0) {
-              toast({
-                title: "No Results",
-                description: selectedGenre 
-                  ? `No web series found matching '${searchQuery}' in ${selectedGenre} genre`
-                  : `No web series found matching '${searchQuery}'`,
-              });
-            } else {
-              toast({
-                title: "Search Results",
-                description: `Found ${filteredData.length} results for "${searchQuery}"`,
-              });
-            }
-          }
-        } catch (error) {
+      try {
+        setLoading(true);
+        toast({
+          title: "Searching",
+          description: `Finding results for: "${searchQuery}"`,
+        });
+        
+        // API call for search using the stored procedure
+        const { data: seriesResults, error } = await supabase.rpc<any[]>('search_series', { 
+          search_term: searchQuery.toLowerCase() 
+        });
+        
+        if (error) {
           console.error("Search error:", error);
-        } finally {
-          setLoading(false);
-          setSearchSuggestions([]);
+          
+          // Fallback to client-side filtering
+          const results = allSeries.filter(item => 
+            item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            (item.storyline && item.storyline.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (item.genre && item.genre.some((g: string) => g.toLowerCase().includes(searchQuery.toLowerCase()))) ||
+            (item.seo_tags && item.seo_tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase())))
+          );
+          
+          // Apply genre filter if selected
+          let filteredResults = results;
+          if (selectedGenre) {
+            filteredResults = results.filter(item => 
+              item.genre && item.genre.includes(selectedGenre)
+            );
+          }
+          
+          setSeries(filteredResults.slice(0, ITEMS_PER_PAGE));
+          setTotalPages(Math.ceil(filteredResults.length / ITEMS_PER_PAGE));
+          
+          if (filteredResults.length === 0) {
+            toast({
+              title: "No Results",
+              description: `No web series found matching '${searchQuery}' ${selectedGenre ? `in ${selectedGenre} genre` : ''}`,
+            });
+          }
+        } else if (seriesResults && Array.isArray(seriesResults)) {
+          // Use API results
+          let filteredData = seriesResults;
+          
+          // Apply genre filter if selected
+          if (selectedGenre) {
+            filteredData = seriesResults.filter((item: any) => 
+              item.genre && item.genre.includes(selectedGenre)
+            );
+          }
+          
+          setSeries(filteredData.slice(0, ITEMS_PER_PAGE));
+          setTotalPages(Math.ceil(filteredData.length / ITEMS_PER_PAGE));
+          
+          if (filteredData.length === 0) {
+            toast({
+              title: "No Results",
+              description: selectedGenre 
+                ? `No web series found matching '${searchQuery}' in ${selectedGenre} genre`
+                : `No web series found matching '${searchQuery}'`,
+            });
+          } else {
+            toast({
+              title: "Search Results",
+              description: `Found ${filteredData.length} results for "${searchQuery}"`,
+            });
+          }
         }
-      };
-      
-      performSearch();
+      } catch (error) {
+        console.error("Search error:", error);
+      } finally {
+        setLoading(false);
+        setSearchSuggestions([]);
+      }
     }
   };
 
@@ -559,15 +547,15 @@ const WebSeries = () => {
           {series.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {series.map((item, index) => (
-                <>
+                <React.Fragment key={item.id || index}>
                   {/* Insert ad banner after every 3 items */}
                   {index > 0 && index % 3 === 0 && (
-                    <div key={`ad-${index}`} className="col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 h-24 my-2">
+                    <div className="col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 h-24 my-2">
                       <AdBanner position={`series_after_${index}`} className="w-full h-full" />
                     </div>
                   )}
                 
-                  <Link key={item.id} to={`/movie/${item.id}`}>
+                  <Link to={`/movie/${item.id}`}>
                     <div className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-750 transition-colors">
                       <div className="h-56 bg-gray-700 relative">
                         {item.poster_url ? (
@@ -601,7 +589,7 @@ const WebSeries = () => {
                       </div>
                     </div>
                   </Link>
-                </>
+                </React.Fragment>
               ))}
             </div>
           ) : (

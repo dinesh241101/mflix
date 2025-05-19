@@ -1,10 +1,13 @@
 
 import { useLocation } from "react-router-dom";
-import { useEffect } from "react";
-import { useRef } from "react";
-import AdBanner from "./AdBanner";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import AdBanner from "./AdBanner";
 
+/**
+ * AdManager component handles ad tracking, placement rules, and analytics.
+ * It doesn't render anything visually but coordinates ad placements throughout the app.
+ */
 const AdManager = () => {
   const location = useLocation();
   const viewTrackedRef = useRef<Record<string, boolean>>({});

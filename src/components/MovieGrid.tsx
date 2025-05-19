@@ -34,7 +34,7 @@ const MovieGrid = ({ movies, title = "Movies", showFilters = false }: MovieProps
         <div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6">
             {movies.map((movie, index) => (
-              <>
+              <React.Fragment key={movie.id || index}>
                 {/* Insert ad banner after every 3 items */}
                 {index > 0 && index % 3 === 0 && (
                   <div key={`ad-${index}`} className={`${isMobile ? 'col-span-2' : 'sm:col-span-3 md:col-span-4 lg:col-span-5'} h-24 my-2`}>
@@ -43,7 +43,6 @@ const MovieGrid = ({ movies, title = "Movies", showFilters = false }: MovieProps
                 )}
               
                 <Link 
-                  key={movie.id} 
                   to={`/movie/${movie.id}`}
                   className="group"
                 >
@@ -96,7 +95,7 @@ const MovieGrid = ({ movies, title = "Movies", showFilters = false }: MovieProps
                     </div>
                   </div>
                 </Link>
-              </>
+              </React.Fragment>
             ))}
           </div>
         </div>

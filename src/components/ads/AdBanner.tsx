@@ -33,7 +33,7 @@ const AdBanner = ({ position, className = "" }: AdBannerProps) => {
         if (data) {
           // Check display frequency (simplified implementation)
           const viewCount = parseInt(localStorage.getItem(`ad_view_count_${position}`) || '0');
-          if (viewCount % data.display_frequency === 0) {
+          if (viewCount % (data.display_frequency || 1) === 0) {
             setAdContent(data);
             
             // Log ad impression (in a real app, you'd send this to analytics)
