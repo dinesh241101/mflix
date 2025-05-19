@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel";
@@ -545,11 +544,16 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Latest Uploads */}
-      <MovieGrid 
-        movies={featuredMovies} 
-        title="Latest Uploads" 
-      />
+      {/* Featured Movies Section */}
+      <section className="py-8">
+        <div className="container mx-auto px-4">
+          <MovieGrid 
+            movies={featuredMovies} 
+            title="Featured Movies" 
+            showFilters={false} 
+          />
+        </div>
+      </section>
 
       {/* Ad banner between sections */}
       <div className="container mx-auto px-4 my-4">

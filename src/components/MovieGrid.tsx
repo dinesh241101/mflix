@@ -1,17 +1,17 @@
-import {useState, useEffect} from "react";
-import {Link} from "react-router-dom";
-import {Star} from "lucide-react";
+
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Star } from "lucide-react";
 import AdBanner from "./ads/AdBanner";
-import React from "react";
 
 interface MovieProps {
-    movies: any[],
-    title?: string,
-    showFilters?: boolean,
-    bgClass?: string
+    movies: any[];
+    title?: string;
+    showFilters?: boolean;
+    bgClass?: string;
 }
 
-const MovieGrid = ({movies, title = "Movies", showFilters = false, bgClass}: MovieProps) => {
+const MovieGrid = ({ movies, title = "Movies", showFilters = false, bgClass }: MovieProps) => {
     const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
 
     useEffect(() => {
@@ -23,8 +23,10 @@ const MovieGrid = ({movies, title = "Movies", showFilters = false, bgClass}: Mov
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    const containerClass = bgClass ? `py-6 ${bgClass}` : "py-6";
+
     return (
-        <div className="py-6">
+        <div className={containerClass}>
             <h2 className="text-2xl font-bold mb-6">{title}</h2>
 
             {movies.length === 0 ? (
@@ -35,7 +37,7 @@ const MovieGrid = ({movies, title = "Movies", showFilters = false, bgClass}: Mov
                 <div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6">
                         {movies.map((movie, index) => (
-                            <React.Fragment key={movie.id || index}>
+                            <>
                                 {/* Insert ad banner after every 3 items */}
                                 {index > 0 && index % 3 === 0 && (
                                     <div key={`ad-${index}`}
@@ -45,6 +47,7 @@ const MovieGrid = ({movies, title = "Movies", showFilters = false, bgClass}: Mov
                                 )}
 
                                 <Link
+                                    key={movie.id || index}
                                     to={`/movie/${movie.id}`}
                                     className="group"
                                 >
@@ -101,7 +104,7 @@ const MovieGrid = ({movies, title = "Movies", showFilters = false, bgClass}: Mov
                                         </div>
                                     </div>
                                 </Link>
-                            </React.Fragment>
+                            </>
                         ))}
                     </div>
                 </div>

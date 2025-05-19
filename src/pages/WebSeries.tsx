@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -144,22 +143,22 @@ const WebSeries = () => {
         try {
           // Generate search suggestions from local data first (for quick response)
           const localSuggestions = allSeries
-            .filter(item => 
-              item.title.toLowerCase().includes(query.toLowerCase()) ||
-              (item.genre && item.genre.some((g: string) => g.toLowerCase().includes(query.toLowerCase()))) ||
-              (item.seo_tags && item.seo_tags.some((tag: string) => tag.toLowerCase().includes(query.toLowerCase())))
+            .filter(series => 
+              series.title.toLowerCase().includes(query.toLowerCase()) ||
+              (series.genre && series.genre.some((g: string) => g.toLowerCase().includes(query.toLowerCase()))) ||
+              (series.seo_tags && series.seo_tags.some((tag: string) => tag.toLowerCase().includes(query.toLowerCase())))
             )
             .slice(0, 5);
             
           setSearchSuggestions(localSuggestions);
           
           // Then fetch from API for more comprehensive results
-          const { data: seriesResults, error } = await supabase.rpc<any[]>('search_series', { 
-            search_term: query.toLowerCase() 
+          const { data: searchResults, error } = await supabase.rpc<any>('search_series', { 
+            search_term: query.toLowerCase()
           });
           
-          if (!error && seriesResults && Array.isArray(seriesResults)) {
-            setSearchSuggestions(seriesResults.slice(0, 5));
+          if (!error && searchResults && Array.isArray(searchResults)) {
+            setSearchSuggestions(searchResults.slice(0, 5));
           }
         } catch (error) {
           console.error("Error searching series:", error);
@@ -193,8 +192,8 @@ const WebSeries = () => {
         });
         
         // API call for search using the stored procedure
-        const { data: seriesResults, error } = await supabase.rpc<any[]>('search_series', { 
-          search_term: searchQuery.toLowerCase() 
+        const { data: searchResults, error } = await supabase.rpc<any>('search_series', { 
+          search_term: searchQuery.toLowerCase()
         });
         
         if (error) {
@@ -225,13 +224,13 @@ const WebSeries = () => {
               description: `No web series found matching '${searchQuery}' ${selectedGenre ? `in ${selectedGenre} genre` : ''}`,
             });
           }
-        } else if (seriesResults && Array.isArray(seriesResults)) {
+        } else if (searchResults && Array.isArray(searchResults)) {
           // Use API results
-          let filteredData = seriesResults;
+          let filteredData = searchResults;
           
           // Apply genre filter if selected
           if (selectedGenre) {
-            filteredData = seriesResults.filter((item: any) => 
+            filteredData = searchResults.filter((item: any) => 
               item.genre && item.genre.includes(selectedGenre)
             );
           }
