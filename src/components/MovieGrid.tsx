@@ -35,10 +35,10 @@ const MovieGrid = ({ movies, title = "Movies", showFilters = false }: MovieProps
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6">
             {movies.map((movie, index) => (
               <>
-                {/* Insert ad banner every 10 items */}
-                {index > 0 && index % 10 === 0 && (
+                {/* Insert ad banner after every 3 items */}
+                {index > 0 && index % 3 === 0 && (
                   <div key={`ad-${index}`} className={`${isMobile ? 'col-span-2' : 'sm:col-span-3 md:col-span-4 lg:col-span-5'} h-24 my-2`}>
-                    <AdBanner position="home" className="w-full h-full" />
+                    <AdBanner position={`content_after_${index}`} className="w-full h-full" />
                   </div>
                 )}
               

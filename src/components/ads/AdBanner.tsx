@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Ad } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 
 interface AdBannerProps {
   position: string;
@@ -72,7 +72,7 @@ const AdBanner = ({ position, className = "" }: AdBannerProps) => {
   if (loading) {
     return (
       <div className={`ad-banner-placeholder ${className} h-24 bg-gray-800 animate-pulse rounded-lg flex items-center justify-center`}>
-        <Ad className="text-gray-700" size={24} />
+        <ExternalLink className="text-gray-700" size={24} />
       </div>
     );
   }
@@ -100,7 +100,7 @@ const AdBanner = ({ position, className = "" }: AdBannerProps) => {
   if (showPlaceholder) {
     return (
       <div className={`ad-banner-placeholder ${className} bg-gray-800/50 border border-dashed border-gray-700 rounded-lg p-4 flex flex-col items-center justify-center`}>
-        <Ad className="text-gray-700 mb-2" size={24} />
+        <ExternalLink className="text-gray-700 mb-2" size={24} />
         <p className="text-gray-600 text-sm text-center">Ad Space Available</p>
         <p className="text-gray-600 text-xs text-center">Position: {position}</p>
       </div>
