@@ -1,107 +1,113 @@
-
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Star } from "lucide-react";
+import {useState, useEffect} from "react";
+import {Link} from "react-router-dom";
+import {Star} from "lucide-react";
 import AdBanner from "./ads/AdBanner";
+import React from "react";
 
 interface MovieProps {
-  movies: any[];
-  title?: string;
-  showFilters?: boolean;
+    movies: any[],
+    title?: string,
+    showFilters?: boolean,
+    bgClass?: string
 }
 
-const MovieGrid = ({ movies, title = "Movies", showFilters = false }: MovieProps) => {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
-  
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 640);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  
-  return (
-    <div className="py-6">
-      <h2 className="text-2xl font-bold mb-6">{title}</h2>
-      
-      {movies.length === 0 ? (
-        <div className="bg-gray-800 rounded-lg p-12 text-center">
-          <p className="text-gray-400 text-lg">No movies found.</p>
-        </div>
-      ) : (
-        <div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6">
-            {movies.map((movie, index) => (
-              <React.Fragment key={movie.id || index}>
-                {/* Insert ad banner after every 3 items */}
-                {index > 0 && index % 3 === 0 && (
-                  <div key={`ad-${index}`} className={`${isMobile ? 'col-span-2' : 'sm:col-span-3 md:col-span-4 lg:col-span-5'} h-24 my-2`}>
-                    <AdBanner position={`content_after_${index}`} className="w-full h-full" />
-                  </div>
-                )}
-              
-                <Link 
-                  to={`/movie/${movie.id}`}
-                  className="group"
-                >
-                  <div className="bg-gray-800 rounded-lg overflow-hidden shadow-lg transition-transform transform hover:scale-105 hover:shadow-xl">
-                    {/* Movie poster */}
-                    <div className="relative aspect-[2/3]">
-                      <img 
-                        src={movie.poster_url || 'https://via.placeholder.com/300x450?text=No+Image'} 
-                        alt={movie.title}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                      
-                      {/* Quality badge */}
-                      <span className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
+const MovieGrid = ({movies, title = "Movies", showFilters = false, bgClass}: MovieProps) => {
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 640);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    return (
+        <div className="py-6">
+            <h2 className="text-2xl font-bold mb-6">{title}</h2>
+
+            {movies.length === 0 ? (
+                <div className="bg-gray-800 rounded-lg p-12 text-center">
+                    <p className="text-gray-400 text-lg">No movies found.</p>
+                </div>
+            ) : (
+                <div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-6">
+                        {movies.map((movie, index) => (
+                            <React.Fragment key={movie.id || index}>
+                                {/* Insert ad banner after every 3 items */}
+                                {index > 0 && index % 3 === 0 && (
+                                    <div key={`ad-${index}`}
+                                         className={`${isMobile ? 'col-span-2' : 'sm:col-span-3 md:col-span-4 lg:col-span-5'} h-24 my-2`}>
+                                        <AdBanner position={`content_after_${index}`} className="w-full h-full"/>
+                                    </div>
+                                )}
+
+                                <Link
+                                    to={`/movie/${movie.id}`}
+                                    className="group"
+                                >
+                                    <div
+                                        className="bg-gray-800 rounded-lg overflow-hidden shadow-lg transition-transform transform hover:scale-105 hover:shadow-xl">
+                                        {/* Movie poster */}
+                                        <div className="relative aspect-[2/3]">
+                                            <img
+                                                src={movie.poster_url || 'https://via.placeholder.com/300x450?text=No+Image'}
+                                                alt={movie.title}
+                                                className="w-full h-full object-cover"
+                                                loading="lazy"
+                                            />
+
+                                            {/* Quality badge */}
+                                            <span
+                                                className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
                         {movie.quality || 'HD'}
                       </span>
-                      
-                      {/* Rating */}
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2">
-                        <div className="flex items-center">
-                          <Star size={14} className="text-yellow-500 mr-1" />
-                          <span className="text-white text-sm">
+
+                                            {/* Rating */}
+                                            <div
+                                                className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2">
+                                                <div className="flex items-center">
+                                                    <Star size={14} className="text-yellow-500 mr-1"/>
+                                                    <span className="text-white text-sm">
                             {movie.imdb_rating || '?'}/10
                           </span>
-                        </div>
-                      </div>
-                      
-                      {/* Hover overlay */}
-                      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                        <div className="text-center p-4">
+                                                </div>
+                                            </div>
+
+                                            {/* Hover overlay */}
+                                            <div
+                                                className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                <div className="text-center p-4">
                           <span className="inline-block bg-blue-600 text-white text-sm px-2 py-1 rounded mb-2">
                             View Details
                           </span>
-                          <p className="text-gray-200 text-sm hidden sm:block">
-                            {movie.year ? `${movie.year} | ` : ''}{(movie.genre && movie.genre[0]) || ''}
-                          </p>
-                        </div>
-                      </div>
+                                                    <p className="text-gray-200 text-sm hidden sm:block">
+                                                        {movie.year ? `${movie.year} | ` : ''}{(movie.genre && movie.genre[0]) || ''}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Movie info */}
+                                        <div className="p-3">
+                                            <h3 className="text-white text-sm sm:text-base font-semibold line-clamp-2 leading-tight">
+                                                {movie.title}
+                                            </h3>
+                                            <p className="text-gray-400 text-xs sm:text-sm mt-1">
+                                                {movie.year || ''} {movie.year && movie.content_type ? '•' : ''} {movie.content_type === 'movie' ? 'Movie' : movie.content_type === 'series' ? 'Series' : movie.content_type}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </Link>
+                            </React.Fragment>
+                        ))}
                     </div>
-                    
-                    {/* Movie info */}
-                    <div className="p-3">
-                      <h3 className="text-white text-sm sm:text-base font-semibold line-clamp-2 leading-tight">
-                        {movie.title}
-                      </h3>
-                      <p className="text-gray-400 text-xs sm:text-sm mt-1">
-                        {movie.year || ''} {movie.year && movie.content_type ? '•' : ''} {movie.content_type === 'movie' ? 'Movie' : movie.content_type === 'series' ? 'Series' : movie.content_type}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-              </React.Fragment>
-            ))}
-          </div>
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 };
 
 export default MovieGrid;
