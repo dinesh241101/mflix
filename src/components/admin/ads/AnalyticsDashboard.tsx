@@ -7,14 +7,15 @@ import {
   DeviceDistributionChart,
   GeographicDistributionChart,
   AdComparisonChart,
-  CampaignStatusCard,
-  DateRangePicker
+  DatePickerWithRange as DateRangePicker,
+  CampaignStatusCard
 } from "@/components/admin/ads/analytics";
+import { DateRange } from "react-day-picker";
 
 interface AnalyticsDashboardProps {
   ads: any[];
-  dateRange?: { from: Date; to: Date; };
-  setDateRange?: React.Dispatch<React.SetStateAction<{ from: Date; to: Date; }>>;
+  dateRange?: DateRange;
+  setDateRange?: (dateRange: DateRange | undefined) => void;
 }
 
 const AnalyticsDashboard = ({ ads, dateRange, setDateRange }: AnalyticsDashboardProps) => {

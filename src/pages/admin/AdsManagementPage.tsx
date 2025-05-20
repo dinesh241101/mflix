@@ -9,6 +9,7 @@ import AnalyticsDashboard from "@/components/admin/ads/AnalyticsDashboard";
 import AffiliateLinksManager from "@/components/admin/ads/AffiliateLinksManager";
 import LoadingScreen from "@/components/LoadingScreen";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DateRange } from "react-day-picker";
 
 const AdsManagementPage = () => {
   const navigate = useNavigate();
@@ -36,8 +37,8 @@ const AdsManagementPage = () => {
   });
   
   // Analytics date range
-  const [dateRange, setDateRange] = useState({
-    from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date()
   });
   
@@ -286,7 +287,7 @@ const AdsManagementPage = () => {
           
           <TabsContent value="analytics">
             <AnalyticsDashboard 
-              ads={ads}
+              ads={ads} 
               dateRange={dateRange}
               setDateRange={setDateRange}
             />

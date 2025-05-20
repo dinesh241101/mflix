@@ -1,9 +1,9 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminHeader from "@/components/admin/AdminHeader";
-import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import MoviesTab from "@/components/admin/movies/MoviesTab";
 import LoadingScreen from "@/components/LoadingScreen";
 
@@ -44,7 +44,7 @@ const MoviesPage = () => {
   });
   
   // Google search results for cast members
-  const [castSearchResults, setCastSearchResults] = useState([]);
+  const [castSearchResults, setCastSearchResults] = useState<Array<{name: string, role: string}>>([]);
   const [castSearchQuery, setCastSearchQuery] = useState("");
   
   // Downloads form
@@ -326,9 +326,10 @@ const MoviesPage = () => {
       setMovieCast([
         ...movieCast,
         {
-          id: Date.now().toString(), // Temporary ID
-          name: castForm.name,
-          role: castForm.role
+          // Temporary ID for UI purposes
+          id: Date.now().toString(),
+          actor_name: castForm.name,
+          actor_role: castForm.role
         }
       ]);
       
@@ -357,7 +358,7 @@ const MoviesPage = () => {
       const { error } = await supabase
         .from('movie_cast')
         .delete()
-        .eq('id', id);
+        .eq('cast_id', id);
       
       if (error) throw error;
       
@@ -366,8 +367,8 @@ const MoviesPage = () => {
         description: "Cast member removed successfully!",
       });
       
-      // Update local state
-      setMovieCast(movieCast.filter(member => member.id !== id));
+      // Update local state - use cast_id for DB entries or id for temporary entries
+      setMovieCast(movieCast.filter(member => (member.cast_id !== id && member.id !== id)));
       
     } catch (error: any) {
       console.error("Error deleting cast member:", error);
@@ -381,11 +382,11 @@ const MoviesPage = () => {
     }
   };
   
-  // Handle search for cast members using Google
-  const handleCastSearch = async (query: string) => {
+  // Handle search for cast members
+  const handleCastSearch = (query: string) => {
     setCastSearchQuery(query);
     
-    // Simulate Google search results
+    // Simulate search results based on query
     if (query.trim().length > 2) {
       // Simulated results based on query
       const simulatedResults = [
@@ -395,14 +396,14 @@ const MoviesPage = () => {
         { name: `${query} Brown`, role: "Producer" }
       ];
       
-      setCastSearchResults(simulatedResults as any);
+      setCastSearchResults(simulatedResults);
     } else {
       setCastSearchResults([]);
     }
   };
   
   // Select cast member from search results
-  const selectCastFromSearch = (result: any) => {
+  const selectCastFromSearch = (result: {name: string, role: string}) => {
     setCastForm({
       name: result.name,
       role: ""
