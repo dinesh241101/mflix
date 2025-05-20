@@ -239,7 +239,8 @@ const WebSeries = () => {
         });
         
         // API call for search using the stored procedure
-        const { data: searchResults, error } = await supabase.rpc<any>('search_series', { 
+        // Fix: Add the proper generic type arguments to the useQuery call
+        const { data: searchResults, error } = await supabase.rpc<any, { search_term: string }>('search_series', { 
           search_term: searchQuery.toLowerCase()
         });
         
