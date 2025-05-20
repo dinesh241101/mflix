@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,7 +6,7 @@ import {
   DeviceDistributionChart,
   GeographicDistributionChart,
   AdComparisonChart,
-  DatePickerWithRange as DateRangePicker,
+  DatePickerWithRange,
   CampaignStatusCard
 } from "@/components/admin/ads/analytics";
 import { DateRange } from "react-day-picker";
@@ -25,7 +24,7 @@ const AnalyticsDashboard = ({ ads, dateRange, setDateRange }: AnalyticsDashboard
         <h2 className="text-xl font-bold">Ad Analytics Dashboard</h2>
         
         {setDateRange && dateRange && (
-          <DateRangePicker 
+          <DatePickerWithRange 
             dateRange={dateRange}
             setDateRange={setDateRange}
           />
