@@ -6,10 +6,10 @@ import {
   PerformanceOverTimeChart, 
   DeviceDistributionChart,
   GeographicDistributionChart,
-  AdComparisonChart
+  AdComparisonChart,
+  CampaignStatusCard,
+  DateRangePicker
 } from "@/components/admin/ads/analytics";
-import DateRangePicker from "@/components/admin/ads/analytics/DateRangePicker";
-import CampaignStatusCard from "@/components/admin/ads/analytics/CampaignStatusCard";
 
 interface AnalyticsDashboardProps {
   ads: any[];
@@ -50,7 +50,7 @@ const AnalyticsDashboard = ({ ads, dateRange, setDateRange }: AnalyticsDashboard
             <CardContent className="pt-6">
               <h3 className="text-lg font-medium mb-4">Performance Over Time</h3>
               <div className="h-80">
-                <PerformanceOverTimeChart />
+                <PerformanceOverTimeChart analytics={[]} dateRange={dateRange || {from: new Date(), to: new Date()}} />
               </div>
             </CardContent>
           </Card>
@@ -62,7 +62,7 @@ const AnalyticsDashboard = ({ ads, dateRange, setDateRange }: AnalyticsDashboard
               <CardContent className="pt-6">
                 <h3 className="text-lg font-medium mb-4">Device Distribution</h3>
                 <div className="h-72">
-                  <DeviceDistributionChart />
+                  <DeviceDistributionChart analytics={[]} type="device" />
                 </div>
               </CardContent>
             </Card>
@@ -71,7 +71,7 @@ const AnalyticsDashboard = ({ ads, dateRange, setDateRange }: AnalyticsDashboard
               <CardContent className="pt-6">
                 <h3 className="text-lg font-medium mb-4">Geographic Distribution</h3>
                 <div className="h-72">
-                  <GeographicDistributionChart />
+                  <GeographicDistributionChart analytics={[]} />
                 </div>
               </CardContent>
             </Card>
@@ -83,7 +83,7 @@ const AnalyticsDashboard = ({ ads, dateRange, setDateRange }: AnalyticsDashboard
             <CardContent className="pt-6">
               <h3 className="text-lg font-medium mb-4">Ad Campaign Comparison</h3>
               <div className="h-80">
-                <AdComparisonChart />
+                <AdComparisonChart analytics={[]} metric="impressions" />
               </div>
             </CardContent>
           </Card>
