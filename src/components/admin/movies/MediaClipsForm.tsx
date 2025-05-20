@@ -49,8 +49,8 @@ const MediaClipsForm = ({ movieId, onClipAdded, existingClips, onClipDeleted }: 
         .from('media_clips')
         .insert({
           movie_id: movieId,
-          type: clipType,
-          title: clipTitle || `${clipType} clip`,
+          clip_type: clipType,
+          clip_title: clipTitle || `${clipType} clip`,
           thumbnail_url: thumbnailUrl,
           video_url: clipUrl
         })
@@ -87,7 +87,7 @@ const MediaClipsForm = ({ movieId, onClipAdded, existingClips, onClipDeleted }: 
       const { error } = await supabase
         .from('media_clips')
         .delete()
-        .eq('id', clipId);
+        .eq('clip_id', clipId);
       
       if (error) throw error;
       
@@ -258,12 +258,12 @@ const MediaClipsForm = ({ movieId, onClipAdded, existingClips, onClipDeleted }: 
           {existingClips && existingClips.length > 0 ? (
             <div className="space-y-4">
               {existingClips.map((clip) => (
-                <div key={clip.id} className="bg-gray-700 rounded-md p-4 flex items-start">
+                <div key={clip.clip_id} className="bg-gray-700 rounded-md p-4 flex items-start">
                   <div className="flex-shrink-0 mr-4">
                     {clip.thumbnail_url ? (
                       <img 
                         src={clip.thumbnail_url} 
-                        alt={clip.title || "Clip thumbnail"}
+                        alt={clip.clip_title || "Clip thumbnail"}
                         className="w-24 h-16 object-cover rounded-md"
                       />
                     ) : (
@@ -274,10 +274,10 @@ const MediaClipsForm = ({ movieId, onClipAdded, existingClips, onClipDeleted }: 
                   </div>
                   <div className="flex-grow">
                     <h3 className="font-medium">
-                      {clip.title || `${clip.type} clip`}
+                      {clip.clip_title || `${clip.clip_type} clip`}
                     </h3>
                     <p className="text-sm text-gray-400">
-                      Type: {clip.type}
+                      Type: {clip.clip_type}
                     </p>
                     {clip.video_url && (
                       <p className="text-xs text-gray-500 truncate mt-1">
@@ -289,7 +289,7 @@ const MediaClipsForm = ({ movieId, onClipAdded, existingClips, onClipDeleted }: 
                     variant="ghost" 
                     size="sm" 
                     className="text-red-400 hover:text-red-300 hover:bg-red-900/30"
-                    onClick={() => handleDeleteClip(clip.id)}
+                    onClick={() => handleDeleteClip(clip.clip_id)}
                   >
                     <Trash2 size={16} />
                   </Button>

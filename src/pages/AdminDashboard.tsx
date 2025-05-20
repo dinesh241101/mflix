@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -38,7 +39,7 @@ const AdminDashboard = () => {
   });
   const [movieCast, setMovieCast] = useState<any[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<any>(null);
-  const [isEditing, setIsEditing] = useState(false); // Add the missing state variable
+  const [isEditing, setIsEditing] = useState(false);
   
   // Form states
   const [currentPassword, setCurrentPassword] = useState("");
@@ -97,7 +98,7 @@ const AdminDashboard = () => {
   });
   
   // Google search results for cast members
-  const [castSearchResults, setCastSearchResults] = useState([]);
+  const [castSearchResults, setCastSearchResults] = useState<any[]>([]);
   const [castSearchQuery, setCastSearchQuery] = useState("");
   
   // Downloads form
@@ -162,10 +163,10 @@ const AdminDashboard = () => {
       const { data: userData, error: userError } = await supabase
         .from('user_roles')
         .select(`
-          id,
-          role,
+          role_id,
+          role_name,
           created_at,
-          user_id
+          auth_user_id
         `);
       
       if (userError) throw userError;
@@ -174,7 +175,7 @@ const AdminDashboard = () => {
       let populatedUsers = [];
       if (userData) {
         for (const user of userData) {
-          const { data: authUser } = await supabase.auth.admin.getUserById(user.user_id);
+          const { data: authUser } = await supabase.auth.admin.getUserById(user.auth_user_id);
           if (authUser && authUser.user) {
             populatedUsers.push({
               ...user,
@@ -224,7 +225,7 @@ const AdminDashboard = () => {
       // Process analytics data for display
       if (analyticsData) {
         // Group by country
-        const countries = analyticsData.reduce((acc: any, item: any) => {
+        const countries: any = analyticsData.reduce((acc: any, item: any) => {
           const country = item.country || 'Unknown';
           if (!acc[country]) {
             acc[country] = { count: 0, states: {} };
@@ -232,7 +233,7 @@ const AdminDashboard = () => {
           acc[country].count++;
           
           // Track states/cities
-          const state = item.state || 'Unknown';
+          const state = item.state_region || 'Unknown';
           if (!acc[country].states[state]) {
             acc[country].states[state] = { count: 0, cities: {} };
           }
@@ -332,13 +333,13 @@ const AdminDashboard = () => {
       const { data: movie, error: movieError } = await supabase
         .from('movies')
         .insert(movieData)
-        .select('id')
+        .select('movie_id')
         .single();
       
       if (movieError) throw movieError;
       
       // If movie created successfully, add download links
-      if (movie && movie.id) {
+      if (movie && movie.movie_id) {
         // Process download links if any
         if (movieForm.downloadLinks.trim()) {
           const links = movieForm.downloadLinks.split('\n').filter(link => link.trim());
@@ -352,10 +353,10 @@ const AdminDashboard = () => {
               await supabase
                 .from('download_links')
                 .insert({
-                  movie_id: movie.id,
+                  movie_id: movie.movie_id,
                   quality: quality.trim(),
-                  size: size.trim(),
-                  url: url.trim()
+                  file_size: size.trim(),
+                  download_url: url.trim()
                 });
             }
           }
@@ -366,9 +367,9 @@ const AdminDashboard = () => {
           await supabase
             .from('media_clips')
             .insert({
-              movie_id: movie.id,
-              title: `${movieForm.title} - Trailer`,
-              type: 'trailer',
+              movie_id: movie.movie_id,
+              clip_title: `${movieForm.title} - Trailer`,
+              clip_type: 'trailer',
               video_url: movieForm.youtubeTrailer.trim()
             });
         }
@@ -422,7 +423,7 @@ const AdminDashboard = () => {
       setLoading(true);
       
       const adData = {
-        name: adForm.name,
+        ad_name: adForm.name,
         ad_type: adForm.adType,
         position: adForm.position,
         content_url: adForm.contentUrl,
@@ -531,8 +532,8 @@ const AdminDashboard = () => {
         const { error: roleError } = await supabase
           .from('user_roles')
           .insert({
-            user_id: data.user.id,
-            role: newUserForm.role
+            auth_user_id: data.user.id,
+            role_name: newUserForm.role
           });
         
         if (roleError) throw roleError;
@@ -571,8 +572,8 @@ const AdminDashboard = () => {
       
       const { error } = await supabase
         .from('user_roles')
-        .update({ role: newRole })
-        .eq('user_id', userId);
+        .update({ role_name: newRole })
+        .eq('auth_user_id', userId);
       
       if (error) throw error;
       
@@ -678,7 +679,7 @@ const AdminDashboard = () => {
       const { error } = await supabase
         .from('shorts')
         .delete()
-        .eq('id', id);
+        .eq('short_id', id);
       
       if (error) throw error;
       
@@ -711,7 +712,7 @@ const AdminDashboard = () => {
       const { data: movie, error: movieError } = await supabase
         .from('movies')
         .select('*')
-        .eq('id', movieId)
+        .eq('movie_id', movieId)
         .single();
       
       if (movieError) throw movieError;
@@ -759,9 +760,9 @@ const AdminDashboard = () => {
       const { error } = await supabase
         .from('movie_cast')
         .insert({
-          movie_id: selectedMovie.id,
-          name: castForm.name,
-          role: castForm.role
+          movie_id: selectedMovie.movie_id,
+          actor_name: castForm.name,
+          actor_role: castForm.role
         });
       
       if (error) throw error;
@@ -775,9 +776,9 @@ const AdminDashboard = () => {
       setMovieCast([
         ...movieCast,
         {
-          id: Date.now().toString(), // Temporary ID
-          name: castForm.name,
-          role: castForm.role
+          cast_id: Date.now().toString(), // Temporary ID
+          actor_name: castForm.name,
+          actor_role: castForm.role
         }
       ]);
       
@@ -806,7 +807,7 @@ const AdminDashboard = () => {
       const { error } = await supabase
         .from('movie_cast')
         .delete()
-        .eq('id', id);
+        .eq('cast_id', id);
       
       if (error) throw error;
       
@@ -816,7 +817,7 @@ const AdminDashboard = () => {
       });
       
       // Update local state
-      setMovieCast(movieCast.filter(member => member.id !== id));
+      setMovieCast(movieCast.filter(member => member.cast_id !== id));
       
     } catch (error: any) {
       console.error("Error deleting cast member:", error);
@@ -845,7 +846,7 @@ const AdminDashboard = () => {
         { name: `${query} Brown`, role: "Producer" }
       ];
       
-      setCastSearchResults(simulatedResults as any);
+      setCastSearchResults(simulatedResults);
     } else {
       setCastSearchResults([]);
     }
@@ -871,7 +872,7 @@ const AdminDashboard = () => {
       const { error } = await supabase
         .from('movies')
         .update({ downloads: downloadsCount })
-        .eq('id', selectedMovie.id);
+        .eq('movie_id', selectedMovie.movie_id);
       
       if (error) throw error;
       
@@ -897,28 +898,6 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   };
-  
-  // For unauthorized access
-  // if (!isLoggedIn && !loading) {
-  //   return (
-  //     <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-  //       <div className="text-center text-white">
-  //         <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
-  //         <p className="text-gray-400 mb-6">You need to log in to access the admin panel</p>
-  //         <Link 
-  //           to="/admin/login" 
-  //           className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
-  //         >
-  //           Go to Login
-  //         </Link>
-  //       </div>
-  //     </div>
-  //   );
-  // }
-
-  // if (loading) {
-  //   return <LoadingScreen message="Loading Admin Dashboard" />;
-  // }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">

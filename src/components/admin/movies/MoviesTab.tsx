@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Edit, Plus, Trash2, AlertCircle } from "lucide-react";
@@ -73,7 +74,7 @@ const MoviesTab = ({
       const { error } = await supabase
         .from('movies')
         .delete()
-        .eq('id', movieToDelete);
+        .eq('movie_id', movieToDelete);
       
       if (error) throw error;
       
@@ -102,7 +103,7 @@ const MoviesTab = ({
   // Handle edit movie
   const handleEditMovie = (movieId: string) => {
     // Find the movie to edit
-    const movieData = movies.find(m => m.id === movieId);
+    const movieData = movies.find(m => m.movie_id === movieId);
     if (movieData) {
       // Set form data (this is simplified - you'd need to map database fields to form fields)
       setMovieForm({

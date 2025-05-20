@@ -3,6 +3,9 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import AdPlaceholder from './AdPlaceholder';
 
+// Define valid position types
+type AdPosition = 'top' | 'bottom' | 'side' | 'center';
+
 interface AdBannerProps {
   position: string;
   className?: string;
@@ -82,11 +85,11 @@ const AdBanner = ({ position, className = '' }: AdBannerProps) => {
   };
 
   if (loading) {
-    return <AdPlaceholder position={position} className={className} />;
+    return <AdPlaceholder position={position as AdPosition} className={className} />;
   }
 
   if (error || !ad) {
-    return <AdPlaceholder position={position} className={className} />;
+    return <AdPlaceholder position={position as AdPosition} className={className} />;
   }
 
   return (
