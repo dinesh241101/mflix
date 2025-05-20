@@ -11,37 +11,37 @@ export type Database = {
     Tables: {
       ads: {
         Row: {
+          ad_id: string
+          ad_name: string
           ad_type: string
           content_url: string | null
           created_at: string | null
           display_frequency: number | null
-          id: string
           is_active: boolean | null
-          name: string
           position: string | null
           target_url: string | null
           updated_at: string | null
         }
         Insert: {
+          ad_id?: string
+          ad_name: string
           ad_type: string
           content_url?: string | null
           created_at?: string | null
           display_frequency?: number | null
-          id?: string
           is_active?: boolean | null
-          name: string
           position?: string | null
           target_url?: string | null
           updated_at?: string | null
         }
         Update: {
+          ad_id?: string
+          ad_name?: string
           ad_type?: string
           content_url?: string | null
           created_at?: string | null
           display_frequency?: number | null
-          id?: string
           is_active?: boolean | null
-          name?: string
           position?: string | null
           target_url?: string | null
           updated_at?: string | null
@@ -50,36 +50,36 @@ export type Database = {
       }
       analytics: {
         Row: {
+          analytics_id: string
           browser: string | null
           city: string | null
           country: string | null
           device: string | null
-          id: string
-          os: string | null
+          operating_system: string | null
           page_visited: string | null
-          state: string | null
+          state_region: string | null
           visit_timestamp: string | null
         }
         Insert: {
+          analytics_id?: string
           browser?: string | null
           city?: string | null
           country?: string | null
           device?: string | null
-          id?: string
-          os?: string | null
+          operating_system?: string | null
           page_visited?: string | null
-          state?: string | null
+          state_region?: string | null
           visit_timestamp?: string | null
         }
         Update: {
+          analytics_id?: string
           browser?: string | null
           city?: string | null
           country?: string | null
           device?: string | null
-          id?: string
-          os?: string | null
+          operating_system?: string | null
           page_visited?: string | null
-          state?: string | null
+          state_region?: string | null
           visit_timestamp?: string | null
         }
         Relationships: []
@@ -87,27 +87,27 @@ export type Database = {
       download_links: {
         Row: {
           created_at: string | null
-          id: string
+          download_url: string
+          file_size: string
+          link_id: string
           movie_id: string | null
           quality: string
-          size: string
-          url: string
         }
         Insert: {
           created_at?: string | null
-          id?: string
+          download_url: string
+          file_size: string
+          link_id?: string
           movie_id?: string | null
           quality: string
-          size: string
-          url: string
         }
         Update: {
           created_at?: string | null
-          id?: string
+          download_url?: string
+          file_size?: string
+          link_id?: string
           movie_id?: string | null
           quality?: string
-          size?: string
-          url?: string
         }
         Relationships: [
           {
@@ -115,36 +115,36 @@ export type Database = {
             columns: ["movie_id"]
             isOneToOne: false
             referencedRelation: "movies"
-            referencedColumns: ["id"]
+            referencedColumns: ["movie_id"]
           },
         ]
       }
       media_clips: {
         Row: {
+          clip_id: string
+          clip_title: string | null
+          clip_type: string
           created_at: string | null
-          id: string
           movie_id: string | null
           thumbnail_url: string | null
-          title: string | null
-          type: string
           video_url: string
         }
         Insert: {
+          clip_id?: string
+          clip_title?: string | null
+          clip_type: string
           created_at?: string | null
-          id?: string
           movie_id?: string | null
           thumbnail_url?: string | null
-          title?: string | null
-          type: string
           video_url: string
         }
         Update: {
+          clip_id?: string
+          clip_title?: string | null
+          clip_type?: string
           created_at?: string | null
-          id?: string
           movie_id?: string | null
           thumbnail_url?: string | null
-          title?: string | null
-          type?: string
           video_url?: string
         }
         Relationships: [
@@ -153,31 +153,31 @@ export type Database = {
             columns: ["movie_id"]
             isOneToOne: false
             referencedRelation: "movies"
-            referencedColumns: ["id"]
+            referencedColumns: ["movie_id"]
           },
         ]
       }
       movie_cast: {
         Row: {
+          actor_name: string
+          actor_role: string | null
+          cast_id: string
           created_at: string | null
-          id: string
           movie_id: string | null
-          name: string
-          role: string | null
         }
         Insert: {
+          actor_name: string
+          actor_role?: string | null
+          cast_id?: string
           created_at?: string | null
-          id?: string
           movie_id?: string | null
-          name: string
-          role?: string | null
         }
         Update: {
+          actor_name?: string
+          actor_role?: string | null
+          cast_id?: string
           created_at?: string | null
-          id?: string
           movie_id?: string | null
-          name?: string
-          role?: string | null
         }
         Relationships: [
           {
@@ -185,7 +185,7 @@ export type Database = {
             columns: ["movie_id"]
             isOneToOne: false
             referencedRelation: "movies"
-            referencedColumns: ["id"]
+            referencedColumns: ["movie_id"]
           },
         ]
       }
@@ -198,8 +198,8 @@ export type Database = {
           downloads: number | null
           featured: boolean | null
           genre: string[] | null
-          id: string
           imdb_rating: number | null
+          movie_id: string
           poster_url: string | null
           production_house: string | null
           quality: string | null
@@ -218,8 +218,8 @@ export type Database = {
           downloads?: number | null
           featured?: boolean | null
           genre?: string[] | null
-          id?: string
           imdb_rating?: number | null
+          movie_id?: string
           poster_url?: string | null
           production_house?: string | null
           quality?: string | null
@@ -238,8 +238,8 @@ export type Database = {
           downloads?: number | null
           featured?: boolean | null
           genre?: string[] | null
-          id?: string
           imdb_rating?: number | null
+          movie_id?: string
           poster_url?: string | null
           production_house?: string | null
           quality?: string | null
@@ -255,21 +255,21 @@ export type Database = {
       shorts: {
         Row: {
           created_at: string | null
-          id: string
+          short_id: string
           thumbnail_url: string | null
           title: string
           video_url: string
         }
         Insert: {
           created_at?: string | null
-          id?: string
+          short_id?: string
           thumbnail_url?: string | null
           title: string
           video_url: string
         }
         Update: {
           created_at?: string | null
-          id?: string
+          short_id?: string
           thumbnail_url?: string | null
           title?: string
           video_url?: string
@@ -278,22 +278,22 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          auth_user_id: string
           created_at: string | null
-          id: string
-          role: string
-          user_id: string
+          role_id: string
+          role_name: string
         }
         Insert: {
+          auth_user_id: string
           created_at?: string | null
-          id?: string
-          role: string
-          user_id?: string
+          role_id?: string
+          role_name: string
         }
         Update: {
+          auth_user_id?: string
           created_at?: string | null
-          id?: string
-          role?: string
-          user_id?: string
+          role_id?: string
+          role_name?: string
         }
         Relationships: []
       }
@@ -316,8 +316,8 @@ export type Database = {
           downloads: number | null
           featured: boolean | null
           genre: string[] | null
-          id: string
           imdb_rating: number | null
+          movie_id: string
           poster_url: string | null
           production_house: string | null
           quality: string | null
@@ -339,8 +339,8 @@ export type Database = {
           downloads: number | null
           featured: boolean | null
           genre: string[] | null
-          id: string
           imdb_rating: number | null
+          movie_id: string
           poster_url: string | null
           production_house: string | null
           quality: string | null

@@ -53,7 +53,7 @@ const MovieDetail = () => {
         const { data: movieData, error: movieError } = await supabase
           .from("movies")
           .select("*")
-          .eq("id", id)
+          .eq("movie_id", id)
           .single();
         
         if (movieError) throw movieError;
@@ -66,7 +66,7 @@ const MovieDetail = () => {
           .from("media_clips")
           .select("*")
           .eq("movie_id", id)
-          .eq("type", "trailer")
+          .eq("clip_type", "trailer")
           .limit(1)
           .single();
         
@@ -98,9 +98,9 @@ const MovieDetail = () => {
         if (movieData.genre && movieData.genre.length > 0) {
           const { data: relatedData, error: relatedError } = await supabase
             .from("movies")
-            .select("id, title, poster_url, year, imdb_rating, genre")
+            .select("movie_id, title, poster_url, year, imdb_rating, genre")
             .contains("genre", [movieData.genre[0]])
-            .neq("id", id)
+            .neq("movie_id", id)
             .limit(4);
           
           if (!relatedError) {
@@ -113,7 +113,7 @@ const MovieDetail = () => {
           page_visited: `movie/${id}`,
           browser: navigator.userAgent,
           device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
-          os: navigator.platform
+          operating_system: navigator.platform
         });
         
       } catch (error) {
@@ -131,7 +131,7 @@ const MovieDetail = () => {
     if (id) {
       fetchMovieData();
     }
-  }, [id, toast]);
+  }, [id]);
 
   // Handle download click
   const handleDownloadClick = async (downloadLink: any) => {
@@ -140,7 +140,7 @@ const MovieDetail = () => {
       const { error } = await supabase
         .from("movies")
         .update({ downloads: (movie.downloads || 0) + 1 })
-        .eq("id", id);
+        .eq("movie_id", id);
       
       if (error) throw error;
       
@@ -149,11 +149,11 @@ const MovieDetail = () => {
         page_visited: `download/${id}`,
         browser: navigator.userAgent,
         device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
-        os: navigator.platform
+        operating_system: navigator.platform
       });
       
       // Open link in new tab
-      window.open(downloadLink.url, "_blank");
+      window.open(downloadLink.download_url, "_blank");
       
     } catch (error) {
       console.error("Error tracking download:", error);
@@ -388,12 +388,12 @@ const MovieDetail = () => {
             <h2 className="text-2xl font-bold mb-6">Cast</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {cast.map((person) => (
-                <div key={person.id} className="bg-gray-700 rounded-lg p-4 text-center">
+                <div key={person.cast_id} className="bg-gray-700 rounded-lg p-4 text-center">
                   <div className="w-16 h-16 mx-auto rounded-full bg-gray-600 flex items-center justify-center mb-2">
                     {person.profile_pic ? (
                       <img 
                         src={person.profile_pic}
-                        alt={person.name}
+                        alt={person.actor_name}
                         className="w-full h-full object-cover rounded-full"
                       />
                     ) : (
@@ -402,9 +402,9 @@ const MovieDetail = () => {
                       </svg>
                     )}
                   </div>
-                  <h3 className="font-medium">{person.name}</h3>
-                  {person.role && (
-                    <p className="text-sm text-gray-400">{person.role}</p>
+                  <h3 className="font-medium">{person.actor_name}</h3>
+                  {person.actor_role && (
+                    <p className="text-sm text-gray-400">{person.actor_role}</p>
                   )}
                 </div>
               ))}
@@ -421,7 +421,7 @@ const MovieDetail = () => {
             <div className="space-y-4">
               {downloadLinks.map((link) => (
                 <div 
-                  key={link.id}
+                  key={link.link_id}
                   className="bg-gray-800 rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between"
                 >
                   <div className="mb-4 md:mb-0">
@@ -431,7 +431,7 @@ const MovieDetail = () => {
                     </div>
                     <div className="flex items-center">
                       <span className="font-bold mr-2">Size:</span>
-                      <span>{link.size}</span>
+                      <span>{link.file_size}</span>
                     </div>
                   </div>
                   <Button 
@@ -465,7 +465,7 @@ const MovieDetail = () => {
             <h2 className="text-2xl font-bold mb-6">Related {movie.content_type === 'movie' ? 'Movies' : movie.content_type === 'series' ? 'Series' : 'Content'}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {relatedMovies.map((relatedMovie) => (
-                <Link key={relatedMovie.id} to={`/movie/${relatedMovie.id}`}>
+                <Link key={relatedMovie.movie_id} to={`/movie/${relatedMovie.movie_id}`}>
                   <div className="bg-gray-700 rounded-lg overflow-hidden hover:bg-gray-650 transition-colors">
                     <div className="h-56 bg-gray-600 relative">
                       {relatedMovie.poster_url ? (

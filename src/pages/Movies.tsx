@@ -77,7 +77,7 @@ const Movies = () => {
           page_visited: 'movies',
           browser: navigator.userAgent,
           device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
-          os: navigator.platform
+          operating_system: navigator.platform
         });
       } catch (error) {
         console.error("Error fetching movies:", error);
@@ -177,7 +177,7 @@ const Movies = () => {
           setSearchSuggestions(localSuggestions);
           
           // Then fetch from API for more comprehensive results
-          const { data: searchResults, error } = await supabase.rpc('search_movies', { 
+          const { data: searchResults, error } = await supabase.rpc<any, { search_term: string }>('search_movies', { 
             search_term: query.toLowerCase()
           });
           
@@ -209,7 +209,7 @@ const Movies = () => {
             
             // Combine results, remove duplicates by id
             const allMatches = [...titleMatches, ...genreMatches, ...typeMatches, ...tagMatches];
-            const uniqueMatches = Array.from(new Map(allMatches.map(item => [item.id, item])).values());
+            const uniqueMatches = Array.from(new Map(allMatches.map(item => [item.movie_id, item])).values());
             
             setSearchSuggestions(uniqueMatches.slice(0, 5));
           }
@@ -381,8 +381,8 @@ const Movies = () => {
               <div className="absolute z-50 mt-1 w-full bg-gray-800 border border-gray-700 rounded-md shadow-lg">
                 {searchSuggestions.map((item) => (
                   <Link 
-                    key={item.id}
-                    to={`/movie/${item.id}`}
+                    key={item.movie_id}
+                    to={`/movie/${item.movie_id}`}
                     className="flex items-center p-3 hover:bg-gray-700 border-b border-gray-700 last:border-0"
                   >
                     <div className="w-12 h-16 bg-gray-700 rounded overflow-hidden mr-3">
