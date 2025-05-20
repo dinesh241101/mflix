@@ -79,7 +79,7 @@ const Index = () => {
         // Fetch featured movies first to show content quickly
         const { data: featured, error: featuredError } = await supabase
           .from('movies')
-          .select('id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
+          .select('movie_id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
           .eq('featured', true)
           .limit(5);
         
@@ -112,7 +112,7 @@ const Index = () => {
         for (const category of categoriesToFetch) {
           const { data, error } = await supabase
             .from('movies')
-            .select('id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
+            .select('movie_id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
             .contains('genre', [category])
             .limit(4);
             
@@ -202,7 +202,7 @@ const Index = () => {
     try {
       const { data, error } = await supabase
         .from('movies')
-        .select('id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
+        .select('movie_id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
         .eq('content_type', 'movie')
         .order('downloads', { ascending: false })
         .limit(10);
@@ -224,7 +224,7 @@ const Index = () => {
       // Get total count for pagination
       const { count, error: countError } = await supabase
         .from('movies')
-        .select('id', { count: 'exact' })
+        .select('movie_id', { count: 'exact' })
         .eq('content_type', 'series');
         
       if (countError) throw countError;
@@ -236,7 +236,7 @@ const Index = () => {
       // Fetch paginated data
       const { data, error } = await supabase
         .from('movies')
-        .select('id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
+        .select('movie_id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
         .eq('content_type', 'series')
         .range(from, to);
       
@@ -254,7 +254,7 @@ const Index = () => {
     try {
       const { data, error } = await supabase
         .from('movies')
-        .select('id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
+        .select('movie_id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
         .eq('content_type', 'anime')
         .limit(8);
       
@@ -292,7 +292,7 @@ const Index = () => {
         // Search for movies by title
         const { data: titleMatches, error: titleError } = await supabase
           .from('movies')
-          .select('id, title, content_type, year, poster_url')
+          .select('movie_id, title, content_type, year, poster_url')
           .or(`title.ilike.%${query}%`)
           .limit(5);
           
@@ -301,7 +301,7 @@ const Index = () => {
         // Search for movies by genre
         const { data: genreMatches, error: genreError } = await supabase
           .from('movies')
-          .select('id, title, content_type, year, poster_url, genre')
+          .select('movie_id, title, content_type, year, poster_url, genre')
           .contains('genre', [query])
           .limit(3);
           
@@ -310,7 +310,7 @@ const Index = () => {
         // Search for movies by content_type
         const { data: typeMatches, error: typeError } = await supabase
           .from('movies')
-          .select('id, title, content_type, year, poster_url')
+          .select('movie_id, title, content_type, year, poster_url')
           .eq('content_type', query.toLowerCase())
           .limit(3);
           
@@ -319,7 +319,7 @@ const Index = () => {
         // Search for movies by seo_tags
         const { data: tagMatches, error: tagError } = await supabase
           .from('movies')
-          .select('id, title, content_type, year, poster_url, seo_tags')
+          .select('movie_id, title, content_type, year, poster_url, seo_tags')
           .contains('seo_tags', [query])
           .limit(3);
           
@@ -327,7 +327,7 @@ const Index = () => {
         
         // Combine results, remove duplicates by id
         const allMatches = [...(titleMatches || []), ...(genreMatches || []), ...(typeMatches || []), ...(tagMatches || [])];
-        const uniqueMatches = Array.from(new Map(allMatches.map(item => [item.id, item])).values());
+        const uniqueMatches = Array.from(new Map(allMatches.map(item => [item.movie_id, item])).values());
         
         setSearchSuggestions(uniqueMatches);
       } catch (error) {
@@ -360,7 +360,7 @@ const Index = () => {
   if (featuredMovies.length === 0) {
     featuredMovies.push(
       {
-        id: 1,
+        movie_id: 1,
         title: "Sample Movie",
         poster_url: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5",
         year: 2025,
@@ -428,8 +428,8 @@ const Index = () => {
               <div className="absolute z-50 mt-1 w-full bg-gray-800 border border-gray-700 rounded-md shadow-lg">
                 {searchSuggestions.map((item) => (
                   <Link 
-                    key={item.id}
-                    to={`/movie/${item.id}`}
+                    key={item.movie_id}
+                    to={`/movie/${item.movie_id}`}
                     className="flex items-center p-3 hover:bg-gray-700 border-b border-gray-700 last:border-0"
                   >
                     <div className="w-12 h-16 bg-gray-700 rounded overflow-hidden mr-3">
@@ -508,8 +508,8 @@ const Index = () => {
             <Carousel className="w-full" opts={{ loop: true, duration: 5000 }}>
               <CarouselContent>
                 {featuredMovies.map((movie, index) => (
-                  <CarouselItem key={movie.id || index} className="basis-full">
-                    <Link to={`/movie/${movie.id}`}>
+                  <CarouselItem key={movie.movie_id || index} className="basis-full">
+                    <Link to={`/movie/${movie.movie_id}`}>
                       <div className="h-[400px] relative transform transition-all duration-300 hover:scale-[1.01] cursor-pointer">
                         <img 
                           src={movie.poster_url || "https://images.unsplash.com/photo-1500673922987-e212871fec22"} 
@@ -604,7 +604,7 @@ const Index = () => {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {movies.map((movie) => (
-                  <Link key={movie.id} to={`/movie/${movie.id}`}>
+                  <Link key={movie.movie_id} to={`/movie/${movie.movie_id}`}>
                     <div className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-750 transition-colors">
                       <div className="h-56 bg-gray-700 relative">
                         {movie.poster_url ? (

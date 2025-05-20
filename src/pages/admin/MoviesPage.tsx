@@ -185,8 +185,8 @@ const MoviesPage = () => {
                 .insert({
                   movie_id: movie.id,
                   quality: quality.trim(),
-                  size: size.trim(),
-                  url: url.trim()
+                  file_size: size.trim(),
+                  download_url: url.trim()
                 });
               
               if (linkError) {
@@ -202,8 +202,8 @@ const MoviesPage = () => {
             .from('media_clips')
             .insert({
               movie_id: movie.id,
-              title: `${movieForm.title} - Trailer`,
-              type: 'trailer',
+              clip_title: `${movieForm.title} - Trailer`,
+              clip_type: 'trailer',
               video_url: movieForm.youtubeTrailer.trim()
             });
           
@@ -310,9 +310,9 @@ const MoviesPage = () => {
       const { error } = await supabase
         .from('movie_cast')
         .insert({
-          movie_id: selectedMovie.id,
-          name: castForm.name,
-          role: castForm.role
+          movie_id: selectedMovie.movie_id,
+          actor_name: castForm.name,
+          actor_role: castForm.role
         });
       
       if (error) throw error;

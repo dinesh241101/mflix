@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,12 +12,18 @@ interface AffiliateLinksManagerProps {
   affiliateLinks: AffiliateLink[];
   onAddLink: (link: Omit<AffiliateLink, "id" | "createdAt" | "clicks" | "conversions" | "revenue" | "conversionRate">) => void;
   onDeleteLink: (id: string) => void;
+  affiliateForm?: { name: string; url: string; commission: string; category: string; };
+  setAffiliateForm?: React.Dispatch<React.SetStateAction<{ name: string; url: string; commission: string; category: string; }>>;
+  handleAddAffiliate?: (e: React.FormEvent) => Promise<void>;
 }
 
 const AffiliateLinksManager = ({ 
   affiliateLinks, 
   onAddLink, 
-  onDeleteLink 
+  onDeleteLink, 
+  affiliateForm, 
+  setAffiliateForm, 
+  handleAddAffiliate 
 }: AffiliateLinksManagerProps) => {
   const [activeTab, setActiveTab] = useState("manage");
   const [newLink, setNewLink] = useState({

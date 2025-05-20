@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
@@ -176,7 +175,7 @@ const WebSeriesPage = () => {
                 .insert({
                   movie_id: series.id,
                   quality: quality.trim(),
-                  size: size.trim(),
+                  file_size: size.trim(),
                   url: url.trim()
                 });
             }
@@ -189,8 +188,8 @@ const WebSeriesPage = () => {
             .from('media_clips')
             .insert({
               movie_id: series.id,
-              title: `${seriesForm.title} - Trailer`,
-              type: 'trailer',
+              clip_title: `${seriesForm.title} - Trailer`,
+              clip_type: 'trailer',
               video_url: seriesForm.youtubeTrailer.trim()
             });
         }
@@ -294,8 +293,8 @@ const WebSeriesPage = () => {
         .from('movie_cast')
         .insert({
           movie_id: selectedSeries.id,
-          name: castForm.name,
-          role: castForm.role
+          actor_name: castForm.name,
+          actor_role: castForm.role
         });
       
       if (error) throw error;
@@ -310,8 +309,8 @@ const WebSeriesPage = () => {
         ...seriesCast,
         {
           id: Date.now().toString(), // Temporary ID
-          name: castForm.name,
-          role: castForm.role
+          actor_name: castForm.name,
+          actor_role: castForm.role
         }
       ]);
       

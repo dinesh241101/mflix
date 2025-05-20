@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Edit, Plus, Trash2, AlertCircle } from "lucide-react";
@@ -105,7 +104,7 @@ const MoviesTab = ({
     // Find the movie to edit
     const movieData = movies.find(m => m.movie_id === movieId);
     if (movieData) {
-      // Set form data (this is simplified - you'd need to map database fields to form fields)
+      // Set form data
       setMovieForm({
         title: movieData.title || "",
         year: movieData.year?.toString() || "",
@@ -120,8 +119,8 @@ const MoviesTab = ({
         seoTags: Array.isArray(movieData.seo_tags) ? movieData.seo_tags.join(", ") : "",
         posterUrl: movieData.poster_url || "",
         featured: movieData.featured || false,
-        youtubeTrailer: "",  // You'd need to fetch this from another table
-        downloadLinks: "",   // You'd need to fetch these from another table
+        youtubeTrailer: "",
+        downloadLinks: "",
         releaseMonth: "",
         releaseYear: ""
       });

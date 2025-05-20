@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
@@ -176,8 +175,8 @@ const AnimePage = () => {
                 .insert({
                   movie_id: anime.id,
                   quality: quality.trim(),
-                  size: size.trim(),
-                  url: url.trim()
+                  file_size: size.trim(),
+                  download_url: url.trim()
                 });
             }
           }
@@ -189,8 +188,8 @@ const AnimePage = () => {
             .from('media_clips')
             .insert({
               movie_id: anime.id,
-              title: `${animeForm.title} - Trailer`,
-              type: 'trailer',
+              clip_title: `${animeForm.title} - Trailer`,
+              clip_type: 'trailer',
               video_url: animeForm.youtubeTrailer.trim()
             });
         }
@@ -293,9 +292,9 @@ const AnimePage = () => {
       const { error } = await supabase
         .from('movie_cast')
         .insert({
-          movie_id: selectedAnime.id,
-          name: castForm.name,
-          role: castForm.role
+          movie_id: selectedAnime.movie_id,
+          actor_name: castForm.name,
+          actor_role: castForm.role
         });
       
       if (error) throw error;

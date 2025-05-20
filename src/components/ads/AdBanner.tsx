@@ -85,10 +85,12 @@ const AdBanner = ({ position, className = '' }: AdBannerProps) => {
   };
 
   if (loading) {
+    // Ensure we're casting position to AdPosition and passing className
     return <AdPlaceholder position={position as AdPosition} className={className} />;
   }
 
   if (error || !ad) {
+    // Ensure we're casting position to AdPosition and passing className
     return <AdPlaceholder position={position as AdPosition} className={className} />;
   }
 

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -22,6 +21,7 @@ interface AdPlaceholderProps {
   onAdClick?: () => void;
   isNavigation?: boolean;
   adContent?: AdContent;
+  className?: string; // Added className prop
 }
 
 const AdPlaceholder = ({ 
@@ -29,7 +29,8 @@ const AdPlaceholder = ({
   position = 'bottom',
   onAdClick,
   isNavigation = false,
-  adContent
+  adContent,
+  className = '' // Default value for className
 }: AdPlaceholderProps) => {
   const [showAd, setShowAd] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -115,7 +116,7 @@ const AdPlaceholder = ({
   // Floating ad
   if (type === 'floating') {
     return (
-      <div className="fixed bottom-4 right-4 z-50 w-64 bg-gray-800 border border-gray-700 rounded-lg shadow-lg overflow-hidden animate-fade-in">
+      <div className={`fixed bottom-4 right-4 z-50 w-64 bg-gray-800 border border-gray-700 rounded-lg shadow-lg overflow-hidden animate-fade-in ${className}`}>
         <button 
           onClick={handleDismiss}
           className="absolute top-2 right-2 text-gray-400 hover:text-white z-10"
@@ -147,7 +148,7 @@ const AdPlaceholder = ({
   // Video ad
   if (type === 'video' && content?.videoUrl) {
     return (
-      <div className="relative w-full bg-gray-800 border border-gray-700 rounded-lg shadow-lg overflow-hidden">
+      <div className={`relative w-full bg-gray-800 border border-gray-700 rounded-lg shadow-lg overflow-hidden ${className}`}>
         <button 
           onClick={handleDismiss}
           className="absolute top-2 right-2 text-gray-400 hover:text-white z-10"
@@ -178,7 +179,7 @@ const AdPlaceholder = ({
   // Native ad - matches site styling
   if (type === 'native') {
     return (
-      <div className="w-full bg-gray-800 border border-gray-700 rounded-lg shadow-lg overflow-hidden mb-4">
+      <div className={`w-full bg-gray-800 border border-gray-700 rounded-lg shadow-lg overflow-hidden mb-4 ${className}`}>
         <div className="flex items-start p-4">
           <img 
             src={content.imageUrl} 
@@ -212,7 +213,7 @@ const AdPlaceholder = ({
   // Sidebar ad
   if (type === 'sidebar') {
     return (
-      <div className="fixed right-0 top-1/4 z-50 w-48 bg-gray-800 border border-gray-700 rounded-l-lg shadow-lg overflow-hidden">
+      <div className={`fixed right-0 top-1/4 z-50 w-48 bg-gray-800 border border-gray-700 rounded-l-lg shadow-lg overflow-hidden ${className}`}>
         <button 
           onClick={handleDismiss}
           className="absolute top-2 right-2 text-gray-400 hover:text-white z-10"
@@ -245,7 +246,7 @@ const AdPlaceholder = ({
   return (
     <div className={`w-full bg-gray-800 border border-gray-700 rounded-lg shadow-lg overflow-hidden ${
       position === 'top' ? 'mb-4' : position === 'bottom' ? 'mt-4' : ''
-    }`}>
+    } ${className}`}>
       <div className="relative">
         <button 
           onClick={handleDismiss}
