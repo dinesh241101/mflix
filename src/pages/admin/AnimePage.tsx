@@ -153,13 +153,13 @@ const AnimePage = () => {
       const { data: anime, error: animeError } = await supabase
         .from('movies')
         .insert(animeData)
-        .select('id')
+        .select('movie_id')
         .single();
       
       if (animeError) throw animeError;
       
       // If anime created successfully, add download links
-      if (anime && anime.id) {
+      if (anime && anime.movie_id) {
         // Process download links if any
         if (animeForm.downloadLinks.trim()) {
           const links = animeForm.downloadLinks.split('\n').filter(link => link.trim());
@@ -173,7 +173,7 @@ const AnimePage = () => {
               await supabase
                 .from('download_links')
                 .insert({
-                  movie_id: anime.id,
+                  movie_id: anime.movie_id,
                   quality: quality.trim(),
                   file_size: size.trim(),
                   download_url: url.trim()
@@ -187,7 +187,7 @@ const AnimePage = () => {
           await supabase
             .from('media_clips')
             .insert({
-              movie_id: anime.id,
+              movie_id: anime.movie_id,
               clip_title: `${animeForm.title} - Trailer`,
               clip_type: 'trailer',
               video_url: animeForm.youtubeTrailer.trim()
@@ -244,7 +244,7 @@ const AnimePage = () => {
       const { data: anime, error: animeError } = await supabase
         .from('movies')
         .select('*')
-        .eq('id', animeId)
+        .eq('movie_id', animeId)
         .single();
       
       if (animeError) throw animeError;
@@ -403,7 +403,7 @@ const AnimePage = () => {
       const { error } = await supabase
         .from('movies')
         .update({ downloads: downloadsCount })
-        .eq('id', selectedAnime.id);
+        .eq('movie_id', selectedAnime.movie_id);
       
       if (error) throw error;
       

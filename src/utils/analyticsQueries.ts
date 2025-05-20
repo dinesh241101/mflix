@@ -11,15 +11,15 @@ export interface AnalyticsCountResult {
 export const fetchStateAnalytics = async (country: string): Promise<AnalyticsCountResult[]> => {
   const { data, error } = await supabase
     .from('analytics')
-    .select('state, count')
+    .select('state_region, count')
     .eq('country', country)
-    .not('state', 'is', null)
+    .not('state_region', 'is', null)
     .order('count', { ascending: false });
     
   if (error) throw error;
   
   return data?.map(item => ({
-    state: item.state,
+    state: item.state_region,
     count: item.count || 0
   })) || [];
 };

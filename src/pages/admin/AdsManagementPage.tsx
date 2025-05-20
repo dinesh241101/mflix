@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
@@ -41,6 +40,36 @@ const AdsManagementPage = () => {
     from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
     to: new Date()
   });
+  
+  // Add dummy data for affiliate links
+  const [affiliateLinks, setAffiliateLinks] = useState<any[]>([
+    {
+      id: '1',
+      name: 'Amazon Affiliate Link',
+      shortCode: 'amazon-deal',
+      originalUrl: 'https://amazon.com/product?tag=myaffiliateid',
+      program: 'Amazon Associates',
+      commission: 5,
+      trackingParams: { utm_source: 'website', utm_medium: 'affiliate', utm_campaign: 'summer-sale' },
+      clicks: 145,
+      conversions: 12,
+      revenue: 240,
+      conversionRate: 8.27
+    },
+    {
+      id: '2',
+      name: 'Walmart Promo',
+      shortCode: 'walmart-promo',
+      originalUrl: 'https://walmart.com/deals?affiliate=myid',
+      program: 'Walmart Affiliates',
+      commission: 3.5,
+      trackingParams: { utm_source: 'website', utm_medium: 'affiliate', utm_campaign: 'back-to-school' },
+      clicks: 89,
+      conversions: 5,
+      revenue: 175,
+      conversionRate: 5.62
+    }
+  ]);
   
   // Check if user is logged in
   useEffect(() => {
@@ -200,6 +229,34 @@ const AdsManagementPage = () => {
     }
   };
   
+  // Add handlers for affiliate links
+  const handleAddLink = (link: any) => {
+    const newLink = {
+      ...link,
+      id: Date.now().toString(),
+      clicks: 0,
+      conversions: 0,
+      revenue: 0,
+      conversionRate: 0
+    };
+    
+    setAffiliateLinks([newLink, ...affiliateLinks]);
+    
+    toast({
+      title: "Success",
+      description: "Affiliate link added successfully!",
+    });
+  };
+  
+  const handleDeleteLink = (id: string) => {
+    setAffiliateLinks(affiliateLinks.filter(link => link.id !== id));
+    
+    toast({
+      title: "Success",
+      description: "Affiliate link deleted successfully!",
+    });
+  };
+  
   if (loading && ads.length === 0) {
     return <LoadingScreen message="Loading Ads Management" />;
   }
@@ -229,14 +286,17 @@ const AdsManagementPage = () => {
           
           <TabsContent value="analytics">
             <AnalyticsDashboard 
+              ads={ads}
               dateRange={dateRange}
               setDateRange={setDateRange}
-              ads={ads}
             />
           </TabsContent>
           
           <TabsContent value="affiliates">
             <AffiliateLinksManager 
+              affiliateLinks={affiliateLinks}
+              onAddLink={handleAddLink}
+              onDeleteLink={handleDeleteLink}
               affiliateForm={affiliateForm}
               setAffiliateForm={setAffiliateForm}
               handleAddAffiliate={handleAddAffiliate}

@@ -153,13 +153,13 @@ const WebSeriesPage = () => {
       const { data: series, error: seriesError } = await supabase
         .from('movies')
         .insert(seriesData)
-        .select('id')
+        .select('movie_id')
         .single();
       
       if (seriesError) throw seriesError;
       
       // If series created successfully, add download links
-      if (series && series.id) {
+      if (series && series.movie_id) {
         // Process download links if any
         if (seriesForm.downloadLinks.trim()) {
           const links = seriesForm.downloadLinks.split('\n').filter(link => link.trim());
@@ -173,10 +173,10 @@ const WebSeriesPage = () => {
               await supabase
                 .from('download_links')
                 .insert({
-                  movie_id: series.id,
+                  movie_id: series.movie_id,
                   quality: quality.trim(),
                   file_size: size.trim(),
-                  url: url.trim()
+                  download_url: url.trim()
                 });
             }
           }
@@ -187,7 +187,7 @@ const WebSeriesPage = () => {
           await supabase
             .from('media_clips')
             .insert({
-              movie_id: series.id,
+              movie_id: series.movie_id,
               clip_title: `${seriesForm.title} - Trailer`,
               clip_type: 'trailer',
               video_url: seriesForm.youtubeTrailer.trim()
@@ -244,7 +244,7 @@ const WebSeriesPage = () => {
       const { data: series, error: seriesError } = await supabase
         .from('movies')
         .select('*')
-        .eq('id', seriesId)
+        .eq('movie_id', seriesId)
         .single();
       
       if (seriesError) throw seriesError;
@@ -403,7 +403,7 @@ const WebSeriesPage = () => {
       const { error } = await supabase
         .from('movies')
         .update({ downloads: downloadsCount })
-        .eq('id', selectedSeries.id);
+        .eq('movie_id', selectedSeries.movie_id);
       
       if (error) throw error;
       
