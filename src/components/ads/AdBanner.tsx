@@ -1,113 +1,121 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { ExternalLink } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import AdPlaceholder from './AdPlaceholder';
 
 interface AdBannerProps {
   position: string;
   className?: string;
 }
 
-const AdBanner = ({ position, className = "" }: AdBannerProps) => {
-  const [adContent, setAdContent] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [showPlaceholder, setShowPlaceholder] = useState(false);
+const AdBanner = ({ position, className = '' }: AdBannerProps) => {
+  const [ad, setAd] = useState<any | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchAd = async () => {
+    const loadAds = async () => {
       try {
+        setLoading(true);
+        
         const { data, error } = await supabase
           .from('ads')
           .select('*')
           .eq('position', position)
           .eq('is_active', true)
-          .limit(1)
-          .maybeSingle();
+          .order('display_frequency', { ascending: false })
+          .limit(5);
         
         if (error) {
-          console.error("Error fetching ad:", error);
-          setShowPlaceholder(true);
-          return;
+          throw error;
         }
         
-        if (data) {
-          // Check display frequency (simplified implementation)
-          const viewCount = parseInt(localStorage.getItem(`ad_view_count_${position}`) || '0');
-          if (viewCount % (data.display_frequency || 1) === 0) {
-            setAdContent(data);
-            
-            // Log ad impression (in a real app, you'd send this to analytics)
-            console.log(`Ad impression: ${data.name} in position ${position}`);
-          } else {
-            setShowPlaceholder(true);
+        if (data && data.length > 0) {
+          // Select a random ad from the results, weighted by display_frequency
+          const totalWeight = data.reduce((sum: number, ad: any) => sum + (ad.display_frequency || 1), 0);
+          let randomWeight = Math.random() * totalWeight;
+          
+          let selectedAd = data[0];
+          for (const adItem of data) {
+            randomWeight -= (adItem.display_frequency || 1);
+            if (randomWeight <= 0) {
+              selectedAd = adItem;
+              break;
+            }
           }
           
-          // Update view count
-          localStorage.setItem(`ad_view_count_${position}`, (viewCount + 1).toString());
-        } else {
-          // No ad found for this position, show placeholder
-          setShowPlaceholder(true);
+          setAd(selectedAd);
+          
+          // Track ad impression
+          await supabase.from('analytics').insert({
+            page_visited: `ad_impression_${position}`,
+            browser: navigator.userAgent,
+            device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
+            operating_system: navigator.platform
+          });
         }
-      } catch (error) {
-        console.error("Error in ad banner:", error);
-        setShowPlaceholder(true);
+      } catch (err: any) {
+        console.error("Error loading ad:", err);
+        setError(err.message);
       } finally {
         setLoading(false);
       }
     };
     
-    fetchAd();
+    loadAds();
   }, [position]);
 
-  const handleAdClick = () => {
-    if (adContent) {
-      // Track ad click (in a real app, send to analytics)
-      console.log(`Ad clicked: ${adContent.name}`);
-      
-      // Open target URL in new tab
-      window.open(adContent.target_url, '_blank');
+  const handleAdClick = async () => {
+    if (!ad) return;
+    
+    try {
+      // Track ad click
+      await supabase.from('analytics').insert({
+        page_visited: `ad_click_${position}`,
+        browser: navigator.userAgent,
+        device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
+        operating_system: navigator.platform
+      });
+    } catch (err) {
+      console.error("Error tracking ad click:", err);
     }
   };
 
   if (loading) {
-    return (
-      <div className={`ad-banner-placeholder ${className} h-24 bg-gray-800 animate-pulse rounded-lg flex items-center justify-center`}>
-        <ExternalLink className="text-gray-700" size={24} />
-      </div>
-    );
+    return <AdPlaceholder position={position} className={className} />;
   }
 
-  if (adContent) {
-    return (
-      <div 
-        className={`ad-banner ${className} cursor-pointer overflow-hidden rounded-lg`}
+  if (error || !ad) {
+    return <AdPlaceholder position={position} className={className} />;
+  }
+
+  return (
+    <div className={`ad-container ${className}`}>
+      <a 
+        href={ad.target_url} 
+        target="_blank" 
+        rel="noopener noreferrer"
         onClick={handleAdClick}
+        className="block w-full"
       >
-        <div className="relative">
+        {ad.ad_type === 'banner' && ad.content_url && (
           <img 
-            src={adContent.content_url} 
-            alt={`${adContent.name} - Advertisement`} 
-            className="w-full h-auto object-cover"
+            src={ad.content_url} 
+            alt={ad.ad_name} 
+            className="w-full rounded-lg shadow-lg"
           />
-          <div className="absolute top-1 right-1 bg-gray-800/70 text-xs px-1 rounded">
-            Ad
+        )}
+        
+        {ad.ad_type === 'text' && (
+          <div className="bg-gray-800 text-white p-4 rounded-lg shadow-lg text-center">
+            <p className="font-semibold">{ad.ad_name}</p>
+            <p className="text-sm text-blue-400 mt-2">{ad.content_url}</p>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (showPlaceholder) {
-    return (
-      <div className={`ad-banner-placeholder ${className} bg-gray-800/50 border border-dashed border-gray-700 rounded-lg p-4 flex flex-col items-center justify-center`}>
-        <ExternalLink className="text-gray-700 mb-2" size={24} />
-        <p className="text-gray-600 text-sm text-center">Ad Space Available</p>
-        <p className="text-gray-600 text-xs text-center">Position: {position}</p>
-      </div>
-    );
-  }
-
-  return null;
+        )}
+      </a>
+      <div className="text-xs text-gray-500 text-right mt-1">Advertisement</div>
+    </div>
+  );
 };
 
 export default AdBanner;

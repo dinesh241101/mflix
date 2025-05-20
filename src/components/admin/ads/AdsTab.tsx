@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -29,7 +28,7 @@ const AdsTab = ({
   // Handle edit ad
   const handleEditAd = (ad: any) => {
     setAdForm({
-      name: ad.name,
+      name: ad.ad_name,
       adType: ad.ad_type,
       position: ad.position,
       contentUrl: ad.content_url,
@@ -50,7 +49,7 @@ const AdsTab = ({
       const { error } = await supabase
         .from('ads')
         .update({
-          name: adForm.name,
+          ad_name: adForm.name,
           ad_type: adForm.adType,
           position: adForm.position,
           content_url: adForm.contentUrl,
@@ -58,7 +57,7 @@ const AdsTab = ({
           display_frequency: parseInt(adForm.displayFrequency.toString()),
           updated_at: new Date().toISOString()
         })
-        .eq('id', selectedAd.id);
+        .eq('ad_id', selectedAd.ad_id);
       
       if (error) throw error;
       
@@ -102,7 +101,7 @@ const AdsTab = ({
       const { error } = await supabase
         .from('ads')
         .delete()
-        .eq('id', selectedAd.id);
+        .eq('ad_id', selectedAd.ad_id);
       
       if (error) throw error;
       
@@ -191,11 +190,11 @@ const AdsTab = ({
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
               {ads.map((ad) => (
                 <div 
-                  key={ad.id}
+                  key={ad.ad_id}
                   className="bg-gray-700 rounded-lg p-4"
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium">{ad.name}</h4>
+                    <h4 className="font-medium">{ad.ad_name}</h4>
                     <div className="flex space-x-2">
                       <Button 
                         variant="ghost" 
@@ -229,7 +228,7 @@ const AdsTab = ({
                       <div className="h-16 bg-gray-800 rounded overflow-hidden">
                         <img 
                           src={ad.content_url}
-                          alt={ad.name}
+                          alt={ad.ad_name}
                           className="h-full object-cover"
                         />
                       </div>
@@ -263,7 +262,7 @@ const AdsTab = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Are you sure you want to delete the ad campaign "{selectedAd?.name}"? This action cannot be undone.
+              Are you sure you want to delete the ad campaign "{selectedAd?.ad_name}"? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
