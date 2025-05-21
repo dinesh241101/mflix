@@ -1,5 +1,4 @@
-
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useNavigate } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,7 @@ const MovieDetail = () => {
   const [cast, setCast] = useState<any[]>([]);
   const [relatedMovies, setRelatedMovies] = useState<any[]>([]);
   const videoRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   
   // Scroll to video section
   const scrollToVideo = () => {
@@ -54,7 +54,7 @@ const MovieDetail = () => {
           .from("movies")
           .select("*")
           .eq("movie_id", id)
-          .single();
+          .maybeSingle();
         
         if (movieError) throw movieError;
         if (!movieData) throw new Error("Movie not found");
@@ -68,7 +68,7 @@ const MovieDetail = () => {
           .eq("movie_id", id)
           .eq("clip_type", "trailer")
           .limit(1)
-          .single();
+          .maybeSingle();
         
         if (trailerData && !trailerError) {
           setTrailerUrl(trailerData.video_url);
@@ -98,7 +98,7 @@ const MovieDetail = () => {
         if (movieData.genre && movieData.genre.length > 0) {
           const { data: relatedData, error: relatedError } = await supabase
             .from("movies")
-            .select("movie_id, title, poster_url, year, imdb_rating, genre")
+            .select("movie_id, title, poster_url, year, imdb_rating, genre, content_type")
             .contains("genre", [movieData.genre[0]])
             .neq("movie_id", id)
             .limit(4);
@@ -133,17 +133,9 @@ const MovieDetail = () => {
     }
   }, [id]);
 
-  // Handle download click
+  // Handle download click - modified to navigate to the download page
   const handleDownloadClick = async (downloadLink: any) => {
     try {
-      // Update downloads count
-      const { error } = await supabase
-        .from("movies")
-        .update({ downloads: (movie.downloads || 0) + 1 })
-        .eq("movie_id", id);
-      
-      if (error) throw error;
-      
       // Track analytics
       await supabase.from('analytics').insert({
         page_visited: `download/${id}`,
@@ -152,8 +144,8 @@ const MovieDetail = () => {
         operating_system: navigator.platform
       });
       
-      // Open link in new tab
-      window.open(downloadLink.download_url, "_blank");
+      // Navigate to download page
+      navigate(`/download/${id}/${downloadLink.link_id}`);
       
     } catch (error) {
       console.error("Error tracking download:", error);
@@ -422,7 +414,8 @@ const MovieDetail = () => {
               {downloadLinks.map((link) => (
                 <div 
                   key={link.link_id}
-                  className="bg-gray-800 rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between"
+                  className="bg-gray-800 rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between hover:bg-gray-750 transition-colors cursor-pointer"
+                  onClick={() => handleDownloadClick(link)}
                 >
                   <div className="mb-4 md:mb-0">
                     <div className="flex items-center mb-1">
@@ -436,7 +429,10 @@ const MovieDetail = () => {
                   </div>
                   <Button 
                     className="bg-green-600 hover:bg-green-700"
-                    onClick={() => handleDownloadClick(link)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownloadClick(link);
+                    }}
                   >
                     <Download className="mr-2" size={16} />
                     Download

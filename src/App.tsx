@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,6 +20,7 @@ import WebSeries from "./pages/WebSeries";
 import Anime from "./pages/Anime";
 import MobileShortsPage from "./pages/MobileShortsPage";
 import AdManager from "./components/ads/AdManager";
+import DownloadPage from "./pages/DownloadPage";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +107,7 @@ const App = () => {
                 <Route path="/anime" element={<Anime />} />
                 <Route path="/shorts" element={<MobileShortsPage />} />
                 <Route path="/movie/:id" element={<MovieDetail />} />
+                <Route path="/download/:id/:linkId" element={<DownloadPage />} />
                 <Route path="/admin/login" element={!isAuthenticated ? <AdminLogin /> : <Navigate to="/admin/dashboard" replace />} />
                 <Route path="/admin/dashboard" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
                 <Route path="/admin/movies" element={isAuthenticated ? <MoviesPage /> : <Navigate to="/admin/login" replace />} />

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -61,8 +60,9 @@ const AdminDashboard = () => {
     seoTags: "",
     posterUrl: "",
     featured: false,
+    isLatest: false,
     youtubeTrailer: "",
-    downloadLinks: "",
+    downloadLinks: [],
     releaseMonth: "",
     releaseYear: ""
   });
@@ -326,6 +326,7 @@ const AdminDashboard = () => {
         seo_tags: movieForm.seoTags.split(',').map(t => t.trim()),
         poster_url: movieForm.posterUrl,
         featured: movieForm.featured,
+        is_latest: movieForm.isLatest,
         downloads: 0
       };
       
@@ -341,79 +342,95 @@ const AdminDashboard = () => {
       // If movie created successfully, add download links
       if (movie && movie.movie_id) {
         // Process download links if any
-        if (movieForm.downloadLinks.trim()) {
-          const links = movieForm.downloadLinks.split('\n').filter(link => link.trim());
+        if (movieForm.downloadLinks && movieForm.downloadLinks.length > 0) {
+          for (const link of movieForm.downloadLinks) {
+            // Insert the download link
+            const { data: downloadLink, error: linkError } = await supabase
+              .from('download_links')
+              .insert({
+                movie_id: movie.movie_id,
+                quality: link.quality,
+                file_size: link.fileSize,
+                download_url: link.url || 'javascript:void(0)' // Fallback if no URL
+              })
+              .select('link_id')
+              .single();
           
-          for (const link of links) {
-            const match = link.match(/Quality:\s*(.*),\s*Size:\s*(.*),\s*URL:\s*(.*)/i);
-            
-            if (match && match.length >= 4) {
-              const [_, quality, size, url] = match;
-              
-              await supabase
-                .from('download_links')
-                .insert({
-                  movie_id: movie.movie_id,
-                  quality: quality.trim(),
-                  file_size: size.trim(),
-                  download_url: url.trim()
-                });
+          if (linkError) {
+            console.error("Error adding download link:", linkError);
+            continue;
+          }
+          
+          // Add download sources/mirrors if any
+          if (downloadLink && link.sources && link.sources.length > 0) {
+            for (const source of link.sources) {
+              if (source.name && source.url) {
+                await supabase
+                  .from('download_mirrors')
+                  .insert({
+                    link_id: downloadLink.link_id,
+                    source_name: source.name,
+                    mirror_url: source.url
+                  });
+              }
             }
           }
         }
-        
-        // Add YouTube trailer if provided
-        if (movieForm.youtubeTrailer.trim()) {
-          await supabase
-            .from('media_clips')
-            .insert({
-              movie_id: movie.movie_id,
-              clip_title: `${movieForm.title} - Trailer`,
-              clip_type: 'trailer',
-              video_url: movieForm.youtubeTrailer.trim()
-            });
-        }
-        
-        toast({
-          title: "Success",
-          description: "Movie uploaded successfully!",
-        });
-        
-        // Reset form
-        setMovieForm({
-          title: "",
-          year: "",
-          contentType: "movie",
-          genre: "",
-          quality: "1080p",
-          country: "",
-          director: "",
-          productionHouse: "",
-          imdbRating: "",
-          storyline: "",
-          seoTags: "",
-          posterUrl: "",
-          featured: false,
-          youtubeTrailer: "",
-          downloadLinks: "",
-          releaseMonth: "",
-          releaseYear: ""
-        });
-        
-        // Reload movie data
-        fetchData();
       }
-    } catch (error: any) {
-      console.error("Error uploading movie:", error);
+      
+      // Add YouTube trailer if provided
+      if (movieForm.youtubeTrailer.trim()) {
+        await supabase
+          .from('media_clips')
+          .insert({
+            movie_id: movie.movie_id,
+            clip_title: `${movieForm.title} - Trailer`,
+            clip_type: 'trailer',
+            video_url: movieForm.youtubeTrailer.trim()
+          });
+      }
+      
       toast({
-        title: "Error",
-        description: error.message || "Failed to upload movie",
-        variant: "destructive"
+        title: "Success",
+        description: "Movie uploaded successfully!",
       });
-    } finally {
-      setLoading(false);
+      
+      // Reset form
+      setMovieForm({
+        title: "",
+        year: "",
+        contentType: "movie",
+        genre: "",
+        quality: "1080p",
+        country: "",
+        director: "",
+        productionHouse: "",
+        imdbRating: "",
+        storyline: "",
+        seoTags: "",
+        posterUrl: "",
+        featured: false,
+        isLatest: false,
+        youtubeTrailer: "",
+        downloadLinks: [],
+        releaseMonth: "",
+        releaseYear: ""
+      });
+      
+      // Reload movie data
+      fetchData();
     }
-  };
+  } catch (error: any) {
+    console.error("Error uploading movie:", error);
+    toast({
+      title: "Error",
+      description: error.message || "Failed to upload movie",
+      variant: "destructive"
+    });
+  } finally {
+    setLoading(false);
+  }
+};
   
   // Handle upload ad
   const handleUploadAd = async (e: React.FormEvent) => {

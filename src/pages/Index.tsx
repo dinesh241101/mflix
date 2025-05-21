@@ -13,6 +13,7 @@ import MovieCarousel from "@/components/MovieCarousel";
 import ShortsPlayer from "@/components/ShortsPlayer";
 import AdBanner from "@/components/ads/AdBanner";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import LatestUploadsSection from "@/components/LatestUploadsSection";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -31,6 +32,7 @@ const Index = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [categoryMovies, setCategoryMovies] = useState<Record<string, any[]>>({});
   const [showAllCategories, setShowAllCategories] = useState(false);
+  const [latestMovies, setLatestMovies] = useState<any[]>([]); // New state for latest movies
   
   // Auto-slide interval for featured carousel
   const autoSlideInterval = useRef<NodeJS.Timeout | null>(null);
@@ -351,6 +353,30 @@ const Index = () => {
       // navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
     }
   };
+
+  // Fetch latest movies
+  useEffect(() => {
+    const fetchLatestMovies = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("movies")
+          .select("movie_id, title, year, genre, poster_url, imdb_rating, downloads, content_type")
+          .eq("is_latest", true)
+          .order("created_at", { ascending: false })
+          .limit(10);
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setLatestMovies(data);
+        }
+      } catch (error) {
+        console.error("Error fetching latest movies:", error);
+      }
+    };
+    
+    fetchLatestMovies();
+  }, []);
 
   if (loading) {
     return <LoadingScreen />;
@@ -804,6 +830,13 @@ const Index = () => {
       {/* Shorts Player */}
       {showShorts && shorts.length > 0 && (
         <ShortsPlayer shorts={shorts} onClose={() => setShowShorts(false)} />
+      )}
+
+      {/* Latest Uploads Section */}
+      {latestMovies && latestMovies.length > 0 && (
+        <div className="container mx-auto px-4">
+          <LatestUploadsSection movies={latestMovies} />
+        </div>
       )}
 
       {/* Footer */}

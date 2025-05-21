@@ -56,8 +56,10 @@ export type Database = {
           country: string | null
           device: string | null
           operating_system: string | null
+          os: string | null
           page_visited: string | null
           state_region: string | null
+          user_id: string | null
           visit_timestamp: string | null
         }
         Insert: {
@@ -67,8 +69,10 @@ export type Database = {
           country?: string | null
           device?: string | null
           operating_system?: string | null
+          os?: string | null
           page_visited?: string | null
           state_region?: string | null
+          user_id?: string | null
           visit_timestamp?: string | null
         }
         Update: {
@@ -78,11 +82,45 @@ export type Database = {
           country?: string | null
           device?: string | null
           operating_system?: string | null
+          os?: string | null
           page_visited?: string | null
           state_region?: string | null
+          user_id?: string | null
           visit_timestamp?: string | null
         }
         Relationships: []
+      }
+      download_episodes: {
+        Row: {
+          created_at: string | null
+          episode_id: string
+          episode_number: string
+          episode_title: string | null
+          link_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          episode_id?: string
+          episode_number: string
+          episode_title?: string | null
+          link_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          episode_id?: string
+          episode_number?: string
+          episode_title?: string | null
+          link_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "download_episodes_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "download_links"
+            referencedColumns: ["link_id"]
+          },
+        ]
       }
       download_links: {
         Row: {
@@ -118,6 +156,82 @@ export type Database = {
             referencedColumns: ["movie_id"]
           },
         ]
+      }
+      download_mirrors: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          episode_id: string | null
+          link_id: string | null
+          mirror_id: string
+          mirror_url: string
+          source_id: string | null
+          source_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          episode_id?: string | null
+          link_id?: string | null
+          mirror_id?: string
+          mirror_url: string
+          source_id?: string | null
+          source_name: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          episode_id?: string | null
+          link_id?: string | null
+          mirror_id?: string
+          mirror_url?: string
+          source_id?: string | null
+          source_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "download_mirrors_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "download_episodes"
+            referencedColumns: ["episode_id"]
+          },
+          {
+            foreignKeyName: "download_mirrors_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "download_links"
+            referencedColumns: ["link_id"]
+          },
+          {
+            foreignKeyName: "download_mirrors_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "download_sources"
+            referencedColumns: ["source_id"]
+          },
+        ]
+      }
+      download_sources: {
+        Row: {
+          created_at: string | null
+          icon_url: string | null
+          name: string
+          source_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          icon_url?: string | null
+          name: string
+          source_id?: string
+        }
+        Update: {
+          created_at?: string | null
+          icon_url?: string | null
+          name?: string
+          source_id?: string
+        }
+        Relationships: []
       }
       media_clips: {
         Row: {
@@ -199,6 +313,7 @@ export type Database = {
           featured: boolean | null
           genre: string[] | null
           imdb_rating: number | null
+          is_latest: boolean | null
           movie_id: string
           poster_url: string | null
           production_house: string | null
@@ -219,6 +334,7 @@ export type Database = {
           featured?: boolean | null
           genre?: string[] | null
           imdb_rating?: number | null
+          is_latest?: boolean | null
           movie_id?: string
           poster_url?: string | null
           production_house?: string | null
@@ -239,6 +355,7 @@ export type Database = {
           featured?: boolean | null
           genre?: string[] | null
           imdb_rating?: number | null
+          is_latest?: boolean | null
           movie_id?: string
           poster_url?: string | null
           production_house?: string | null
@@ -317,6 +434,7 @@ export type Database = {
           featured: boolean | null
           genre: string[] | null
           imdb_rating: number | null
+          is_latest: boolean | null
           movie_id: string
           poster_url: string | null
           production_house: string | null
@@ -340,6 +458,7 @@ export type Database = {
           featured: boolean | null
           genre: string[] | null
           imdb_rating: number | null
+          is_latest: boolean | null
           movie_id: string
           poster_url: string | null
           production_house: string | null

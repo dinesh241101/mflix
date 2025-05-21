@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/select";
 import ImageUploader from "./ImageUploader";
 import * as React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Trash } from "lucide-react";
 
 interface MovieFormProps {
     onSubmit: (e: React.FormEvent) => void,
@@ -19,6 +21,79 @@ interface MovieFormProps {
 }
 
 const MovieForm = ({onSubmit, movieForm, setMovieForm, isEditing}: MovieFormProps) => {
+    const [isAddingLink, setIsAddingLink] = useState(false);
+    const [currentLink, setCurrentLink] = useState({
+        quality: "1080p",
+        fileSize: "",
+        url: "",
+        sources: [{ name: "", url: "" }]
+    });
+
+    // Handle adding a new download link
+    const handleAddDownloadLink = () => {
+        if (!currentLink.quality || !currentLink.fileSize) {
+            return; // Don't add if missing required fields
+        }
+
+        const newLinks = movieForm.downloadLinks 
+            ? [...movieForm.downloadLinks] 
+            : [];
+        
+        newLinks.push({
+            quality: currentLink.quality,
+            fileSize: currentLink.fileSize,
+            url: currentLink.url,
+            sources: currentLink.sources.filter(source => source.name && source.url)
+        });
+        
+        setMovieForm({...movieForm, downloadLinks: newLinks});
+        
+        // Reset current link
+        setCurrentLink({
+            quality: "1080p",
+            fileSize: "",
+            url: "",
+            sources: [{ name: "", url: "" }]
+        });
+        
+        setIsAddingLink(false);
+    };
+
+    // Handle removing a download link
+    const handleRemoveDownloadLink = (index: number) => {
+        const newLinks = [...movieForm.downloadLinks];
+        newLinks.splice(index, 1);
+        setMovieForm({...movieForm, downloadLinks: newLinks});
+    };
+
+    // Add a source field to the current link
+    const handleAddSource = () => {
+        setCurrentLink({
+            ...currentLink,
+            sources: [...currentLink.sources, { name: "", url: "" }]
+        });
+    };
+
+    // Remove a source from the current link
+    const handleRemoveSource = (index: number) => {
+        const newSources = [...currentLink.sources];
+        newSources.splice(index, 1);
+        setCurrentLink({
+            ...currentLink,
+            sources: newSources
+        });
+    };
+
+    // Update a source field
+    const handleSourceChange = (index: number, field: 'name' | 'url', value: string) => {
+        const newSources = [...currentLink.sources];
+        newSources[index][field] = value;
+        setCurrentLink({
+            ...currentLink,
+            sources: newSources
+        });
+    };
+
     return (
         <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
@@ -213,25 +288,202 @@ const MovieForm = ({onSubmit, movieForm, setMovieForm, isEditing}: MovieFormProp
                     />
                 </div>
 
+                {/* Enhanced Download Links Management */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">Download Links (one per
-                        line)</label>
-                    <Textarea
-                        value={movieForm.downloadLinks}
-                        onChange={(e) => setMovieForm({...movieForm, downloadLinks: e.target.value})}
-                        className="bg-gray-700 border-gray-600 min-h-[100px]"
-                        placeholder="Quality: 1080p, Size: 2.1GB, URL: https://example.com/download
-Quality: 720p, Size: 1.3GB, URL: https://example.com/download-720"
-                    />
+                    <div className="flex justify-between items-center mb-2">
+                        <label className="block text-sm font-medium text-gray-400">Download Links</label>
+                        <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => setIsAddingLink(true)}
+                            className="text-xs"
+                        >
+                            Add Link
+                        </Button>
+                    </div>
+                    
+                    {/* Display existing links */}
+                    {movieForm.downloadLinks && movieForm.downloadLinks.length > 0 && (
+                        <div className="space-y-3 mb-4">
+                            {movieForm.downloadLinks.map((link: any, index: number) => (
+                                <Card key={index} className="bg-gray-700 border-gray-600">
+                                    <CardContent className="p-4">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                                <div className="flex items-center">
+                                                    <span className="font-bold mr-2">Quality:</span>
+                                                    <span className="bg-blue-600 px-2 py-0.5 rounded text-xs">
+                                                        {link.quality}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center mt-1">
+                                                    <span className="font-bold mr-2">Size:</span>
+                                                    <span className="text-sm">{link.fileSize}</span>
+                                                </div>
+                                            </div>
+                                            <Button 
+                                                type="button" 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                onClick={() => handleRemoveDownloadLink(index)}
+                                                className="text-red-500 hover:text-red-400 p-0 h-auto"
+                                            >
+                                                <Trash size={16} />
+                                            </Button>
+                                        </div>
+                                        
+                                        {link.sources && link.sources.length > 0 && (
+                                            <div className="mt-2">
+                                                <div className="text-xs font-medium text-gray-400 mb-1">Download Sources:</div>
+                                                <div className="space-y-1">
+                                                    {link.sources.map((source: any, sIndex: number) => (
+                                                        <div key={sIndex} className="flex items-center text-xs">
+                                                            <span className="font-medium">{source.name}:</span>
+                                                            <span className="ml-1 text-blue-400 truncate">{source.url}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                    
+                    {/* Add new link form */}
+                    {isAddingLink && (
+                        <Card className="bg-gray-700 border-gray-600 mb-4">
+                            <CardContent className="p-4">
+                                <h4 className="font-bold mb-3">Add Download Link</h4>
+                                
+                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-1">Quality</label>
+                                        <Select
+                                            value={currentLink.quality}
+                                            onValueChange={(value) => setCurrentLink({...currentLink, quality: value})}
+                                        >
+                                            <SelectTrigger className="bg-gray-600 border-gray-500 h-8 text-sm">
+                                                <SelectValue placeholder="Select Quality"/>
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-gray-700 border-gray-600">
+                                                <SelectItem value="1080p">1080p Full HD</SelectItem>
+                                                <SelectItem value="720p">720p HD</SelectItem>
+                                                <SelectItem value="4K">4K Ultra HD</SelectItem>
+                                                <SelectItem value="480p">480p SD</SelectItem>
+                                                <SelectItem value="360p">360p</SelectItem>
+                                                <SelectItem value="240p">240p</SelectItem>
+                                                <SelectItem value="2160p">2160p (4K)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-1">File Size</label>
+                                        <Input
+                                            value={currentLink.fileSize}
+                                            onChange={(e) => setCurrentLink({...currentLink, fileSize: e.target.value})}
+                                            className="bg-gray-600 border-gray-500 h-8 text-sm"
+                                            placeholder="e.g. 2.1 GB"
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <div className="mb-3">
+                                    <label className="block text-xs font-medium text-gray-400 mb-1">Default URL (optional)</label>
+                                    <Input
+                                        value={currentLink.url}
+                                        onChange={(e) => setCurrentLink({...currentLink, url: e.target.value})}
+                                        className="bg-gray-600 border-gray-500 h-8 text-sm"
+                                        placeholder="https://example.com/download"
+                                    />
+                                </div>
+                                
+                                <div className="mb-3">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <label className="block text-xs font-medium text-gray-400">Download Sources</label>
+                                        <Button 
+                                            type="button" 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            onClick={handleAddSource}
+                                            className="text-xs h-6 px-2"
+                                        >
+                                            Add Source
+                                        </Button>
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                        {currentLink.sources.map((source, index) => (
+                                            <div key={index} className="flex items-center gap-2">
+                                                <Input
+                                                    value={source.name}
+                                                    onChange={(e) => handleSourceChange(index, 'name', e.target.value)}
+                                                    className="bg-gray-600 border-gray-500 h-8 text-sm"
+                                                    placeholder="Source name (e.g. Google Drive)"
+                                                />
+                                                <Input
+                                                    value={source.url}
+                                                    onChange={(e) => handleSourceChange(index, 'url', e.target.value)}
+                                                    className="bg-gray-600 border-gray-500 h-8 text-sm"
+                                                    placeholder="URL"
+                                                />
+                                                <Button 
+                                                    type="button" 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    onClick={() => handleRemoveSource(index)}
+                                                    className="text-red-500 hover:text-red-400 p-0 h-auto"
+                                                    disabled={currentLink.sources.length <= 1}
+                                                >
+                                                    <Trash size={14} />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                <div className="flex justify-end gap-2 mt-4">
+                                    <Button 
+                                        type="button" 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setIsAddingLink(false)}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button 
+                                        type="button" 
+                                        size="sm" 
+                                        onClick={handleAddDownloadLink}
+                                    >
+                                        Add Link
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
 
-                <div className="flex items-center space-x-2">
-                    <Switch
-                        id="featured"
-                        checked={movieForm.featured}
-                        onCheckedChange={(checked) => setMovieForm({...movieForm, featured: checked})}
-                    />
-                    <label htmlFor="featured">Featured Content</label>
+                <div className="flex flex-col gap-3">
+                    <div className="flex items-center space-x-2">
+                        <Switch
+                            id="featured"
+                            checked={movieForm.featured}
+                            onCheckedChange={(checked) => setMovieForm({...movieForm, featured: checked})}
+                        />
+                        <label htmlFor="featured">Featured Content</label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                        <Switch
+                            id="latest"
+                            checked={movieForm.isLatest}
+                            onCheckedChange={(checked) => setMovieForm({...movieForm, isLatest: checked})}
+                        />
+                        <label htmlFor="latest">Latest Upload (Show in Latest section)</label>
+                    </div>
                 </div>
 
                 <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
