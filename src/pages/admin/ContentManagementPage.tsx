@@ -11,11 +11,23 @@ import { Button } from "@/components/ui/button";
 import { Search, Trash, Edit, Download, Eye } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
+interface Content {
+  id: string;
+  movie_id: string;
+  title: string;
+  year?: number;
+  poster_url?: string;
+  storyline?: string;
+  imdb_rating?: number;
+  genre?: string[];
+  content_type: string;
+}
+
 const ContentManagementPage = () => {
   const navigate = useNavigate();
   const [adminEmail, setAdminEmail] = useState("");
   const [loading, setLoading] = useState(true);
-  const [contents, setContents] = useState<any[]>([]);
+  const [contents, setContents] = useState<Content[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [contentType, setContentType] = useState("movie");
 
@@ -225,7 +237,7 @@ const ContentManagementPage = () => {
 };
 
 interface ContentListProps {
-  contents: any[];
+  contents: Content[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onView: (id: string) => void;

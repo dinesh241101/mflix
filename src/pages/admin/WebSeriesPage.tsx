@@ -7,14 +7,37 @@ import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import MoviesTab from "@/components/admin/movies/MoviesTab";
 import LoadingScreen from "@/components/LoadingScreen";
 
+interface Series {
+  id: string;
+  movie_id: string;
+  title: string;
+  year?: number;
+  poster_url?: string;
+  content_type: string;
+  created_at?: string;
+  downloads?: number;
+}
+
+interface Cast {
+  id?: string;
+  cast_id?: string;
+  actor_name: string;
+  actor_role?: string;
+}
+
+interface CastSearchResult {
+  name: string;
+  role: string;
+}
+
 const WebSeriesPage = () => {
   const navigate = useNavigate();
   const [adminEmail, setAdminEmail] = useState("");
   const [loading, setLoading] = useState(true);
-  const [series, setSeries] = useState<any[]>([]);
-  const [selectedSeries, setSelectedSeries] = useState<any>(null);
+  const [series, setSeries] = useState<Series[]>([]);
+  const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [seriesCast, setSeriesCast] = useState<any[]>([]);
+  const [seriesCast, setSeriesCast] = useState<Cast[]>([]);
   
   // Series form state
   const [seriesForm, setSeriesForm] = useState({
@@ -44,7 +67,7 @@ const WebSeriesPage = () => {
   });
   
   // Google search results for cast members
-  const [castSearchResults, setCastSearchResults] = useState([]);
+  const [castSearchResults, setCastSearchResults] = useState<CastSearchResult[]>([]);
   const [castSearchQuery, setCastSearchQuery] = useState("");
   
   // Downloads form
@@ -384,7 +407,7 @@ const WebSeriesPage = () => {
   };
   
   // Select cast member from search results
-  const selectCastFromSearch = (result: any) => {
+  const selectCastFromSearch = (result: CastSearchResult) => {
     setCastForm({
       name: result.name,
       role: ""

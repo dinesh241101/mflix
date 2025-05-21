@@ -8,12 +8,20 @@ import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import ShortsTab from "@/components/admin/shorts/ShortsTab";
 import LoadingScreen from "@/components/LoadingScreen";
 
+interface Short {
+  id: string;
+  title: string;
+  video_url: string;
+  thumbnail_url?: string;
+  created_at?: string;
+}
+
 const ShortsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [adminEmail, setAdminEmail] = useState("");
   const [loading, setLoading] = useState(true);
-  const [shorts, setShorts] = useState<any[]>([]);
+  const [shorts, setShorts] = useState<Short[]>([]);
   
   // Short form state
   const [shortForm, setShortForm] = useState({

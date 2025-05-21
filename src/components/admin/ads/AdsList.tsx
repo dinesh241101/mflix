@@ -25,9 +25,18 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+interface Ad {
+  id: string;
+  name: string;
+  ad_type: string;
+  position: string;
+  is_active: boolean;
+  display_frequency: number;
+}
+
 interface AdsListProps {
-  ads: any[];
-  onEditAd: (ad: any) => void;
+  ads: Ad[];
+  onEditAd: (ad: Ad) => void;
   onRefreshList: () => void;
 }
 
