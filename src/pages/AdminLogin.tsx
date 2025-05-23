@@ -4,17 +4,21 @@ import { Link, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { LoaderCircle, AtSign, Lock, KeyRound, Eye, EyeOff } from "lucide-react";
+import { LoaderCircle, AtSign, Lock, KeyRound, Eye, EyeOff, Shield } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
 import MFlixLogo from "@/components/MFlixLogo";
+import { useSecureAuth } from "@/hooks/useSecureAuth";
+import { sanitizeInput } from "@/utils/security";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, isLoading: authLoading, login } = useSecureAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [loginAttempts, setLoginAttempts] = useState(0);
   
   // Simulate page load
   useEffect(() => {
@@ -22,55 +26,43 @@ const AdminLogin = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Check if user is already logged in
+  // Redirect if already authenticated
   useEffect(() => {
-    const checkLoginStatus = () => {
-      const adminEmail = localStorage.getItem("adminEmail");
-      const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
-      
-      if (adminEmail && isAuthenticated) {
-        // Admin is already logged in, redirect to dashboard
-        navigate("/admin/dashboard", { replace: true });
-      }
-    };
-    
-    checkLoginStatus();
-    
-    // Add event listener for storage changes (in case user logs in from another tab)
-    window.addEventListener("storage", checkLoginStatus);
-    return () => window.removeEventListener("storage", checkLoginStatus);
-  }, [navigate]);
+    if (!authLoading && isAuthenticated) {
+      navigate("/admin/dashboard", { replace: true });
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (loginAttempts >= 3) {
+      toast({
+        title: "Too many attempts",
+        description: "Please wait before trying again.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
-      // For demo purposes, any valid email/password combination works
-      if (email.trim() && password.trim()) {
-        // Store session data
-        localStorage.setItem("adminEmail", email);
-        localStorage.setItem("isAuthenticated", "true");
-        localStorage.setItem("adminLoginTime", new Date().toISOString());
-        localStorage.setItem("adminToken", "demo-token-" + Date.now());
-        
-        // Broadcast storage update to other tabs
-        window.dispatchEvent(new Event("storage"));
-        
-        toast({
-          title: "Login successful",
-          description: "Welcome to the admin dashboard!",
-        });
-        
-        // Use replace to prevent back button from returning to login page
+      const sanitizedEmail = sanitizeInput(email);
+      const sanitizedPassword = sanitizeInput(password);
+      
+      const success = await login(sanitizedEmail, sanitizedPassword);
+      
+      if (success) {
         navigate("/admin/dashboard", { replace: true });
       } else {
-        throw new Error("Please fill in all fields");
+        setLoginAttempts(prev => prev + 1);
       }
     } catch (error: any) {
+      setLoginAttempts(prev => prev + 1);
       toast({
         title: "Login failed",
-        description: error.message || "Invalid credentials",
+        description: "An error occurred during login.",
         variant: "destructive"
       });
     } finally {
@@ -78,18 +70,21 @@ const AdminLogin = () => {
     }
   };
 
-  if (pageLoading) {
-    return <LoadingScreen message="Preparing Admin Portal" />;
+  if (pageLoading || authLoading) {
+    return <LoadingScreen message="Preparing Secure Admin Portal" />;
   }
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-      <div className="w-full max-w-md p-8 bg-gray-800 rounded-lg shadow-lg">
+      <div className="w-full max-w-md p-8 bg-gray-800 rounded-lg shadow-lg border border-gray-700">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-2">
             <MFlixLogo />
           </div>
-          <p className="text-gray-400 mt-2">Access the admin control panel</p>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <Shield className="text-green-500" size={16} />
+            <p className="text-gray-400">Secure Admin Access</p>
+          </div>
         </div>
         
         <form onSubmit={handleLogin}>
@@ -99,10 +94,12 @@ const AdminLogin = () => {
               <Input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => setEmail(sanitizeInput(e.target.value))}
                 placeholder="Admin Email"
                 className="bg-gray-700 border-gray-600 text-white pl-10"
                 required
+                maxLength={254}
+                autoComplete="email"
               />
             </div>
             
@@ -115,6 +112,8 @@ const AdminLogin = () => {
                 placeholder="Password"
                 className="bg-gray-700 border-gray-600 text-white pl-10 pr-10"
                 required
+                maxLength={128}
+                autoComplete="current-password"
               />
               <button
                 type="button"
@@ -128,23 +127,28 @@ const AdminLogin = () => {
             <Button 
               type="submit" 
               className="w-full bg-blue-600 hover:bg-blue-700"
-              disabled={isLoading}
+              disabled={isLoading || loginAttempts >= 3}
             >
               {isLoading ? (
                 <>
                   <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                  Logging in...
+                  Authenticating...
                 </>
               ) : (
                 <>
                   <KeyRound className="mr-2 h-4 w-4" />
-                  Sign In
+                  Secure Sign In
                 </>
               )}
             </Button>
             
             <div className="text-center text-sm text-gray-500">
-              <p>For demo: enter any email and password</p>
+              <p>Protected by advanced security measures</p>
+              {loginAttempts > 0 && (
+                <p className="text-yellow-500 mt-1">
+                  {3 - loginAttempts} attempts remaining
+                </p>
+              )}
             </div>
           </div>
         </form>

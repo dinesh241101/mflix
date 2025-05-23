@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,53 +21,48 @@ import WebSeries from "./pages/WebSeries";
 import Anime from "./pages/Anime";
 import MobileShortsPage from "./pages/MobileShortsPage";
 import AdManager from "./components/ads/AdManager";
+import ClickAdModal from "./components/ads/ClickAdModal";
 import DownloadPage from "./pages/DownloadPage";
+import { useSecureAuth } from "./hooks/useSecureAuth";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => {
   const [isAdminDomain, setIsAdminDomain] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const { isAuthenticated, isLoading: isCheckingAuth } = useSecureAuth();
 
-  // Handle custom domain for admin and check authentication
+  // Handle custom domain for admin
   useEffect(() => {
-    const checkAuth = () => {
-      const hostname = window.location.hostname;
-      const adminToken = localStorage.getItem("adminToken");
-      const isAuth = localStorage.getItem("isAuthenticated") === "true";
-      
-      setIsAdminDomain(hostname.includes("admin") || hostname === "crmadmin.mflix");
-      setIsAuthenticated(!!adminToken && isAuth);
-      
-      // Check if session is still valid (24 hours)
-      if (isAuth && adminToken) {
-        const loginTime = localStorage.getItem("adminLoginTime");
-        if (loginTime) {
-          const loginDate = new Date(loginTime);
-          const currentDate = new Date();
-          const hoursDiff = (currentDate.getTime() - loginDate.getTime()) / (1000 * 60 * 60);
-          
-          // If session is older than 24 hours, logout
-          if (hoursDiff > 24) {
-            localStorage.removeItem("adminEmail");
-            localStorage.removeItem("adminToken");
-            localStorage.removeItem("isAuthenticated");
-            localStorage.removeItem("adminLoginTime");
-            setIsAuthenticated(false);
-          }
-        }
+    const hostname = window.location.hostname;
+    setIsAdminDomain(hostname.includes("admin") || hostname === "crmadmin.mflix");
+  }, []);
+
+  // Security headers and CSP (Content Security Policy)
+  useEffect(() => {
+    // Add security-related meta tags
+    const addSecurityHeaders = () => {
+      // Prevent clickjacking
+      if (window.top !== window.self) {
+        window.top.location = window.self.location;
       }
       
-      setIsCheckingAuth(false);
+      // Disable right-click context menu in admin areas
+      if (isAdminDomain) {
+        const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+        document.addEventListener('contextmenu', handleContextMenu);
+        return () => document.removeEventListener('contextmenu', handleContextMenu);
+      }
     };
     
-    checkAuth();
-    
-    // Add event listener for storage changes (in case user logs in/out from another tab)
-    window.addEventListener("storage", checkAuth);
-    return () => window.removeEventListener("storage", checkAuth);
-  }, []);
+    addSecurityHeaders();
+  }, [isAdminDomain]);
 
   // Show loading while checking authentication
   if (isCheckingAuth) {
@@ -81,6 +77,9 @@ const App = () => {
         <BrowserRouter>
           {/* Global ad manager */}
           <AdManager />
+          
+          {/* Click-based ad modal - only on public pages */}
+          {!isAdminDomain && <ClickAdModal />}
           
           <Routes>
             {/* Admin domain routing */}

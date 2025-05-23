@@ -154,6 +154,17 @@ const AdsTab = ({
               />
             </div>
             
+            <div className="mt-4 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+              <h4 className="text-sm font-semibold text-blue-400 mb-2">Ad Placement Guide:</h4>
+              <ul className="text-xs text-gray-300 space-y-1">
+                <li>• <strong>click_based</strong>: Shows after every user click</li>
+                <li>• <strong>home_*</strong>: Homepage sections</li>
+                <li>• <strong>trending_*</strong>: After every 3 trending items</li>
+                <li>• <strong>categories_*</strong>: Between category sections</li>
+                <li>• <strong>movies_*</strong>: In movie listing pages</li>
+              </ul>
+            </div>
+            
             <div className="mt-6 flex space-x-4">
               <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
                 {isEditing ? "Update Ad" : "Create Ad"}
@@ -191,7 +202,7 @@ const AdsTab = ({
               {ads.map((ad) => (
                 <div 
                   key={ad.ad_id}
-                  className="bg-gray-700 rounded-lg p-4"
+                  className="bg-gray-700 rounded-lg p-4 border border-gray-600"
                 >
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-medium">{ad.ad_name}</h4>
@@ -200,6 +211,7 @@ const AdsTab = ({
                         variant="ghost" 
                         size="sm"
                         onClick={() => handleEditAd(ad)}
+                        className="hover:bg-gray-600"
                       >
                         <Edit size={16} />
                       </Button>
@@ -217,19 +229,22 @@ const AdsTab = ({
                     </div>
                   </div>
                   
-                  <div className="flex items-center mb-2">
+                  <div className="flex items-center mb-2 flex-wrap gap-2">
                     <span className="bg-blue-600 text-xs px-2 py-1 rounded capitalize">{ad.ad_type}</span>
-                    <span className="ml-2 bg-gray-600 text-xs px-2 py-1 rounded">Position: {ad.position}</span>
-                    <span className="ml-2 text-xs text-gray-400">Display Freq: {ad.display_frequency}</span>
+                    <span className="bg-gray-600 text-xs px-2 py-1 rounded">Position: {ad.position}</span>
+                    <span className="text-xs text-gray-400">Freq: {ad.display_frequency}</span>
+                    {ad.position === 'click_based' && (
+                      <span className="bg-green-600 text-xs px-2 py-1 rounded">Click-Based</span>
+                    )}
                   </div>
                   
                   {ad.content_url && (
                     <div className="mb-2">
-                      <div className="h-16 bg-gray-800 rounded overflow-hidden">
+                      <div className="h-16 bg-gray-800 rounded overflow-hidden border border-gray-600">
                         <img 
                           src={ad.content_url}
                           alt={ad.ad_name}
-                          className="h-full object-cover"
+                          className="h-full w-full object-cover"
                         />
                       </div>
                     </div>
@@ -248,7 +263,7 @@ const AdsTab = ({
               ))}
             </div>
           ) : (
-            <div className="bg-gray-700 rounded-lg p-6 text-center">
+            <div className="bg-gray-700 rounded-lg p-6 text-center border border-gray-600">
               <p className="text-gray-400">No ad campaigns found.</p>
               <p className="text-sm text-gray-500 mt-2">Create your first campaign using the form.</p>
             </div>

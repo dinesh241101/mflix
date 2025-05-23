@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Star } from "lucide-react";
 import AdBanner from "./ads/AdBanner";
+import AdPlaceholder from "./ads/AdPlaceholder";
 
 interface MovieProps {
     movies: any[];
@@ -106,6 +107,13 @@ const MovieGrid = ({ movies, title = "Movies", showFilters = false, bgClass }: M
                                         position={`${title.toLowerCase().replace(/\s+/g, '_')}_after_${groupIndex + 1}`} 
                                         className="w-full h-24"
                                     />
+                                    {/* Fallback to placeholder if no ad content */}
+                                    <div className="mt-2">
+                                        <AdPlaceholder 
+                                            position="center"
+                                            className="w-full h-16 bg-gray-800/50 border border-gray-700 border-dashed"
+                                        />
+                                    </div>
                                 </div>
                             )}
                         </div>
