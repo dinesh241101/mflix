@@ -481,6 +481,43 @@ const WebSeriesPage = () => {
     }
   };
   
+  // Handle delete series
+  const [deleting, setDeleting] = useState(false);
+  const [seriesIdToDelete, setSeriesIdToDelete] = useState<string | null>(null);
+  
+  const handleDeleteSeries = async (id: string) => {
+    try {
+      setDeleting(true);
+      
+      // Simplify the deletion logic to avoid TypeScript error
+      const { error } = await supabase
+        .from('movies')
+        .delete()
+        .eq('movie_id', id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Web series deleted successfully",
+      });
+      
+      // Update local state
+      setSeries(series.filter(s => s.movie_id !== id));
+      
+    } catch (error: any) {
+      console.error('Error deleting series:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete web series",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleting(false);
+      setSeriesIdToDelete(null);
+    }
+  };
+  
   if (loading) {
     return <LoadingScreen message="Loading Web Series Page" />;
   }
