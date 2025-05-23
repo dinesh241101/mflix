@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
@@ -10,6 +9,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 
 interface Short {
   id: string;
+  short_id?: string;
   title: string;
   video_url: string;
   thumbnail_url?: string;
@@ -83,7 +83,18 @@ const ShortsPage = () => {
         .order('created_at', { ascending: false });
       
       if (shortsError) throw shortsError;
-      setShorts(shortsData || []);
+      
+      // Map the data to match our Short interface
+      const mappedShorts: Short[] = (shortsData || []).map(short => ({
+        id: short.short_id,
+        short_id: short.short_id,
+        title: short.title,
+        video_url: short.video_url,
+        thumbnail_url: short.thumbnail_url,
+        created_at: short.created_at
+      }));
+      
+      setShorts(mappedShorts);
     } catch (error: any) {
       console.error("Error fetching shorts:", error);
       toast({

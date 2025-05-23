@@ -27,7 +27,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface Ad {
   id: string;
+  ad_id?: string;
   name: string;
+  ad_name?: string;
   ad_type: string;
   position: string;
   is_active: boolean;
@@ -127,14 +129,14 @@ const AdsList = ({ ads, onEditAd, onRefreshList }: AdsListProps) => {
         </TableHeader>
         <TableBody>
           {ads.map((ad) => (
-            <TableRow key={ad.id}>
-              <TableCell className="font-medium">{ad.name}</TableCell>
+            <TableRow key={ad.id || ad.ad_id}>
+              <TableCell className="font-medium">{ad.name || ad.ad_name}</TableCell>
               <TableCell>{ad.ad_type}</TableCell>
               <TableCell>{ad.position}</TableCell>
               <TableCell>
                 <Badge 
                   className={ad.is_active ? "bg-green-500" : "bg-red-500"} 
-                  onClick={() => toggleAdStatus(ad.id, ad.is_active)}
+                  onClick={() => toggleAdStatus(ad.id || ad.ad_id || "", ad.is_active)}
                 >
                   {ad.is_active ? "Active" : "Inactive"}
                 </Badge>
@@ -152,7 +154,7 @@ const AdsList = ({ ads, onEditAd, onRefreshList }: AdsListProps) => {
                   <Button 
                     variant="ghost" 
                     size="icon"
-                    onClick={() => setAdToDelete(ad.id)}
+                    onClick={() => setAdToDelete(ad.id || ad.ad_id || "")}
                     className="text-red-500 hover:text-red-600"
                   >
                     <Trash2 size={16} />

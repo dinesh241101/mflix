@@ -64,7 +64,21 @@ const ContentManagementPage = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      setContents(data || []);
+      
+      // Map the data to match our Content interface
+      const mappedData: Content[] = (data || []).map(item => ({
+        id: item.movie_id,
+        movie_id: item.movie_id,
+        title: item.title,
+        year: item.year,
+        poster_url: item.poster_url,
+        storyline: item.storyline,
+        imdb_rating: item.imdb_rating,
+        genre: item.genre,
+        content_type: item.content_type
+      }));
+      
+      setContents(mappedData);
       setContentType(type);
     } catch (error: any) {
       console.error(`Error fetching ${type}:`, error);

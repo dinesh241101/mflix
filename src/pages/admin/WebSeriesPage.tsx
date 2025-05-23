@@ -127,7 +127,20 @@ const WebSeriesPage = () => {
         .order('created_at', { ascending: false });
       
       if (seriesError) throw seriesError;
-      setSeries(seriesData || []);
+      
+      // Map the data to match our Series interface
+      const mappedSeries: Series[] = (seriesData || []).map(item => ({
+        id: item.movie_id,
+        movie_id: item.movie_id,
+        title: item.title,
+        year: item.year,
+        poster_url: item.poster_url,
+        content_type: item.content_type,
+        created_at: item.created_at,
+        downloads: item.downloads
+      }));
+      
+      setSeries(mappedSeries);
     } catch (error: any) {
       console.error("Error fetching series:", error);
       toast({
@@ -264,7 +277,7 @@ const WebSeriesPage = () => {
       setLoading(true);
       
       // Fetch series details
-      const { data: series, error: seriesError } = await supabase
+      const { data: seriesData, error: seriesError } = await supabase
         .from('movies')
         .select('*')
         .eq('movie_id', seriesId)
@@ -280,9 +293,21 @@ const WebSeriesPage = () => {
       
       if (castError) throw castError;
       
-      setSelectedSeries(series);
+      // Map the series data to match our Series interface
+      const mappedSeries: Series = {
+        id: seriesData.movie_id,
+        movie_id: seriesData.movie_id,
+        title: seriesData.title,
+        year: seriesData.year,
+        poster_url: seriesData.poster_url,
+        content_type: seriesData.content_type,
+        created_at: seriesData.created_at,
+        downloads: seriesData.downloads
+      };
+      
+      setSelectedSeries(mappedSeries);
       setSeriesCast(cast || []);
-      setDownloadsCount(series.downloads || 0);
+      setDownloadsCount(seriesData.downloads || 0);
       
     } catch (error: any) {
       console.error("Error fetching series details:", error);
@@ -436,10 +461,12 @@ const WebSeriesPage = () => {
       });
       
       // Update local state
-      setSelectedSeries({
-        ...selectedSeries,
-        downloads: downloadsCount
-      });
+      if (selectedSeries) {
+        setSelectedSeries({
+          ...selectedSeries,
+          downloads: downloadsCount
+        });
+      }
       
     } catch (error: any) {
       console.error("Error updating downloads:", error);
