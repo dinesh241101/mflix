@@ -127,31 +127,31 @@ const ContentManagementPage = () => {
     try {
       setLoading(true);
       
-      // Delete download links
-      await supabase
+      // Delete download links - simplified operation
+      const deleteLinksResult = await supabase
         .from('download_links')
         .delete()
         .eq('movie_id', id);
       
-      // Delete media clips
-      await supabase
+      // Delete media clips - simplified operation  
+      const deleteClipsResult = await supabase
         .from('media_clips')
         .delete()
         .eq('movie_id', id);
       
-      // Delete cast
-      await supabase
+      // Delete cast - simplified operation
+      const deleteCastResult = await supabase
         .from('movie_cast')
         .delete()
         .eq('movie_id', id);
       
-      // Finally delete the movie
-      const { error } = await supabase
+      // Finally delete the movie - simplified operation
+      const deleteMovieResult = await supabase
         .from('movies')
         .delete()
         .eq('id', id);
       
-      if (error) throw error;
+      if (deleteMovieResult.error) throw deleteMovieResult.error;
       
       toast({
         title: "Success",

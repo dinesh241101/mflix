@@ -52,12 +52,13 @@ const AdsList = ({ ads, onEditAd, onRefreshList }: AdsListProps) => {
     try {
       setIsDeleting(true);
       
-      const { error } = await supabase
+      // Simplified delete operation to avoid type instantiation issues
+      const deleteResult = await supabase
         .from('ads')
         .delete()
         .eq('id', adToDelete);
       
-      if (error) throw error;
+      if (deleteResult.error) throw deleteResult.error;
       
       toast({
         title: "Success",
@@ -82,12 +83,13 @@ const AdsList = ({ ads, onEditAd, onRefreshList }: AdsListProps) => {
 
   const toggleAdStatus = async (id: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
+      // Simplified update operation
+      const updateResult = await supabase
         .from('ads')
         .update({ is_active: !currentStatus })
         .eq('id', id);
       
-      if (error) throw error;
+      if (updateResult.error) throw updateResult.error;
       
       toast({
         title: "Success",

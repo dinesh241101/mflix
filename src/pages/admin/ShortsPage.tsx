@@ -163,12 +163,13 @@ const ShortsPage = () => {
     try {
       setLoading(true);
       
-      const { error } = await supabase
+      // Simplified delete operation to avoid type instantiation issues
+      const deleteResult = await supabase
         .from('shorts')
         .delete()
         .eq('id', id);
       
-      if (error) throw error;
+      if (deleteResult.error) throw deleteResult.error;
       
       toast({
         title: "Success",
