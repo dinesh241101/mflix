@@ -379,26 +379,24 @@ const WebSeriesPage = () => {
     }
   };
   
-  // Handle delete cast member
+  // Simplified delete cast member to avoid type issues
   const handleDeleteCastMember = async (id: string) => {
     try {
       setLoading(true);
       
-      // Simplified delete operation to avoid type instantiation issues
-      const deleteResult = await supabase
+      const { error } = await supabase
         .from('movie_cast')
         .delete()
-        .eq('id', id);
+        .eq('cast_id', id);
       
-      if (deleteResult.error) throw deleteResult.error;
+      if (error) throw error;
       
       toast({
         title: "Success",
         description: "Cast member removed successfully!",
       });
       
-      // Update local state
-      setSeriesCast(seriesCast.filter(member => member.id !== id));
+      setSeriesCast(prev => prev.filter(member => member.id !== id && member.cast_id !== id));
       
     } catch (error: any) {
       console.error("Error deleting cast member:", error);

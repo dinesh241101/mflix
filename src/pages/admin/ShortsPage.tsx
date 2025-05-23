@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
@@ -34,8 +35,7 @@ interface Short {
   short_id: string;
   title: string;
   video_url: string;
-  thumbnail_url: string;
-  description: string;
+  thumbnail_url: string | null;
   created_at: string;
 }
 
@@ -51,7 +51,6 @@ const ShortsPage = () => {
     title: "",
     video_url: "",
     thumbnail_url: "",
-    description: "",
   });
 
   useEffect(() => {
@@ -132,13 +131,17 @@ const ShortsPage = () => {
     try {
       setUploading(true);
 
-      if (!newShort.title.trim() || !newShort.video_url.trim() || !newShort.thumbnail_url.trim()) {
-        throw new Error("All fields are required");
+      if (!newShort.title.trim() || !newShort.video_url.trim()) {
+        throw new Error("Title and video URL are required");
       }
 
       const { error } = await supabase
         .from('shorts')
-        .insert(newShort);
+        .insert({
+          title: newShort.title,
+          video_url: newShort.video_url,
+          thumbnail_url: newShort.thumbnail_url || null
+        });
 
       if (error) throw error;
 
@@ -151,7 +154,6 @@ const ShortsPage = () => {
         title: "",
         video_url: "",
         thumbnail_url: "",
-        description: "",
       });
 
       fetchShorts();
@@ -168,12 +170,10 @@ const ShortsPage = () => {
     }
   };
 
-  // FIX: Simplify the delete operation to avoid deep type instantiation
   const handleDeleteShort = async (id: string) => {
     try {
       setDeleting(true);
       
-      // Simplify the deletion logic to avoid TypeScript error
       const { error } = await supabase
         .from('shorts')
         .delete()
@@ -186,7 +186,6 @@ const ShortsPage = () => {
         description: "Short deleted successfully",
       });
       
-      // Update local state
       setShorts(shorts.filter(s => s.short_id !== id));
       
     } catch (error: any) {
@@ -249,17 +248,6 @@ const ShortsPage = () => {
                   name="thumbnail_url"
                   value={newShort.thumbnail_url}
                   onChange={handleInputChange}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={newShort.description}
-                  onChange={handleInputChange}
-                  rows={3}
                 />
               </div>
               <Button type="submit" disabled={uploading} className="w-full">
@@ -295,9 +283,13 @@ const ShortsPage = () => {
                     </a>
                   </TableCell>
                   <TableCell>
-                    <a href={short.thumbnail_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                      View Thumbnail
-                    </a>
+                    {short.thumbnail_url ? (
+                      <a href={short.thumbnail_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                        View Thumbnail
+                      </a>
+                    ) : (
+                      <span className="text-gray-500">No thumbnail</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
