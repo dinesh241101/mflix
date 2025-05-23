@@ -1,124 +1,76 @@
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import AdPlaceholder from './AdPlaceholder';
-
-// Define valid position types
-type AdPosition = 'top' | 'bottom' | 'side' | 'center';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AdBannerProps {
   position: string;
   className?: string;
 }
 
-const AdBanner = ({ position, className = '' }: AdBannerProps) => {
-  const [ad, setAd] = useState<any | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+const AdBanner = ({ position, className = "" }: AdBannerProps) => {
+  const [ad, setAd] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadAds = async () => {
+    const fetchAd = async () => {
       try {
-        setLoading(true);
-        
         const { data, error } = await supabase
           .from('ads')
           .select('*')
           .eq('position', position)
           .eq('is_active', true)
-          .order('display_frequency', { ascending: false })
-          .limit(5);
-        
-        if (error) {
-          throw error;
+          .limit(1)
+          .maybeSingle();
+
+        if (!error && data) {
+          setAd(data);
         }
-        
-        if (data && data.length > 0) {
-          // Select a random ad from the results, weighted by display_frequency
-          const totalWeight = data.reduce((sum: number, ad: any) => sum + (ad.display_frequency || 1), 0);
-          let randomWeight = Math.random() * totalWeight;
-          
-          let selectedAd = data[0];
-          for (const adItem of data) {
-            randomWeight -= (adItem.display_frequency || 1);
-            if (randomWeight <= 0) {
-              selectedAd = adItem;
-              break;
-            }
-          }
-          
-          setAd(selectedAd);
-          
-          // Track ad impression
-          await supabase.from('analytics').insert({
-            page_visited: `ad_impression_${position}`,
-            browser: navigator.userAgent,
-            device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
-            operating_system: navigator.platform
-          });
-        }
-      } catch (err: any) {
-        console.error("Error loading ad:", err);
-        setError(err.message);
+      } catch (error) {
+        console.error('Error fetching ad:', error);
       } finally {
         setLoading(false);
       }
     };
-    
-    loadAds();
+
+    fetchAd();
   }, [position]);
 
-  const handleAdClick = async () => {
-    if (!ad) return;
-    
-    try {
+  const handleAdClick = () => {
+    if (ad?.target_url) {
       // Track ad click
-      await supabase.from('analytics').insert({
-        page_visited: `ad_click_${position}`,
+      supabase.from('analytics').insert({
+        page_visited: `ad_click/${ad.ad_id}`,
         browser: navigator.userAgent,
         device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
         operating_system: navigator.platform
       });
-    } catch (err) {
-      console.error("Error tracking ad click:", err);
+
+      window.open(ad.target_url, '_blank');
     }
   };
 
-  if (loading) {
-    // Ensure we're casting position to AdPosition and passing className
-    return <AdPlaceholder position={position as AdPosition} className={className} />;
-  }
-
-  if (error || !ad) {
-    // Ensure we're casting position to AdPosition and passing className
-    return <AdPlaceholder position={position as AdPosition} className={className} />;
+  if (loading || !ad) {
+    return null;
   }
 
   return (
-    <div className={`ad-container ${className}`}>
-      <a 
-        href={ad.target_url} 
-        target="_blank" 
-        rel="noopener noreferrer"
+    <div className={`ad-banner ${className}`}>
+      <div 
+        className="cursor-pointer"
         onClick={handleAdClick}
-        className="block w-full"
       >
-        {ad.ad_type === 'banner' && ad.content_url && (
+        {ad.content_url ? (
           <img 
             src={ad.content_url} 
-            alt={ad.ad_name} 
-            className="w-full rounded-lg shadow-lg"
+            alt={ad.ad_name || "Advertisement"}
+            className="w-full h-auto"
           />
-        )}
-        
-        {ad.ad_type === 'text' && (
-          <div className="bg-gray-800 text-white p-4 rounded-lg shadow-lg text-center">
-            <p className="font-semibold">{ad.ad_name}</p>
-            <p className="text-sm text-blue-400 mt-2">{ad.content_url}</p>
+        ) : (
+          <div className="bg-gray-200 p-4 text-center text-gray-600">
+            {ad.ad_name || "Advertisement"}
           </div>
         )}
-      </a>
-      <div className="text-xs text-gray-500 text-right mt-1">Advertisement</div>
+      </div>
     </div>
   );
 };

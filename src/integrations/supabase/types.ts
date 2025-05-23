@@ -127,25 +127,31 @@ export type Database = {
           created_at: string | null
           download_url: string
           file_size: string
+          file_size_gb: number | null
           link_id: string
           movie_id: string | null
           quality: string
+          resolution: string | null
         }
         Insert: {
           created_at?: string | null
           download_url: string
           file_size: string
+          file_size_gb?: number | null
           link_id?: string
           movie_id?: string | null
           quality: string
+          resolution?: string | null
         }
         Update: {
           created_at?: string | null
           download_url?: string
           file_size?: string
+          file_size_gb?: number | null
           link_id?: string
           movie_id?: string | null
           quality?: string
+          resolution?: string | null
         }
         Relationships: [
           {

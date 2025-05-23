@@ -10,6 +10,7 @@ import MFlixLogo from "@/components/MFlixLogo";
 import ShareLinks from "@/components/ShareLinks";
 import AutoplayClip from "@/components/AutoplayClip";
 import AdBanner from "@/components/ads/AdBanner";
+import PopupAd from "@/components/ads/PopupAd";
 
 const MovieDetail = () => {
   const { id } = useParams();
@@ -20,8 +21,18 @@ const MovieDetail = () => {
   const [loading, setLoading] = useState(true);
   const [cast, setCast] = useState<any[]>([]);
   const [relatedMovies, setRelatedMovies] = useState<any[]>([]);
+  const [showPopupAd, setShowPopupAd] = useState(false);
   const videoRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  
+  // Show popup ad after 3 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowPopupAd(true);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
   
   // Scroll to video section
   const scrollToVideo = () => {
@@ -183,6 +194,11 @@ const MovieDetail = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+      {/* Popup Ad */}
+      {showPopupAd && (
+        <PopupAd onClose={() => setShowPopupAd(false)} />
+      )}
+
       {/* Header */}
       <header className="bg-gray-800 shadow-md">
         <div className="container mx-auto px-4 py-4">
@@ -421,11 +437,11 @@ const MovieDetail = () => {
                   <div className="mb-4 md:mb-0">
                     <div className="flex items-center mb-1">
                       <span className="font-bold mr-2">Quality:</span>
-                      <span className="bg-blue-600 px-2 py-0.5 rounded text-sm">{link.quality}</span>
+                      <span className="bg-blue-600 px-2 py-0.5 rounded text-sm">{link.quality || link.resolution}</span>
                     </div>
                     <div className="flex items-center">
                       <span className="font-bold mr-2">Size:</span>
-                      <span>{link.file_size}</span>
+                      <span>{link.file_size || `${link.file_size_gb}GB`}</span>
                     </div>
                   </div>
                   <Button 
@@ -436,7 +452,7 @@ const MovieDetail = () => {
                     }}
                   >
                     <Download className="mr-2" size={16} />
-                    Download
+                    Download - {link.quality || link.resolution} ({link.file_size || `${link.file_size_gb}GB`})
                   </Button>
                 </div>
               ))}
