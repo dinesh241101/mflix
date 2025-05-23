@@ -32,7 +32,7 @@ const Index = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [categoryMovies, setCategoryMovies] = useState<Record<string, any[]>>({});
   const [showAllCategories, setShowAllCategories] = useState(false);
-  const [latestMovies, setLatestMovies] = useState<any[]>([]); // New state for latest movies
+  const [latestMovies, setLatestMovies] = useState<any[]>([]);
   
   // Auto-slide interval for featured carousel
   const autoSlideInterval = useRef<NodeJS.Timeout | null>(null);
@@ -103,6 +103,29 @@ const Index = () => {
     
     fetchData();
   }, [toast]);
+
+  // Fetch latest movies - Fixed to fetch real latest content
+  useEffect(() => {
+    const fetchLatestMovies = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("movies")
+          .select("movie_id, title, year, genre, poster_url, imdb_rating, downloads, content_type")
+          .order("created_at", { ascending: false })
+          .limit(10);
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setLatestMovies(data);
+        }
+      } catch (error) {
+        console.error("Error fetching latest movies:", error);
+      }
+    };
+    
+    fetchLatestMovies();
+  }, []);
 
   // Fetch category movies
   useEffect(() => {
@@ -354,30 +377,6 @@ const Index = () => {
     }
   };
 
-  // Fetch latest movies
-  useEffect(() => {
-    const fetchLatestMovies = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("movies")
-          .select("movie_id, title, year, genre, poster_url, imdb_rating, downloads, content_type")
-          .eq("is_latest", true)
-          .order("created_at", { ascending: false })
-          .limit(10);
-        
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-          setLatestMovies(data);
-        }
-      } catch (error) {
-        console.error("Error fetching latest movies:", error);
-      }
-    };
-    
-    fetchLatestMovies();
-  }, []);
-
   if (loading) {
     return <LoadingScreen />;
   }
@@ -570,6 +569,18 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Latest Uploads Section - Now prominently placed */}
+      {latestMovies && latestMovies.length > 0 && (
+        <div className="container mx-auto px-4">
+          <LatestUploadsSection movies={latestMovies} />
+        </div>
+      )}
+
+      {/* Ad banner after latest uploads */}
+      <div className="container mx-auto px-4 my-4">
+        <AdBanner position="home_after_latest" />
+      </div>
+
       {/* Featured Movies Section */}
       <section className="py-8">
         <div className="container mx-auto px-4">
@@ -586,14 +597,67 @@ const Index = () => {
         <AdBanner position="home_middle" />
       </div>
 
-      {/* Trending Movies with Carousel - Lazy Loaded */}
+      {/* Trending Movies with Enhanced Ad Placement */}
       <div id="trending-section" ref={trendingRef}>
         {visibleSections.trending ? (
-          <MovieCarousel 
-            movies={trendingMovies.length ? trendingMovies : featuredMovies} 
-            title="Trending Movies" 
-            bgClass="bg-gray-800"
-          />
+          <section className="py-12 bg-gray-800">
+            <div className="container mx-auto px-4">
+              <h2 className="text-2xl font-bold mb-6">Trending Movies</h2>
+              <div className="space-y-6">
+                {/* Enhanced trending with ads after every 3 movies */}
+                {Array.from({ length: Math.ceil(trendingMovies.length / 3) }, (_, groupIndex) => (
+                  <div key={groupIndex}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                      {trendingMovies
+                        .slice(groupIndex * 3, (groupIndex + 1) * 3)
+                        .map((movie) => (
+                          <Link key={movie.movie_id} to={`/movie/${movie.movie_id}`}>
+                            <div className="bg-gray-700 rounded-lg overflow-hidden hover:bg-gray-600 transition-colors">
+                              <div className="h-56 bg-gray-600 relative">
+                                {movie.poster_url ? (
+                                  <img 
+                                    src={movie.poster_url} 
+                                    alt={movie.title} 
+                                    className="w-full h-full object-cover"
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Film size={32} className="text-gray-500" />
+                                  </div>
+                                )}
+                                {movie.imdb_rating && (
+                                  <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-xs font-bold">
+                                    IMDb {movie.imdb_rating}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-4">
+                                <h3 className="font-bold text-white truncate">{movie.title}</h3>
+                                <div className="flex items-center justify-between mt-2 text-sm text-gray-400">
+                                  <div>
+                                    {movie.year && <span>{movie.year}</span>}
+                                  </div>
+                                  {movie.downloads > 0 && (
+                                    <div>{movie.downloads.toLocaleString()} downloads</div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                    </div>
+                    {/* Ad after every 3 movies group, except the last one */}
+                    {groupIndex < Math.ceil(trendingMovies.length / 3) - 1 && (
+                      <div className="mt-6">
+                        <AdBanner position={`trending_after_${groupIndex + 1}`} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
         ) : (
           <div className="py-12 bg-gray-800">
             <div className="container mx-auto px-4">
@@ -616,8 +680,8 @@ const Index = () => {
         )}
       </div>
 
-      {/* Display categories */}
-      {Object.entries(categoryMovies).map(([category, movies]) => (
+      {/* Display categories with enhanced ad placement */}
+      {Object.entries(categoryMovies).map(([category, movies], categoryIndex) => (
         movies.length > 0 && (
           <section key={category} className={category === 'Action' ? 'bg-gray-800' : ''}>
             <div className="container mx-auto px-4 py-8">
@@ -628,42 +692,57 @@ const Index = () => {
                 </Link>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {movies.map((movie) => (
-                  <Link key={movie.movie_id} to={`/movie/${movie.movie_id}`}>
-                    <div className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-750 transition-colors">
-                      <div className="h-56 bg-gray-700 relative">
-                        {movie.poster_url ? (
-                          <img 
-                            src={movie.poster_url} 
-                            alt={movie.title} 
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Film size={32} className="text-gray-500" />
-                          </div>
-                        )}
-                        {movie.imdb_rating && (
-                          <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-xs font-bold">
-                            IMDb {movie.imdb_rating}
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-bold text-white truncate">{movie.title}</h3>
-                        <div className="flex items-center justify-between mt-2 text-sm text-gray-400">
-                          <div>
-                            {movie.year && <span>{movie.year}</span>}
-                          </div>
-                          {movie.downloads > 0 && (
-                            <div>{movie.downloads.toLocaleString()} downloads</div>
-                          )}
-                        </div>
-                      </div>
+              <div className="space-y-6">
+                {/* Enhanced category display with ads after every 3 movies */}
+                {Array.from({ length: Math.ceil(movies.length / 3) }, (_, groupIndex) => (
+                  <div key={groupIndex}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                      {movies
+                        .slice(groupIndex * 3, (groupIndex + 1) * 3)
+                        .map((movie) => (
+                          <Link key={movie.movie_id} to={`/movie/${movie.movie_id}`}>
+                            <div className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-750 transition-colors">
+                              <div className="h-56 bg-gray-700 relative">
+                                {movie.poster_url ? (
+                                  <img 
+                                    src={movie.poster_url} 
+                                    alt={movie.title} 
+                                    className="w-full h-full object-cover"
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Film size={32} className="text-gray-500" />
+                                  </div>
+                                )}
+                                {movie.imdb_rating && (
+                                  <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-xs font-bold">
+                                    IMDb {movie.imdb_rating}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-4">
+                                <h3 className="font-bold text-white truncate">{movie.title}</h3>
+                                <div className="flex items-center justify-between mt-2 text-sm text-gray-400">
+                                  <div>
+                                    {movie.year && <span>{movie.year}</span>}
+                                  </div>
+                                  {movie.downloads > 0 && (
+                                    <div>{movie.downloads.toLocaleString()} downloads</div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
                     </div>
-                  </Link>
+                    {/* Ad after every 3 movies group in categories */}
+                    {groupIndex < Math.ceil(movies.length / 3) - 1 && (
+                      <div className="mt-6">
+                        <AdBanner position={`${category.toLowerCase()}_after_${groupIndex + 1}`} />
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
 
@@ -690,37 +769,52 @@ const Index = () => {
                 </Link>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {webSeries.map((series) => (
-                  <Link key={series.id} to={`/movie/${series.id}`}>
-                    <div className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-750 transition-colors">
-                      <div className="h-56 bg-gray-700 relative">
-                        {series.poster_url ? (
-                          <img 
-                            src={series.poster_url} 
-                            alt={series.title} 
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Tv size={32} className="text-gray-500" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-bold text-white truncate">{series.title}</h3>
-                        <div className="flex items-center justify-between mt-2 text-sm text-gray-400">
-                          <div>
-                            {series.year && <span>{series.year}</span>}
-                          </div>
-                          {series.imdb_rating && (
-                            <div>IMDb {series.imdb_rating}</div>
-                          )}
-                        </div>
-                      </div>
+              <div className="space-y-6">
+                {/* Enhanced web series with ads after every 3 series */}
+                {Array.from({ length: Math.ceil(webSeries.length / 3) }, (_, groupIndex) => (
+                  <div key={groupIndex}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                      {webSeries
+                        .slice(groupIndex * 3, (groupIndex + 1) * 3)
+                        .map((series) => (
+                          <Link key={series.movie_id} to={`/movie/${series.movie_id}`}>
+                            <div className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-750 transition-colors">
+                              <div className="h-56 bg-gray-700 relative">
+                                {series.poster_url ? (
+                                  <img 
+                                    src={series.poster_url} 
+                                    alt={series.title} 
+                                    className="w-full h-full object-cover"
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Tv size={32} className="text-gray-500" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-4">
+                                <h3 className="font-bold text-white truncate">{series.title}</h3>
+                                <div className="flex items-center justify-between mt-2 text-sm text-gray-400">
+                                  <div>
+                                    {series.year && <span>{series.year}</span>}
+                                  </div>
+                                  {series.imdb_rating && (
+                                    <div>IMDb {series.imdb_rating}</div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
                     </div>
-                  </Link>
+                    {/* Ad after every 3 series group */}
+                    {groupIndex < Math.ceil(webSeries.length / 3) - 1 && (
+                      <div className="mt-6">
+                        <AdBanner position={`series_after_${groupIndex + 1}`} />
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
               
@@ -830,13 +924,6 @@ const Index = () => {
       {/* Shorts Player */}
       {showShorts && shorts.length > 0 && (
         <ShortsPlayer shorts={shorts} onClose={() => setShowShorts(false)} />
-      )}
-
-      {/* Latest Uploads Section */}
-      {latestMovies && latestMovies.length > 0 && (
-        <div className="container mx-auto px-4">
-          <LatestUploadsSection movies={latestMovies} />
-        </div>
       )}
 
       {/* Footer */}
