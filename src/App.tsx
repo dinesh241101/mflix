@@ -46,18 +46,34 @@ const App = () => {
 
   // Security headers and CSP (Content Security Policy)
   useEffect(() => {
-    // Add security-related meta tags
+    // Add security-related measures
     const addSecurityHeaders = () => {
-      // Prevent clickjacking
-      if (window.top !== window.self) {
-        window.top.location = window.self.location;
-      }
-      
-      // Disable right-click context menu in admin areas
-      if (isAdminDomain) {
-        const handleContextMenu = (e: MouseEvent) => e.preventDefault();
-        document.addEventListener('contextmenu', handleContextMenu);
-        return () => document.removeEventListener('contextmenu', handleContextMenu);
+      try {
+        // Only prevent clickjacking if we're not in a development/preview iframe
+        const isInIframe = window.top !== window.self;
+        const isPreviewMode = window.location.hostname.includes('lovable.app') || 
+                             window.location.hostname.includes('localhost');
+        
+        // Only apply clickjacking protection in production environments
+        if (isInIframe && !isPreviewMode) {
+          // In production, prevent clickjacking by breaking out of frames
+          try {
+            window.top.location = window.self.location;
+          } catch (e) {
+            // If we can't access top frame, just log the attempt
+            console.warn('Clickjacking protection: Unable to access parent frame');
+          }
+        }
+        
+        // Disable right-click context menu in admin areas (non-intrusive)
+        if (isAdminDomain) {
+          const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+          document.addEventListener('contextmenu', handleContextMenu);
+          return () => document.removeEventListener('contextmenu', handleContextMenu);
+        }
+      } catch (error) {
+        // Silently handle any security-related errors to prevent breaking the app
+        console.warn('Security initialization warning:', error);
       }
     };
     
