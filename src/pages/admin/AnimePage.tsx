@@ -294,7 +294,15 @@ const AnimePage = () => {
       if (castError) throw castError;
       
       setSelectedAnime(anime);
-      setAnimeCast(cast || []);
+      
+      // Transform Supabase data to match CastMember interface
+      const transformedCast: CastMember[] = (cast || []).map((member: any) => ({
+        id: member.cast_id,
+        name: member.actor_name,
+        role: member.actor_role
+      }));
+      
+      setAnimeCast(transformedCast);
       setDownloadsCount(anime.downloads || 0);
       
     } catch (error: any) {
@@ -340,15 +348,14 @@ const AnimePage = () => {
         description: "Cast member added successfully!",
       });
       
-      // Reset form
-      setAnimeCast([
-        ...animeCast,
-        {
-          id: Date.now().toString(), // Temporary ID
-          name: castForm.name,
-          role: castForm.role
-        }
-      ]);
+      // Reset form and add to local state
+      const newCastMember: CastMember = {
+        id: Date.now().toString(), // Temporary ID
+        name: castForm.name,
+        role: castForm.role
+      };
+      
+      setAnimeCast([...animeCast, newCastMember]);
       
       setCastForm({
         name: "",
@@ -375,7 +382,7 @@ const AnimePage = () => {
       const { error } = await supabase
         .from('movie_cast')
         .delete()
-        .eq('id', id);
+        .eq('cast_id', id);
       
       if (error) throw error;
       
