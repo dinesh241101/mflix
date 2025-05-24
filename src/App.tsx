@@ -1,147 +1,53 @@
 
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import Movies from "./pages/Movies";
+import Anime from "./pages/Anime";
+import WebSeries from "./pages/WebSeries";
 import MovieDetail from "./pages/MovieDetail";
+import DownloadPage from "./pages/DownloadPage";
+import MobileShortsPage from "./pages/MobileShortsPage";
+import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import ContentManagementPage from "./pages/admin/ContentManagementPage";
 import MoviesPage from "./pages/admin/MoviesPage";
-import WebSeriesPage from "./pages/admin/WebSeriesPage";
 import AnimePage from "./pages/admin/AnimePage";
+import WebSeriesPage from "./pages/admin/WebSeriesPage";
 import ShortsPage from "./pages/admin/ShortsPage";
 import AdsManagementPage from "./pages/admin/AdsManagementPage";
-import ContentManagementPage from "./pages/admin/ContentManagementPage";
-import NotFound from "./pages/NotFound";
-import Movies from "./pages/Movies";
-import WebSeries from "./pages/WebSeries";
-import Anime from "./pages/Anime";
-import MobileShortsPage from "./pages/MobileShortsPage";
-import AdManager from "./components/ads/AdManager";
-import ClickAdModal from "./components/ads/ClickAdModal";
-import DownloadPage from "./pages/DownloadPage";
-import { useSecureAuth } from "./hooks/useSecureAuth";
+import SearchResults from "./pages/SearchResults";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-
-const App = () => {
-  const [isAdminDomain, setIsAdminDomain] = useState(false);
-  const { isAuthenticated, isLoading: isCheckingAuth } = useSecureAuth();
-
-  // Handle custom domain for admin
-  useEffect(() => {
-    const hostname = window.location.hostname;
-    setIsAdminDomain(hostname.includes("admin") || hostname === "crmadmin.mflix");
-  }, []);
-
-  // Security headers and CSP (Content Security Policy)
-  useEffect(() => {
-    // Add security-related measures
-    const addSecurityHeaders = () => {
-      try {
-        // Only prevent clickjacking if we're not in a development/preview iframe
-        const isInIframe = window.top !== window.self;
-        const isPreviewMode = window.location.hostname.includes('lovable.app') || 
-                             window.location.hostname.includes('localhost');
-        
-        // Only apply clickjacking protection in production environments
-        if (isInIframe && !isPreviewMode) {
-          // In production, prevent clickjacking by breaking out of frames
-          try {
-            window.top.location = window.self.location;
-          } catch (e) {
-            // If we can't access top frame, just log the attempt
-            console.warn('Clickjacking protection: Unable to access parent frame');
-          }
-        }
-        
-        // Disable right-click context menu in admin areas (non-intrusive)
-        if (isAdminDomain) {
-          const handleContextMenu = (e: MouseEvent) => e.preventDefault();
-          document.addEventListener('contextmenu', handleContextMenu);
-          return () => document.removeEventListener('contextmenu', handleContextMenu);
-        }
-      } catch (error) {
-        // Silently handle any security-related errors to prevent breaking the app
-        console.warn('Security initialization warning:', error);
-      }
-    };
-    
-    addSecurityHeaders();
-  }, [isAdminDomain]);
-
-  // Show loading while checking authentication
-  if (isCheckingAuth) {
-    return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Loading...</div>;
-  }
-
+function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
+    <Router>
+      <div className="min-h-screen bg-gray-900">
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/movies" element={<Movies />} />
+          <Route path="/anime" element={<Anime />} />
+          <Route path="/web-series" element={<WebSeries />} />
+          <Route path="/search" element={<SearchResults />} />
+          <Route path="/movie/:id" element={<MovieDetail />} />
+          <Route path="/anime/:id" element={<MovieDetail />} />
+          <Route path="/series/:id" element={<MovieDetail />} />
+          <Route path="/download/:id" element={<DownloadPage />} />
+          <Route path="/shorts" element={<MobileShortsPage />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/content" element={<ContentManagementPage />} />
+          <Route path="/admin/movies" element={<MoviesPage />} />
+          <Route path="/admin/anime" element={<AnimePage />} />
+          <Route path="/admin/web-series" element={<WebSeriesPage />} />
+          <Route path="/admin/shorts" element={<ShortsPage />} />
+          <Route path="/admin/ads" element={<AdsManagementPage />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
         <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          {/* Global ad manager */}
-          <AdManager />
-          
-          {/* Click-based ad modal - only on public pages */}
-          {!isAdminDomain && <ClickAdModal />}
-          
-          <Routes>
-            {/* Admin domain routing */}
-            {isAdminDomain ? (
-              <>
-                <Route path="/admin/login" element={!isAuthenticated ? <AdminLogin /> : <Navigate to="/admin/dashboard" replace />} />
-                <Route path="/admin/dashboard" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/movies" element={isAuthenticated ? <MoviesPage /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/web-series" element={isAuthenticated ? <WebSeriesPage /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/anime" element={isAuthenticated ? <AnimePage /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/shorts" element={isAuthenticated ? <ShortsPage /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/content" element={isAuthenticated ? <ContentManagementPage /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/ads" element={isAuthenticated ? <AdsManagementPage /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/users" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/settings" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/*" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
-                <Route path="*" element={<Navigate to="/admin/login" replace />} />
-              </>
-            ) : (
-              <>
-                <Route path="/" element={<Index />} />
-                <Route path="/movies" element={<Movies />} />
-                <Route path="/web-series" element={<WebSeries />} />
-                <Route path="/anime" element={<Anime />} />
-                <Route path="/shorts" element={<MobileShortsPage />} />
-                <Route path="/movie/:id" element={<MovieDetail />} />
-                <Route path="/download/:id/:linkId" element={<DownloadPage />} />
-                <Route path="/admin/login" element={!isAuthenticated ? <AdminLogin /> : <Navigate to="/admin/dashboard" replace />} />
-                <Route path="/admin/dashboard" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/movies" element={isAuthenticated ? <MoviesPage /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/web-series" element={isAuthenticated ? <WebSeriesPage /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/anime" element={isAuthenticated ? <AnimePage /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/shorts" element={isAuthenticated ? <ShortsPage /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/content" element={isAuthenticated ? <ContentManagementPage /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/ads" element={isAuthenticated ? <AdsManagementPage /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/users" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/settings" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
-                <Route path="/admin/*" element={isAuthenticated ? <AdminDashboard /> : <Navigate to="/admin/login" replace />} />
-                <Route path="*" element={<NotFound />} />
-              </>
-            )}
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+      </div>
+    </Router>
   );
-};
+}
 
 export default App;

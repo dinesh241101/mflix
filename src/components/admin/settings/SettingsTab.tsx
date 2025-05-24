@@ -1,49 +1,43 @@
 
 import PasswordForm from "./PasswordForm";
 import SiteSettingsForm from "./SiteSettingsForm";
+import ContentToggleForm from "./ContentToggleForm";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SettingsTabProps {
-  currentPassword: string;
-  setCurrentPassword: (password: string) => void;
-  newPassword: string;
-  setNewPassword: (password: string) => void;
-  confirmPassword: string;
-  setConfirmPassword: (password: string) => void;
-  handlePasswordChange: (e: React.FormEvent) => void;
+  onPasswordUpdate: () => void;
+  onSiteSettingsUpdate: () => void;
+  onContentSettingsUpdate?: () => void;
 }
 
-const SettingsTab = ({
-  currentPassword,
-  setCurrentPassword,
-  newPassword,
-  setNewPassword,
-  confirmPassword,
-  setConfirmPassword,
-  handlePasswordChange
+const SettingsTab = ({ 
+  onPasswordUpdate, 
+  onSiteSettingsUpdate, 
+  onContentSettingsUpdate 
 }: SettingsTabProps) => {
   return (
-    <div className="bg-gray-800 p-6 rounded-lg">
-      <h2 className="text-xl font-bold mb-6">Account Settings</h2>
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold">Settings</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div>
-          <h3 className="text-lg font-medium mb-4">Change Password</h3>
-          <PasswordForm 
-            currentPassword={currentPassword}
-            setCurrentPassword={setCurrentPassword}
-            newPassword={newPassword}
-            setNewPassword={setNewPassword}
-            confirmPassword={confirmPassword}
-            setConfirmPassword={setConfirmPassword}
-            handlePasswordChange={handlePasswordChange}
-          />
-        </div>
+      <Tabs defaultValue="site" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 bg-gray-800">
+          <TabsTrigger value="site">Site Settings</TabsTrigger>
+          <TabsTrigger value="content">Content Display</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+        </TabsList>
         
-        <div>
-          <h3 className="text-lg font-medium mb-4">Site Settings</h3>
-          <SiteSettingsForm />
-        </div>
-      </div>
+        <TabsContent value="site">
+          <SiteSettingsForm onSettingsUpdate={onSiteSettingsUpdate} />
+        </TabsContent>
+        
+        <TabsContent value="content">
+          <ContentToggleForm onSettingsUpdate={onContentSettingsUpdate} />
+        </TabsContent>
+        
+        <TabsContent value="security">
+          <PasswordForm onPasswordUpdate={onPasswordUpdate} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

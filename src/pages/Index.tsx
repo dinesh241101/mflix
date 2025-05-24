@@ -1,937 +1,260 @@
-import { useEffect, useState, useRef, useCallback } from "react";
-import { Link } from "react-router-dom";
-import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { supabase } from "@/integrations/supabase/client";
-import { Search, Home, Film, Tv, Video } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import LoadingScreen from "@/components/LoadingScreen";
-import { useToast } from "@/components/ui/use-toast";
-import MFlixLogo from "@/components/MFlixLogo";
-import MovieGrid from "@/components/MovieGrid";
-import MovieCarousel from "@/components/MovieCarousel";
-import ShortsPlayer from "@/components/ShortsPlayer";
-import AdBanner from "@/components/ads/AdBanner";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import LatestUploadsSection from "@/components/LatestUploadsSection";
 
-const ITEMS_PER_PAGE = 8;
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Search, Play, Download, Star, TrendingUp, Clock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import FeaturedMovieSlider from "@/components/FeaturedMovieSlider";
+import MovieCarousel from "@/components/MovieCarousel";
+import LatestUploadsSection from "@/components/LatestUploadsSection";
+import ShareLinks from "@/components/ShareLinks";
+import AdBanner from "@/components/ads/AdBanner";
+import MFlixLogo from "@/components/MFlixLogo";
 
 const Index = () => {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [featuredMovies, setFeaturedMovies] = useState<any[]>([]);
-  const [trendingMovies, setTrendingMovies] = useState<any[]>([]);
-  const [webSeries, setWebSeries] = useState<any[]>([]);
-  const [animeShows, setAnimeShows] = useState<any[]>([]);
-  const [shorts, setShorts] = useState<any[]>([]);
-  const [showShorts, setShowShorts] = useState(false);
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [categoryMovies, setCategoryMovies] = useState<Record<string, any[]>>({});
-  const [showAllCategories, setShowAllCategories] = useState(false);
-  const [latestMovies, setLatestMovies] = useState<any[]>([]);
-  
-  // Auto-slide interval for featured carousel
-  const autoSlideInterval = useRef<NodeJS.Timeout | null>(null);
-  const carouselRef = useRef<HTMLDivElement>(null);
-  
-  // Progressive loading state
-  const [visibleSections, setVisibleSections] = useState({
-    featured: true,
-    trending: false,
-    series: false,
-    anime: false
+  const [featuredMovies, setFeaturedMovies] = useState([]);
+  const [latestMovies, setLatestMovies] = useState([]);
+  const [trendingMovies, setTrendingMovies] = useState([]);
+  const [settings, setSettings] = useState({
+    showLatestUploads: true,
+    showTrendingMovies: true,
+    showFeaturedContent: true,
+    latestUploadsLimit: 12,
+    trendingLimit: 8,
+    featuredLimit: 6
   });
-  const trendingRef = useRef<HTMLDivElement>(null);
-  const seriesRef = useRef<HTMLDivElement>(null);
-  const animeRef = useRef<HTMLDivElement>(null);
 
-  // Categories for the menu bar
-  const categories = [
-    "Action", "Adventure", "Animation", "Comedy", "Crime", 
-    "Documentary", "Drama", "Family", "Fantasy", "Horror",
-    "Mystery", "Romance", "Sci-Fi", "Thriller", "War"
-  ];
-  
-  // Tracking analytics
   useEffect(() => {
-    const trackVisit = async () => {
+    // Load content display settings
+    const savedSettings = localStorage.getItem('contentDisplaySettings');
+    if (savedSettings) {
       try {
-        await supabase.from('analytics').insert({
-          page_visited: 'home',
-          browser: navigator.userAgent,
-          device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
-          os: navigator.platform
-        });
+        setSettings(JSON.parse(savedSettings));
       } catch (error) {
-        console.error("Analytics error:", error);
+        console.error("Error loading settings:", error);
       }
-    };
-    
-    trackVisit();
-  }, []);
-
-  // Fetch initial data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch featured movies first to show content quickly
-        const { data: featured, error: featuredError } = await supabase
-          .from('movies')
-          .select('movie_id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
-          .eq('featured', true)
-          .limit(5);
-        
-        if (featuredError) throw featuredError;
-        
-        setFeaturedMovies(featured || []);
-        setLoading(false); // Stop loading after featured content is loaded
-        
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load content. Please try again later.",
-          variant: "destructive"
-        });
-        setLoading(false);
-      }
-    };
-    
-    fetchData();
-  }, [toast]);
-
-  // Fetch latest movies - Fixed to fetch real latest content
-  useEffect(() => {
-    const fetchLatestMovies = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("movies")
-          .select("movie_id, title, year, genre, poster_url, imdb_rating, downloads, content_type")
-          .order("created_at", { ascending: false })
-          .limit(10);
-        
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-          setLatestMovies(data);
-        }
-      } catch (error) {
-        console.error("Error fetching latest movies:", error);
-      }
-    };
-    
-    fetchLatestMovies();
-  }, []);
-
-  // Fetch category movies
-  useEffect(() => {
-    const fetchCategoryMovies = async () => {
-      try {
-        // Only fetch the first 6 categories initially
-        const categoriesToFetch = showAllCategories ? categories : categories.slice(0, 6);
-        
-        for (const category of categoriesToFetch) {
-          const { data, error } = await supabase
-            .from('movies')
-            .select('movie_id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
-            .contains('genre', [category])
-            .limit(4);
-            
-          if (error) throw error;
-          
-          setCategoryMovies(prev => ({
-            ...prev,
-            [category]: data || []
-          }));
-        }
-      } catch (error) {
-        console.error("Error fetching category movies:", error);
-      }
-    };
-    
-    fetchCategoryMovies();
-  }, [showAllCategories]);
-
-  // Auto-slide effect for featured carousel
-  useEffect(() => {
-    if (featuredMovies.length > 1 && carouselRef.current) {
-      // Set up auto-sliding (right to left)
-      const startAutoSlide = () => {
-        autoSlideInterval.current = setInterval(() => {
-          const nextBtn = carouselRef.current?.querySelector('.carousel-next') as HTMLButtonElement;
-          if (nextBtn) nextBtn.click();
-        }, 5000); // Change slide every 5 seconds
-      };
-      
-      startAutoSlide();
-      
-      // Clean up interval on unmount
-      return () => {
-        if (autoSlideInterval.current) {
-          clearInterval(autoSlideInterval.current);
-        }
-      };
     }
-  }, [featuredMovies]);
-
-  // Intersection observer for lazy loading sections
-  useEffect(() => {
-    const observerOptions = {
-      rootMargin: '100px',
-      threshold: 0.1
-    };
-
-    const observerCallback = (entries: IntersectionObserverEntry[], observer: IntersectionObserver) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const sectionId = entry.target.id;
-          
-          // Load content for the section that's coming into view
-          if (sectionId === 'trending-section' && !visibleSections.trending) {
-            loadTrendingMovies();
-            setVisibleSections(prev => ({ ...prev, trending: true }));
-          } 
-          else if (sectionId === 'series-section' && !visibleSections.series) {
-            loadWebSeries();
-            setVisibleSections(prev => ({ ...prev, series: true }));
-          }
-          else if (sectionId === 'anime-section' && !visibleSections.anime) {
-            loadAnimeShows();
-            setVisibleSections(prev => ({ ...prev, anime: true }));
-            // Also load shorts when we get to the bottom section
-            loadShorts();
-          }
-          
-          // Unobserve the element once it's been loaded
-          observer.unobserve(entry.target);
-        }
-      });
-    };
-
-    const observer = new IntersectionObserver(observerCallback, observerOptions);
     
-    // Observe refs
-    if (trendingRef.current) observer.observe(trendingRef.current);
-    if (seriesRef.current) observer.observe(seriesRef.current);
-    if (animeRef.current) observer.observe(animeRef.current);
-    
-    return () => observer.disconnect();
+    fetchFeaturedMovies();
+    fetchLatestMovies();
+    fetchTrendingMovies();
   }, []);
 
-  // Load trending movies when section becomes visible
-  const loadTrendingMovies = async () => {
+  const fetchFeaturedMovies = async () => {
     try {
       const { data, error } = await supabase
         .from('movies')
-        .select('movie_id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
-        .eq('content_type', 'movie')
-        .order('downloads', { ascending: false })
-        .limit(10);
-      
+        .select('*')
+        .eq('featured', true)
+        .limit(settings.featuredLimit)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setFeaturedMovies(data || []);
+    } catch (error) {
+      console.error("Error fetching featured movies:", error);
+    }
+  };
+
+  const fetchLatestMovies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('movies')
+        .select('*')
+        .limit(settings.latestUploadsLimit)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setLatestMovies(data || []);
+    } catch (error) {
+      console.error("Error fetching latest movies:", error);
+    }
+  };
+
+  const fetchTrendingMovies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('movies')
+        .select('*')
+        .limit(settings.trendingLimit)
+        .order('downloads', { ascending: false });
+
       if (error) throw error;
       setTrendingMovies(data || []);
-      
     } catch (error) {
-      console.error("Error loading trending movies:", error);
+      console.error("Error fetching trending movies:", error);
     }
   };
 
-  // Load web series when section becomes visible
-  const loadWebSeries = async (page = 1) => {
-    try {
-      const from = (page - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-      
-      // Get total count for pagination
-      const { count, error: countError } = await supabase
-        .from('movies')
-        .select('movie_id', { count: 'exact' })
-        .eq('content_type', 'series');
-        
-      if (countError) throw countError;
-      
-      // Calculate total pages
-      const totalPageCount = Math.ceil((count || 0) / ITEMS_PER_PAGE);
-      setTotalPages(totalPageCount || 1);
-      
-      // Fetch paginated data
-      const { data, error } = await supabase
-        .from('movies')
-        .select('movie_id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
-        .eq('content_type', 'series')
-        .range(from, to);
-      
-      if (error) throw error;
-      setWebSeries(data || []);
-      setCurrentPage(page);
-      
-    } catch (error) {
-      console.error("Error loading web series:", error);
-    }
-  };
-
-  // Load anime shows when section becomes visible
-  const loadAnimeShows = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('movies')
-        .select('movie_id, title, year, genre, poster_url, imdb_rating, downloads, content_type')
-        .eq('content_type', 'anime')
-        .limit(8);
-      
-      if (error) throw error;
-      setAnimeShows(data || []);
-      
-    } catch (error) {
-      console.error("Error loading anime shows:", error);
-    }
-  };
-
-  // Load shorts
-  const loadShorts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('shorts')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      setShorts(data || []);
-      
-    } catch (error) {
-      console.error("Error loading shorts:", error);
-    }
-  };
-
-  // Handle search suggestions
-  const handleSearchInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    
-    if (query.trim().length >= 2) {
-      try {
-        // Search for movies by title
-        const { data: titleMatches, error: titleError } = await supabase
-          .from('movies')
-          .select('movie_id, title, content_type, year, poster_url')
-          .or(`title.ilike.%${query}%`)
-          .limit(5);
-          
-        if (titleError) throw titleError;
-        
-        // Search for movies by genre
-        const { data: genreMatches, error: genreError } = await supabase
-          .from('movies')
-          .select('movie_id, title, content_type, year, poster_url, genre')
-          .contains('genre', [query])
-          .limit(3);
-          
-        if (genreError) throw genreError;
-        
-        // Search for movies by content_type
-        const { data: typeMatches, error: typeError } = await supabase
-          .from('movies')
-          .select('movie_id, title, content_type, year, poster_url')
-          .eq('content_type', query.toLowerCase())
-          .limit(3);
-          
-        if (typeError) throw typeError;
-        
-        // Search for movies by seo_tags
-        const { data: tagMatches, error: tagError } = await supabase
-          .from('movies')
-          .select('movie_id, title, content_type, year, poster_url, seo_tags')
-          .contains('seo_tags', [query])
-          .limit(3);
-          
-        if (tagError) throw tagError;
-        
-        // Combine results, remove duplicates by id
-        const allMatches = [...(titleMatches || []), ...(genreMatches || []), ...(typeMatches || []), ...(tagMatches || [])];
-        const uniqueMatches = Array.from(new Map(allMatches.map(item => [item.movie_id, item])).values());
-        
-        setSearchSuggestions(uniqueMatches);
-      } catch (error) {
-        console.error("Error searching movies:", error);
-      }
-    } else {
-      setSearchSuggestions([]);
-    }
-  };
-
-  // Handle search form submission
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      toast({
-        title: "Search",
-        description: `Searching for: ${searchQuery}`,
-      });
-      
-      // In a real app, you'd navigate to search results page
-      // navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 
-  if (loading) {
-    return <LoadingScreen />;
-  }
-
-  // Handle empty state with dummy data
-  if (featuredMovies.length === 0) {
-    featuredMovies.push(
-      {
-        movie_id: 1,
-        title: "Sample Movie",
-        poster_url: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5",
-        year: 2025,
-        rating: 8.5,
-        genre: ["Action"],
-        downloads: 1250
-      }
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      {/* Header/Navigation */}
-      <header className="bg-gray-800 shadow-md">
+      {/* Header */}
+      <header className="bg-gray-800 shadow-lg sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <MFlixLogo />
-            <nav>
-              <ul className="hidden md:flex space-x-6">
-                <li><Link to="/" className="hover:text-blue-400 flex items-center"><Home className="mr-1" size={16} /> Home</Link></li>
-                <li><Link to="/movies" className="hover:text-blue-400 flex items-center"><Film className="mr-1" size={16} /> Movies</Link></li>
-                <li><Link to="/series" className="hover:text-blue-400 flex items-center"><Tv className="mr-1" size={16} /> Web Series</Link></li>
-                <li><Link to="/anime" className="hover:text-blue-400 flex items-center"><Tv className="mr-1" size={16} /> Anime</Link></li>
-                <li>
-                  <button 
-                    onClick={() => setShowShorts(true)} 
-                    className="hover:text-blue-400 flex items-center"
-                  >
-                    <Video className="mr-1" size={16} /> Shorts
-                  </button>
-                </li>
-              </ul>
-              <button className="md:hidden text-white">
-                <span className="sr-only">Open menu</span>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
+            
+            {/* Search Bar */}
+            <form onSubmit={handleSearch} className="flex-1 max-w-2xl mx-8">
+              <div className="relative">
+                <Input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search movies, anime, web series..."
+                  className="w-full pl-12 pr-4 py-3 bg-gray-700 border-gray-600 text-white placeholder-gray-400 rounded-full"
+                />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <Button 
+                  type="submit"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 rounded-full px-6"
+                >
+                  Search
+                </Button>
+              </div>
+            </form>
+
+            {/* Navigation */}
+            <nav className="hidden lg:flex items-center space-x-6">
+              <Button variant="ghost" onClick={() => navigate("/movies")} className="text-white hover:text-blue-400">
+                Movies
+              </Button>
+              <Button variant="ghost" onClick={() => navigate("/anime")} className="text-white hover:text-blue-400">
+                Anime
+              </Button>
+              <Button variant="ghost" onClick={() => navigate("/web-series")} className="text-white hover:text-blue-400">
+                TV Series
+              </Button>
+              <Button variant="ghost" onClick={() => navigate("/shorts")} className="text-white hover:text-blue-400">
+                Shorts
+              </Button>
             </nav>
           </div>
         </div>
       </header>
 
-      {/* Search Bar */}
-      <section className="py-4 bg-gray-800 border-b border-gray-700">
-        <div className="container mx-auto px-4">
-          <form onSubmit={handleSearch} className="relative">
-            <Search className="absolute left-3 top-3 text-gray-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search by movie title, director, production house, genre..." 
-              className="w-full py-2 pl-10 pr-20 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={searchQuery}
-              onChange={handleSearchInputChange}
-            />
-            <Button 
-              type="submit"
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 px-4 py-1 rounded-md"
-            >
-              Search
-            </Button>
-            
-            {/* Search Suggestions Dropdown */}
-            {searchSuggestions.length > 0 && (
-              <div className="absolute z-50 mt-1 w-full bg-gray-800 border border-gray-700 rounded-md shadow-lg">
-                {searchSuggestions.map((item) => (
-                  <Link 
-                    key={item.movie_id}
-                    to={`/movie/${item.movie_id}`}
-                    className="flex items-center p-3 hover:bg-gray-700 border-b border-gray-700 last:border-0"
-                  >
-                    <div className="w-12 h-16 bg-gray-700 rounded overflow-hidden mr-3">
-                      {item.poster_url ? (
-                        <img 
-                          src={item.poster_url} 
-                          alt={item.title}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Film size={16} className="text-gray-500" />
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm">{item.title}</h4>
-                      <div className="text-xs text-gray-400">
-                        {item.year && <span>{item.year} • </span>}
-                        <span className="capitalize">{item.content_type}</span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-                
-                <div className="p-2 text-center border-t border-gray-700">
-                  <button 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleSearch(e as unknown as React.FormEvent);
-                    }}
-                    className="text-sm text-blue-400 hover:text-blue-300"
-                  >
-                    See all results for "{searchQuery}"
-                  </button>
-                </div>
-              </div>
-            )}
-          </form>
+      {/* Hero Section with Featured Content */}
+      {settings.showFeaturedContent && featuredMovies.length > 0 && (
+        <section className="relative">
+          <FeaturedMovieSlider movies={featuredMovies} />
+        </section>
+      )}
+
+      {/* Quick Access CTA Buttons */}
+      <section className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Button 
+            onClick={() => navigate("/movies")} 
+            className="h-24 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 flex flex-col items-center justify-center space-y-2"
+          >
+            <Play size={32} />
+            <span className="text-lg font-semibold">Browse Movies</span>
+          </Button>
+          
+          <Button 
+            onClick={() => navigate("/anime")} 
+            className="h-24 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 flex flex-col items-center justify-center space-y-2"
+          >
+            <Star size={32} />
+            <span className="text-lg font-semibold">Watch Anime</span>
+          </Button>
+          
+          <Button 
+            onClick={() => navigate("/web-series")} 
+            className="h-24 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 flex flex-col items-center justify-center space-y-2"
+          >
+            <TrendingUp size={32} />
+            <span className="text-lg font-semibold">TV Series</span>
+          </Button>
+          
+          <Button 
+            onClick={() => navigate("/shorts")} 
+            className="h-24 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 flex flex-col items-center justify-center space-y-2"
+          >
+            <Clock size={32} />
+            <span className="text-lg font-semibold">Short Videos</span>
+          </Button>
         </div>
       </section>
 
-      {/* Categories Bar */}
-      <section className="overflow-x-auto scrollbar-hide bg-gray-800 border-b border-gray-700">
-        <div className="container mx-auto px-4">
-          <div className="flex py-2 space-x-2">
-            {categories.slice(0, showAllCategories ? categories.length : 10).map((category) => (
-              <Link
-                key={category}
-                to={`/movies?genre=${category}`}
-                className="flex-none px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-md text-sm whitespace-nowrap"
-              >
-                {category}
-              </Link>
-            ))}
-            {!showAllCategories && categories.length > 10 && (
-              <button
-                onClick={() => setShowAllCategories(true)}
-                className="flex-none px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-md text-sm whitespace-nowrap"
-              >
-                More
-              </button>
-            )}
-          </div>
-        </div>
-      </section>
+      <AdBanner position="banner" />
 
-      {/* Hero Banner with Auto-Sliding Carousel */}
-      <section className="py-8">
-        <div className="container mx-auto px-4">
-          <div className="relative" ref={carouselRef}>
-            {/* Ad banner above the carousel */}
-            <AdBanner position="home_top" className="mb-4" />
-            
-            <Carousel className="w-full" opts={{ loop: true, duration: 5000 }}>
-              <CarouselContent>
-                {featuredMovies.map((movie, index) => (
-                  <CarouselItem key={movie.movie_id || index} className="basis-full">
-                    <Link to={`/movie/${movie.movie_id}`}>
-                      <div className="h-[400px] relative transform transition-all duration-300 hover:scale-[1.01] cursor-pointer">
-                        <img 
-                          src={movie.poster_url || "https://images.unsplash.com/photo-1500673922987-e212871fec22"} 
-                          alt={movie.title} 
-                          className="w-full h-full object-cover rounded-xl"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent flex flex-col justify-end p-8">
-                          <h2 className="text-3xl font-bold mb-2">{movie.title}</h2>
-                          <div className="flex items-center space-x-4 mb-2">
-                            <span className="bg-blue-600 px-2 py-1 rounded text-sm">{movie.year}</span>
-                            {movie.genre && movie.genre[0] && 
-                              <span className="bg-gray-700 px-2 py-1 rounded text-sm">{movie.genre[0]}</span>
-                            }
-                            {movie.imdb_rating && 
-                              <span className="bg-yellow-500 text-black px-2 py-1 rounded text-sm font-bold">IMDb {movie.imdb_rating}</span>
-                            }
-                          </div>
-                          <p className="text-lg">Click to view details</p>
-                        </div>
-                      </div>
-                    </Link>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 carousel-prev" />
-              <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 carousel-next" />
-            </Carousel>
-            
-            {/* Ad banner below the carousel */}
-            <AdBanner position="home_below_carousel" className="mt-4" />
-          </div>
-        </div>
-      </section>
-
-      {/* Latest Uploads Section - Now prominently placed */}
-      {latestMovies && latestMovies.length > 0 && (
-        <div className="container mx-auto px-4">
+      {/* Latest Uploads */}
+      {settings.showLatestUploads && (
+        <section className="container mx-auto px-4 py-8">
           <LatestUploadsSection movies={latestMovies} />
-        </div>
+        </section>
       )}
 
-      {/* Ad banner after latest uploads */}
-      <div className="container mx-auto px-4 my-4">
-        <AdBanner position="home_after_latest" />
-      </div>
-
-      {/* Featured Movies Section */}
-      <section className="py-8">
-        <div className="container mx-auto px-4">
-          <MovieGrid 
-            movies={featuredMovies} 
-            title="Featured Movies" 
-            showFilters={false} 
-          />
-        </div>
-      </section>
-
-      {/* Ad banner between sections */}
-      <div className="container mx-auto px-4 my-4">
-        <AdBanner position="home_middle" />
-      </div>
-
-      {/* Trending Movies with Enhanced Ad Placement */}
-      <div id="trending-section" ref={trendingRef}>
-        {visibleSections.trending ? (
-          <section className="py-12 bg-gray-800">
-            <div className="container mx-auto px-4">
-              <h2 className="text-2xl font-bold mb-6">Trending Movies</h2>
-              <div className="space-y-6">
-                {/* Enhanced trending with ads after every 3 movies */}
-                {Array.from({ length: Math.ceil(trendingMovies.length / 3) }, (_, groupIndex) => (
-                  <div key={groupIndex}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                      {trendingMovies
-                        .slice(groupIndex * 3, (groupIndex + 1) * 3)
-                        .map((movie) => (
-                          <Link key={movie.movie_id} to={`/movie/${movie.movie_id}`}>
-                            <div className="bg-gray-700 rounded-lg overflow-hidden hover:bg-gray-600 transition-colors">
-                              <div className="h-56 bg-gray-600 relative">
-                                {movie.poster_url ? (
-                                  <img 
-                                    src={movie.poster_url} 
-                                    alt={movie.title} 
-                                    className="w-full h-full object-cover"
-                                    loading="lazy"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <Film size={32} className="text-gray-500" />
-                                  </div>
-                                )}
-                                {movie.imdb_rating && (
-                                  <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-xs font-bold">
-                                    IMDb {movie.imdb_rating}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="p-4">
-                                <h3 className="font-bold text-white truncate">{movie.title}</h3>
-                                <div className="flex items-center justify-between mt-2 text-sm text-gray-400">
-                                  <div>
-                                    {movie.year && <span>{movie.year}</span>}
-                                  </div>
-                                  {movie.downloads > 0 && (
-                                    <div>{movie.downloads.toLocaleString()} downloads</div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </Link>
-                        ))}
-                    </div>
-                    {/* Ad after every 3 movies group, except the last one */}
-                    {groupIndex < Math.ceil(trendingMovies.length / 3) - 1 && (
-                      <div className="mt-6">
-                        <AdBanner position={`trending_after_${groupIndex + 1}`} />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        ) : (
-          <div className="py-12 bg-gray-800">
-            <div className="container mx-auto px-4">
-              <h2 className="text-2xl font-bold mb-6">Trending Movies</h2>
-              <div className="flex justify-center">
-                <div className="animate-pulse w-full max-w-screen-xl">
-                  <div className="flex space-x-4 overflow-x-auto pb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <div key={i} className="flex-none w-64">
-                        <div className="h-40 bg-gray-700 rounded mb-2"></div>
-                        <div className="h-4 bg-gray-700 rounded w-3/4 mb-2"></div>
-                        <div className="h-3 bg-gray-700 rounded w-1/2"></div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+      {/* Trending Movies */}
+      {settings.showTrendingMovies && trendingMovies.length > 0 && (
+        <section className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold flex items-center">
+              <TrendingUp className="mr-2" size={24} />
+              Trending Now
+            </h2>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/search?q=trending")}
+              className="border-blue-600 text-blue-400 hover:bg-blue-600 hover:text-white"
+            >
+              View All
+            </Button>
           </div>
-        )}
-      </div>
-
-      {/* Display categories with enhanced ad placement */}
-      {Object.entries(categoryMovies).map(([category, movies], categoryIndex) => (
-        movies.length > 0 && (
-          <section key={category} className={category === 'Action' ? 'bg-gray-800' : ''}>
-            <div className="container mx-auto px-4 py-8">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">{category} Movies</h2>
-                <Link to={`/movies?genre=${category}`} className="text-blue-400 hover:underline">
-                  See All
-                </Link>
-              </div>
-              
-              <div className="space-y-6">
-                {/* Enhanced category display with ads after every 3 movies */}
-                {Array.from({ length: Math.ceil(movies.length / 3) }, (_, groupIndex) => (
-                  <div key={groupIndex}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                      {movies
-                        .slice(groupIndex * 3, (groupIndex + 1) * 3)
-                        .map((movie) => (
-                          <Link key={movie.movie_id} to={`/movie/${movie.movie_id}`}>
-                            <div className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-750 transition-colors">
-                              <div className="h-56 bg-gray-700 relative">
-                                {movie.poster_url ? (
-                                  <img 
-                                    src={movie.poster_url} 
-                                    alt={movie.title} 
-                                    className="w-full h-full object-cover"
-                                    loading="lazy"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <Film size={32} className="text-gray-500" />
-                                  </div>
-                                )}
-                                {movie.imdb_rating && (
-                                  <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-xs font-bold">
-                                    IMDb {movie.imdb_rating}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="p-4">
-                                <h3 className="font-bold text-white truncate">{movie.title}</h3>
-                                <div className="flex items-center justify-between mt-2 text-sm text-gray-400">
-                                  <div>
-                                    {movie.year && <span>{movie.year}</span>}
-                                  </div>
-                                  {movie.downloads > 0 && (
-                                    <div>{movie.downloads.toLocaleString()} downloads</div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </Link>
-                        ))}
-                    </div>
-                    {/* Ad after every 3 movies group in categories */}
-                    {groupIndex < Math.ceil(movies.length / 3) - 1 && (
-                      <div className="mt-6">
-                        <AdBanner position={`${category.toLowerCase()}_after_${groupIndex + 1}`} />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Ad banner within category section */}
-              {category === 'Action' && (
-                <div className="mt-8">
-                  <AdBanner position="home_category" />
-                </div>
-              )}
-            </div>
-          </section>
-        )
-      ))}
-
-      {/* Web Series - Lazy Loaded */}
-      <div id="series-section" ref={seriesRef}>
-        {visibleSections.series ? (
-          <section>
-            <div className="container mx-auto px-4 py-8">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Web Series</h2>
-                <Link to="/series" className="text-blue-400 hover:underline">
-                  See All
-                </Link>
-              </div>
-              
-              <div className="space-y-6">
-                {/* Enhanced web series with ads after every 3 series */}
-                {Array.from({ length: Math.ceil(webSeries.length / 3) }, (_, groupIndex) => (
-                  <div key={groupIndex}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                      {webSeries
-                        .slice(groupIndex * 3, (groupIndex + 1) * 3)
-                        .map((series) => (
-                          <Link key={series.movie_id} to={`/movie/${series.movie_id}`}>
-                            <div className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-750 transition-colors">
-                              <div className="h-56 bg-gray-700 relative">
-                                {series.poster_url ? (
-                                  <img 
-                                    src={series.poster_url} 
-                                    alt={series.title} 
-                                    className="w-full h-full object-cover"
-                                    loading="lazy"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <Tv size={32} className="text-gray-500" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="p-4">
-                                <h3 className="font-bold text-white truncate">{series.title}</h3>
-                                <div className="flex items-center justify-between mt-2 text-sm text-gray-400">
-                                  <div>
-                                    {series.year && <span>{series.year}</span>}
-                                  </div>
-                                  {series.imdb_rating && (
-                                    <div>IMDb {series.imdb_rating}</div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </Link>
-                        ))}
-                    </div>
-                    {/* Ad after every 3 series group */}
-                    {groupIndex < Math.ceil(webSeries.length / 3) - 1 && (
-                      <div className="mt-6">
-                        <AdBanner position={`series_after_${groupIndex + 1}`} />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-              
-              {/* Pagination */}
-              <Pagination className="mt-8">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious 
-                      onClick={() => loadWebSeries(Math.max(1, currentPage - 1))}
-                      className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                  
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    // Show pages around current page
-                    let pageNum;
-                    if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
-                    } else {
-                      pageNum = currentPage - 2 + i;
-                    }
-                    
-                    return (
-                      <PaginationItem key={i}>
-                        <PaginationLink 
-                          onClick={() => loadWebSeries(pageNum)}
-                          isActive={currentPage === pageNum}
-                        >
-                          {pageNum}
-                        </PaginationLink>
-                      </PaginationItem>
-                    );
-                  })}
-                  
-                  <PaginationItem>
-                    <PaginationNext 
-                      onClick={() => loadWebSeries(Math.min(totalPages, currentPage + 1))}
-                      className={currentPage >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-
-              {/* Ad banner within web series section */}
-              <div className="mt-8">
-                <AdBanner position="home_series" />
-              </div>
-            </div>
-          </section>
-        ) : (
-          <div className="py-12">
-            <div className="container mx-auto px-4">
-              <h2 className="text-2xl font-bold mb-6">Web Series</h2>
-              <div className="animate-pulse grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="bg-gray-800 rounded-lg overflow-hidden">
-                    <div className="h-56 bg-gray-700"></div>
-                    <div className="p-4">
-                      <div className="h-4 bg-gray-700 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-gray-700 rounded w-1/2"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Anime Section - Lazy Loaded */}
-      <div id="anime-section" ref={animeRef}>
-        {visibleSections.anime ? (
-          <MovieGrid 
-            movies={animeShows.length ? animeShows : []} 
-            title="Anime" 
-            bgClass="bg-gray-800"
-          />
-        ) : (
-          <div className="py-12 bg-gray-800">
-            <div className="container mx-auto px-4">
-              <h2 className="text-2xl font-bold mb-6">Anime</h2>
-              <div className="animate-pulse grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="bg-gray-700 rounded-lg overflow-hidden">
-                    <div className="h-56 bg-gray-600"></div>
-                    <div className="p-4">
-                      <div className="h-4 bg-gray-600 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-gray-600 rounded w-1/2"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Bottom ad banner */}
-      <div className="container mx-auto px-4 my-8">
-        <AdBanner position="home_bottom" />
-      </div>
-
-      {/* Shorts Player */}
-      {showShorts && shorts.length > 0 && (
-        <ShortsPlayer shorts={shorts} onClose={() => setShowShorts(false)} />
+          <MovieCarousel movies={trendingMovies} />
+        </section>
       )}
+
+      <AdBanner position="footer" />
 
       {/* Footer */}
-      <footer className="bg-gray-800 py-8 mt-12">
+      <footer className="bg-gray-800 py-12 mt-12">
         <div className="container mx-auto px-4">
-          <div className="text-center text-gray-400">
-            <p>© 2025 MFlix. All rights reserved.</p>
-            <p className="mt-2">Disclaimer: This site does not store any files on its server. All contents are provided by non-affiliated third parties.</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <MFlixLogo />
+              <p className="text-gray-400 mt-4">
+                Your ultimate destination for movies, anime, and web series. Download and stream your favorite content in high quality.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
+              <div className="space-y-2">
+                <Button variant="link" className="text-gray-400 hover:text-white p-0 h-auto" onClick={() => navigate("/movies")}>
+                  Movies
+                </Button>
+                <Button variant="link" className="text-gray-400 hover:text-white p-0 h-auto" onClick={() => navigate("/anime")}>
+                  Anime
+                </Button>
+                <Button variant="link" className="text-gray-400 hover:text-white p-0 h-auto" onClick={() => navigate("/web-series")}>
+                  Web Series
+                </Button>
+                <Button variant="link" className="text-gray-400 hover:text-white p-0 h-auto" onClick={() => navigate("/shorts")}>
+                  Shorts
+                </Button>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Share & Connect</h3>
+              <ShareLinks />
+            </div>
+          </div>
+          
+          <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+            <p>&copy; 2024 MFlix. All rights reserved.</p>
           </div>
         </div>
       </footer>

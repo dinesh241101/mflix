@@ -1,12 +1,12 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trash2, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Trash2, Plus, ExternalLink } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -27,6 +27,14 @@ interface Episode {
   links: DownloadLink[];
 }
 
+interface ExistingLink {
+  link_id: string;
+  quality: string;
+  file_size: string;
+  download_url: string;
+  created_at: string;
+}
+
 interface DownloadLinksFormProps {
   movieId: string;
   contentType: string;
@@ -36,9 +44,48 @@ interface DownloadLinksFormProps {
 const DownloadLinksForm = ({ movieId, contentType, onLinksAdded }: DownloadLinksFormProps) => {
   const [downloadLinks, setDownloadLinks] = useState<DownloadLink[]>([]);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [existingLinks, setExistingLinks] = useState<ExistingLink[]>([]);
+  const [selectedContent, setSelectedContent] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const resolutions = ['360p', '480p', '720p', '1080p', '1440p', '2160p (4K)'];
+
+  useEffect(() => {
+    if (movieId) {
+      fetchContentDetails();
+      fetchExistingLinks();
+    }
+  }, [movieId]);
+
+  const fetchContentDetails = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('movies')
+        .select('*')
+        .eq('movie_id', movieId)
+        .single();
+
+      if (error) throw error;
+      setSelectedContent(data);
+    } catch (error: any) {
+      console.error("Error fetching content:", error);
+    }
+  };
+
+  const fetchExistingLinks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('download_links')
+        .select('*')
+        .eq('movie_id', movieId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setExistingLinks(data || []);
+    } catch (error: any) {
+      console.error("Error fetching existing links:", error);
+    }
+  };
 
   const addDownloadLink = () => {
     setDownloadLinks([...downloadLinks, {
@@ -85,6 +132,31 @@ const DownloadLinksForm = ({ movieId, contentType, onLinksAdded }: DownloadLinks
       title: '',
       links: []
     }]);
+  };
+
+  const deleteExistingLink = async (linkId: string) => {
+    try {
+      const { error } = await supabase
+        .from('download_links')
+        .delete()
+        .eq('link_id', linkId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Download link deleted successfully!",
+      });
+
+      fetchExistingLinks();
+    } catch (error: any) {
+      console.error("Error deleting link:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete download link",
+        variant: "destructive"
+      });
+    }
   };
 
   const saveDownloadLinks = async () => {
@@ -181,6 +253,7 @@ const DownloadLinksForm = ({ movieId, contentType, onLinksAdded }: DownloadLinks
       // Reset form
       setDownloadLinks([]);
       setEpisodes([]);
+      fetchExistingLinks();
       onLinksAdded();
 
     } catch (error: any) {
@@ -197,9 +270,84 @@ const DownloadLinksForm = ({ movieId, contentType, onLinksAdded }: DownloadLinks
 
   return (
     <div className="space-y-6">
+      {/* Selected Content Info */}
+      {selectedContent && (
+        <Card className="bg-blue-900/20 border-blue-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ExternalLink size={20} />
+              Selected Content
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-start gap-4">
+              {selectedContent.poster_url && (
+                <img 
+                  src={selectedContent.poster_url} 
+                  alt={selectedContent.title}
+                  className="w-20 h-28 object-cover rounded"
+                />
+              )}
+              <div>
+                <h3 className="text-xl font-bold">{selectedContent.title}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="outline">{selectedContent.content_type}</Badge>
+                  {selectedContent.year && <span className="text-sm text-gray-400">{selectedContent.year}</span>}
+                </div>
+                <p className="text-sm text-gray-400 mt-2 line-clamp-2">
+                  {selectedContent.storyline}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Existing Links */}
+      {existingLinks.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Existing Download Links ({existingLinks.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {existingLinks.map((link) => (
+                <div key={link.link_id} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline">{link.quality}</Badge>
+                    <span className="text-sm">{link.file_size} GB</span>
+                    <span className="text-xs text-gray-400">
+                      Added: {new Date(link.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => window.open(link.download_url, '_blank')}
+                      className="text-blue-400"
+                    >
+                      <ExternalLink size={14} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteExistingLink(link.link_id)}
+                      className="text-red-400"
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>Download Links Configuration</CardTitle>
+          <CardTitle>Add New Download Links</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {contentType === 'series' ? (
