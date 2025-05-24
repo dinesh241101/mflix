@@ -1,10 +1,9 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminHeader from "@/components/admin/AdminHeader";
-import MoviesTab from "@/components/admin/movies/MoviesTab";
+import AnimeTab from "@/components/admin/anime/AnimeTab";
 import LoadingScreen from "@/components/LoadingScreen";
 
 interface AnimeFormData {
@@ -196,28 +195,6 @@ const AnimePage = () => {
       
       // If anime created successfully, add download links
       if (anime && anime.movie_id) {
-        // Process download links if any
-        if (animeForm.downloadLinks.trim()) {
-          const links = animeForm.downloadLinks.split('\n').filter(link => link.trim());
-          
-          for (const link of links) {
-            const match = link.match(/Quality:\s*(.*),\s*Size:\s*(.*),\s*URL:\s*(.*)/i);
-            
-            if (match && match.length >= 4) {
-              const [_, quality, size, url] = match;
-              
-              await supabase
-                .from('download_links')
-                .insert({
-                  movie_id: anime.movie_id,
-                  quality: quality.trim(),
-                  file_size: size.trim(),
-                  download_url: url.trim()
-                });
-            }
-          }
-        }
-        
         // Add YouTube trailer if provided
         if (animeForm.youtubeTrailer.trim()) {
           await supabase
@@ -482,15 +459,15 @@ const AnimePage = () => {
       <AdminHeader adminEmail={adminEmail} onLogout={handleLogout} />
 
       <div className="container mx-auto px-4 py-8">
-        <MoviesTab 
-          movies={animes}
-          movieForm={animeForm}
-          setMovieForm={setAnimeForm}
-          handleUploadMovie={handleUploadAnime}
-          selectedMovie={selectedAnime}
-          setSelectedMovie={setSelectedAnime}
-          handleSelectMovieForCast={handleSelectAnimeForCast}
-          movieCast={animeCast}
+        <AnimeTab 
+          animes={animes}
+          animeForm={animeForm}
+          setAnimeForm={setAnimeForm}
+          handleUploadAnime={handleUploadAnime}
+          selectedAnime={selectedAnime}
+          setSelectedAnime={setSelectedAnime}
+          handleSelectAnimeForCast={handleSelectAnimeForCast}
+          animeCast={animeCast}
           castForm={castForm}
           setCastForm={setCastForm}
           handleAddCastMember={handleAddCastMember}
