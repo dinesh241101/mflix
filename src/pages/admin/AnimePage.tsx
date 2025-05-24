@@ -1,11 +1,47 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminHeader from "@/components/admin/AdminHeader";
-import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import MoviesTab from "@/components/admin/movies/MoviesTab";
 import LoadingScreen from "@/components/LoadingScreen";
+
+interface AnimeFormData {
+  title: string;
+  year: string;
+  contentType: string;
+  genre: string;
+  quality: string;
+  country: string;
+  director: string;
+  productionHouse: string;
+  imdbRating: string;
+  storyline: string;
+  seoTags: string;
+  posterUrl: string;
+  featured: boolean;
+  youtubeTrailer: string;
+  downloadLinks: string;
+  releaseMonth: string;
+  releaseYear: string;
+}
+
+interface CastFormData {
+  name: string;
+  role: string;
+}
+
+interface CastMember {
+  id: string;
+  name: string;
+  role: string;
+}
+
+interface SearchResult {
+  name: string;
+  role: string;
+}
 
 const AnimePage = () => {
   const navigate = useNavigate();
@@ -14,10 +50,10 @@ const AnimePage = () => {
   const [animes, setAnimes] = useState<any[]>([]);
   const [selectedAnime, setSelectedAnime] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [animeCast, setAnimeCast] = useState<any[]>([]);
+  const [animeCast, setAnimeCast] = useState<CastMember[]>([]);
   
   // Anime form state
-  const [animeForm, setAnimeForm] = useState({
+  const [animeForm, setAnimeForm] = useState<AnimeFormData>({
     title: "",
     year: "",
     contentType: "anime",
@@ -38,13 +74,13 @@ const AnimePage = () => {
   });
   
   // Cast member form
-  const [castForm, setCastForm] = useState({
+  const [castForm, setCastForm] = useState<CastFormData>({
     name: "",
     role: ""
   });
   
   // Google search results for cast members
-  const [castSearchResults, setCastSearchResults] = useState([]);
+  const [castSearchResults, setCastSearchResults] = useState<SearchResult[]>([]);
   const [castSearchQuery, setCastSearchQuery] = useState("");
   
   // Downloads form
@@ -370,21 +406,21 @@ const AnimePage = () => {
     // Simulate search results
     if (query.trim().length > 2) {
       // Simulated results based on query
-      const simulatedResults = [
+      const simulatedResults: SearchResult[] = [
         { name: `${query} (Voice Actor)`, role: "Voice Actor" },
         { name: `${query} (Voice Actress)`, role: "Voice Actress" },
         { name: `${query} (Director)`, role: "Director" },
         { name: `${query} (Producer)`, role: "Producer" }
       ];
       
-      setCastSearchResults(simulatedResults as any);
+      setCastSearchResults(simulatedResults);
     } else {
       setCastSearchResults([]);
     }
   };
   
   // Select cast member from search results
-  const selectCastFromSearch = (result: any) => {
+  const selectCastFromSearch = (result: SearchResult) => {
     setCastForm({
       name: result.name,
       role: ""
