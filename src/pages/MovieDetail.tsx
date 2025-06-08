@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +10,7 @@ import ShareLinks from "@/components/ShareLinks";
 import AutoplayClip from "@/components/AutoplayClip";
 import AdBanner from "@/components/ads/AdBanner";
 import PopupAd from "@/components/ads/PopupAd";
+import RelatedMoviesSection from "@/components/RelatedMoviesSection";
 
 const MovieDetail = () => {
   const { id } = useParams();
@@ -471,47 +471,15 @@ const MovieDetail = () => {
         <AdBanner position="movie_detail_bottom" />
       </div>
       
-      {/* Related Movies */}
-      {relatedMovies.length > 0 && (
-        <section className="py-8 bg-gray-800">
-          <div className="container mx-auto px-4">
-            <h2 className="text-2xl font-bold mb-6">Related {movie.content_type === 'movie' ? 'Movies' : movie.content_type === 'series' ? 'Series' : 'Content'}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {relatedMovies.map((relatedMovie) => (
-                <Link key={relatedMovie.movie_id} to={`/movie/${relatedMovie.movie_id}`}>
-                  <div className="bg-gray-700 rounded-lg overflow-hidden hover:bg-gray-650 transition-colors">
-                    <div className="h-56 bg-gray-600 relative">
-                      {relatedMovie.poster_url ? (
-                        <img 
-                          src={relatedMovie.poster_url} 
-                          alt={relatedMovie.title} 
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Film size={32} className="text-gray-500" />
-                        </div>
-                      )}
-                      {relatedMovie.imdb_rating && (
-                        <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded text-xs font-bold">
-                          IMDb {relatedMovie.imdb_rating}
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-bold text-white truncate">{relatedMovie.title}</h3>
-                      <div className="mt-2 text-sm text-gray-400">
-                        {relatedMovie.year && <span>{relatedMovie.year}</span>}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      {/* Related Movies Section - New Component */}
+      <RelatedMoviesSection 
+        currentMovie={{
+          movie_id: movie.movie_id,
+          genre: movie.genre || [],
+          content_type: movie.content_type,
+          title: movie.title
+        }}
+      />
 
       {/* Footer */}
       <footer className="bg-gray-800 py-8 mt-12">
