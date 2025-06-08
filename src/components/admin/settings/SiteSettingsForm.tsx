@@ -3,7 +3,18 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-const SiteSettingsForm = () => {
+interface SiteSettingsFormProps {
+  onSettingsUpdate?: () => void;
+}
+
+const SiteSettingsForm = ({ onSettingsUpdate }: SiteSettingsFormProps) => {
+  const handleSave = () => {
+    // Handle saving logic here
+    if (onSettingsUpdate) {
+      onSettingsUpdate();
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -32,7 +43,7 @@ const SiteSettingsForm = () => {
         />
       </div>
       
-      <Button className="bg-blue-600 hover:bg-blue-700">
+      <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
         Save Settings
       </Button>
     </div>
