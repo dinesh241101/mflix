@@ -17,6 +17,7 @@ import AnimePage from "./pages/admin/AnimePage";
 import WebSeriesPage from "./pages/admin/WebSeriesPage";
 import ShortsPage from "./pages/admin/ShortsPage";
 import AdsManagementPage from "./pages/admin/AdsManagementPage";
+import GenresPage from "./pages/admin/GenresPage";
 import SearchResults from "./pages/SearchResults";
 
 function App() {
@@ -42,6 +43,7 @@ function App() {
           <Route path="/admin/web-series" element={<WebSeriesPage />} />
           <Route path="/admin/shorts" element={<ShortsPage />} />
           <Route path="/admin/ads" element={<AdsManagementPage />} />
+          <Route path="/admin/genres" element={<GenresPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />
