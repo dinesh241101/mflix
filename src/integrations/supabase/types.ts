@@ -90,6 +90,24 @@ export type Database = {
         }
         Relationships: []
       }
+      countries: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       download_episodes: {
         Row: {
           created_at: string | null
@@ -236,6 +254,30 @@ export type Database = {
           icon_url?: string | null
           name?: string
           source_id?: string
+        }
+        Relationships: []
+      }
+      genres: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
         }
         Relationships: []
       }

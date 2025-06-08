@@ -18,6 +18,12 @@ interface Movie {
   downloads: number;
 }
 
+interface AdItem {
+  isAd: true;
+  adType: string;
+  id: string;
+}
+
 interface EnhancedMovieGridProps {
   movies: Movie[];
   title?: string;
@@ -26,12 +32,12 @@ interface EnhancedMovieGridProps {
 
 const EnhancedMovieGrid = ({ movies, title = "Movies", showAds = true }: EnhancedMovieGridProps) => {
   const navigate = useNavigate();
-  const [displayedMovies, setDisplayedMovies] = useState<Movie[]>([]);
+  const [displayedMovies, setDisplayedMovies] = useState<(Movie | AdItem)[]>([]);
 
   useEffect(() => {
     // Insert ads every 6 movies if showAds is true
     if (showAds) {
-      const moviesWithAds: any[] = [];
+      const moviesWithAds: (Movie | AdItem)[] = [];
       movies.forEach((movie, index) => {
         moviesWithAds.push(movie);
         
@@ -57,13 +63,17 @@ const EnhancedMovieGrid = ({ movies, title = "Movies", showAds = true }: Enhance
     navigate(route);
   };
 
+  const isAdItem = (item: Movie | AdItem): item is AdItem => {
+    return 'isAd' in item && item.isAd;
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-white">{title}</h2>
       
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
         {displayedMovies.map((item, index) => {
-          if ('isAd' in item && item.isAd) {
+          if (isAdItem(item)) {
             return (
               <div key={item.id} className="col-span-1">
                 <ResponsiveAdPlaceholder position="in-content" />
@@ -71,7 +81,7 @@ const EnhancedMovieGrid = ({ movies, title = "Movies", showAds = true }: Enhance
             );
           }
 
-          const movie = item as Movie;
+          const movie = item;
           return (
             <Card 
               key={movie.movie_id}
