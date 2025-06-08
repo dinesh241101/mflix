@@ -192,7 +192,10 @@ const Index = () => {
       {/* Latest Uploads */}
       {settings.showLatestUploads && (
         <section className="container mx-auto px-4 py-8">
-          <LatestUploadsSection movies={latestMovies} />
+          <LatestUploadsSection 
+            movies={latestMovies} 
+            title="Latest Uploads"
+          />
         </section>
       )}
 
@@ -249,7 +252,10 @@ const Index = () => {
             
             <div>
               <h3 className="text-lg font-semibold mb-4">Share & Connect</h3>
-              <ShareLinks />
+              <ShareLinks 
+                url={window.location.href}
+                title="MFlix - Movies, Anime & Web Series"
+              />
             </div>
           </div>
           

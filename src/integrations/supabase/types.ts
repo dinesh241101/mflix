@@ -430,7 +430,7 @@ export type Database = {
         Returns: boolean
       }
       search_movies: {
-        Args: { search_term: string }
+        Args: Record<PropertyKey, never> | { search_term: string }
         Returns: {
           content_type: string
           country: string | null
@@ -454,7 +454,7 @@ export type Database = {
         }[]
       }
       search_series: {
-        Args: { search_term: string }
+        Args: Record<PropertyKey, never> | { search_term: string }
         Returns: {
           content_type: string
           country: string | null

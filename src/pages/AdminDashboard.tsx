@@ -989,13 +989,9 @@ const AdminDashboard = () => {
           
           <TabsContent value="settings">
             <SettingsTab 
-              currentPassword={currentPassword}
-              setCurrentPassword={setCurrentPassword}
-              newPassword={newPassword}
-              setNewPassword={setNewPassword}
-              confirmPassword={confirmPassword}
-              setConfirmPassword={setConfirmPassword}
-              handlePasswordChange={handlePasswordChange}
+              onPasswordUpdate={() => fetchData()}
+              onSiteSettingsUpdate={() => fetchData()}
+              onContentSettingsUpdate={() => fetchData()}
             />
           </TabsContent>
         </Tabs>
