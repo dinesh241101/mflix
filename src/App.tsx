@@ -1,6 +1,7 @@
 
 import { Toaster } from "@/components/ui/toaster";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import GlobalAdTracker from "./components/ads/GlobalAdTracker";
 import Index from "./pages/Index";
 import Movies from "./pages/Movies";
 import Anime from "./pages/Anime";
@@ -24,6 +25,7 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gray-900">
+        <GlobalAdTracker />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/movies" element={<Movies />} />

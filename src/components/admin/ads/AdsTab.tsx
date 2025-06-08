@@ -1,10 +1,11 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import AdsForm from "./AdsForm";
-import { Edit, Trash2 } from "lucide-react";
+import AdvancedAdsForm from "./AdvancedAdsForm";
+import { Edit, Trash2, Eye, EyeOff } from "lucide-react";
 import ImageUploader from "../../admin/movies/ImageUploader";
 
 interface AdsTabProps {
@@ -33,7 +34,14 @@ const AdsTab = ({
       position: ad.position,
       contentUrl: ad.content_url,
       targetUrl: ad.target_url,
-      displayFrequency: ad.display_frequency
+      displayFrequency: ad.display_frequency,
+      isActive: ad.is_active,
+      startDate: ad.start_date || new Date().toISOString().split('T')[0],
+      endDate: ad.end_date || '',
+      targetCountries: ad.target_countries || ['Global'],
+      targetDevices: ad.target_devices || ['All'],
+      clickBased: ad.position === 'click_based',
+      description: ad.description || ''
     });
     setSelectedAd(ad);
     setIsEditing(true);
@@ -55,6 +63,12 @@ const AdsTab = ({
           content_url: adForm.contentUrl,
           target_url: adForm.targetUrl,
           display_frequency: parseInt(adForm.displayFrequency.toString()),
+          is_active: adForm.isActive,
+          start_date: adForm.startDate,
+          end_date: adForm.endDate || null,
+          target_countries: adForm.targetCountries,
+          target_devices: adForm.targetDevices,
+          description: adForm.description,
           updated_at: new Date().toISOString()
         })
         .eq('ad_id', selectedAd.ad_id);
@@ -70,10 +84,17 @@ const AdsTab = ({
       setAdForm({
         name: "",
         adType: "banner",
-        position: "home",
+        position: "home_top",
         contentUrl: "",
         targetUrl: "",
-        displayFrequency: 2
+        displayFrequency: 2,
+        isActive: true,
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: '',
+        targetCountries: ['Global'],
+        targetDevices: ['All'],
+        clickBased: false,
+        description: ''
       });
       setSelectedAd(null);
       setIsEditing(false);
@@ -86,6 +107,34 @@ const AdsTab = ({
       toast({
         title: "Error",
         description: error.message || "Failed to update ad campaign",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Toggle ad status
+  const toggleAdStatus = async (ad: any) => {
+    try {
+      const { error } = await supabase
+        .from('ads')
+        .update({ is_active: !ad.is_active })
+        .eq('ad_id', ad.ad_id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: `Ad campaign ${!ad.is_active ? "activated" : "deactivated"} successfully!`,
+      });
+      
+      // Reload page to refresh data
+      window.location.reload();
+      
+    } catch (error: any) {
+      console.error("Error toggling ad status:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update ad status",
         variant: "destructive"
       });
     }
@@ -131,7 +180,7 @@ const AdsTab = ({
 
   return (
     <div className="bg-gray-800 p-6 rounded-lg">
-      <h2 className="text-xl font-bold mb-6">Ads Management</h2>
+      <h2 className="text-xl font-bold mb-6">Advanced Ads Management</h2>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div>
@@ -139,79 +188,85 @@ const AdsTab = ({
             {isEditing ? "Update Ad Campaign" : "Create New Ad Campaign"}
           </h3>
           
-          <form onSubmit={isEditing ? handleUpdateAd : handleUploadAd}>
-            <AdsForm 
-              adForm={adForm} 
-              setAdForm={setAdForm} 
-              onSubmit={isEditing ? handleUpdateAd : handleUploadAd}
+          <AdvancedAdsForm 
+            adForm={adForm} 
+            setAdForm={setAdForm} 
+            onSubmit={isEditing ? handleUpdateAd : handleUploadAd}
+            submitButtonText={isEditing ? "Update Campaign" : "Create Campaign"}
+          />
+          
+          <div className="mt-6">
+            <ImageUploader 
+              currentImageUrl={adForm.contentUrl}
+              onImageUrlChange={(url) => setAdForm({...adForm, contentUrl: url})}
+              label="Ad Creative (Image/Banner)"
             />
-            
+          </div>
+          
+          {isEditing && (
             <div className="mt-6">
-              <ImageUploader 
-                currentImageUrl={adForm.contentUrl}
-                onImageUrlChange={(url) => setAdForm({...adForm, contentUrl: url})}
-                label="Ad Image/Banner"
-              />
-            </div>
-            
-            <div className="mt-4 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-              <h4 className="text-sm font-semibold text-blue-400 mb-2">Ad Placement Guide:</h4>
-              <ul className="text-xs text-gray-300 space-y-1">
-                <li>• <strong>click_based</strong>: Shows after every user click</li>
-                <li>• <strong>home_*</strong>: Homepage sections</li>
-                <li>• <strong>trending_*</strong>: After every 3 trending items</li>
-                <li>• <strong>categories_*</strong>: Between category sections</li>
-                <li>• <strong>movies_*</strong>: In movie listing pages</li>
-              </ul>
-            </div>
-            
-            <div className="mt-6 flex space-x-4">
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                {isEditing ? "Update Ad" : "Create Ad"}
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={() => {
+                  setIsEditing(false);
+                  setSelectedAd(null);
+                  setAdForm({
+                    name: "",
+                    adType: "banner",
+                    position: "home_top",
+                    contentUrl: "",
+                    targetUrl: "",
+                    displayFrequency: 2,
+                    isActive: true,
+                    startDate: new Date().toISOString().split('T')[0],
+                    endDate: '',
+                    targetCountries: ['Global'],
+                    targetDevices: ['All'],
+                    clickBased: false,
+                    description: ''
+                  });
+                }}
+                className="w-full"
+              >
+                Cancel Edit
               </Button>
-              
-              {isEditing && (
-                <Button 
-                  type="button" 
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setSelectedAd(null);
-                    setAdForm({
-                      name: "",
-                      adType: "banner",
-                      position: "home",
-                      contentUrl: "",
-                      targetUrl: "",
-                      displayFrequency: 2
-                    });
-                  }}
-                >
-                  Cancel
-                </Button>
-              )}
             </div>
-          </form>
+          )}
         </div>
         
         <div>
-          <h3 className="text-lg font-semibold mb-4">Active Campaigns</h3>
+          <h3 className="text-lg font-semibold mb-4">Active Campaigns ({ads.length})</h3>
           
           {ads.length > 0 ? (
-            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+            <div className="space-y-4 max-h-[700px] overflow-y-auto pr-2">
               {ads.map((ad) => (
                 <div 
                   key={ad.ad_id}
-                  className="bg-gray-700 rounded-lg p-4 border border-gray-600"
+                  className={`rounded-lg p-4 border transition-all ${
+                    ad.is_active 
+                      ? 'bg-gray-700 border-green-500/30' 
+                      : 'bg-gray-700/50 border-red-500/30'
+                  }`}
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium">{ad.ad_name}</h4>
+                  <div className="flex justify-between items-start mb-3">
+                    <h4 className="font-medium text-white">{ad.ad_name}</h4>
                     <div className="flex space-x-2">
                       <Button 
                         variant="ghost" 
                         size="sm"
+                        onClick={() => toggleAdStatus(ad)}
+                        className={`hover:bg-gray-600 ${
+                          ad.is_active ? 'text-green-400' : 'text-red-400'
+                        }`}
+                      >
+                        {ad.is_active ? <Eye size={16} /> : <EyeOff size={16} />}
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
                         onClick={() => handleEditAd(ad)}
-                        className="hover:bg-gray-600"
+                        className="hover:bg-gray-600 text-blue-400"
                       >
                         <Edit size={16} />
                       </Button>
@@ -229,18 +284,26 @@ const AdsTab = ({
                     </div>
                   </div>
                   
-                  <div className="flex items-center mb-2 flex-wrap gap-2">
-                    <span className="bg-blue-600 text-xs px-2 py-1 rounded capitalize">{ad.ad_type}</span>
-                    <span className="bg-gray-600 text-xs px-2 py-1 rounded">Position: {ad.position}</span>
-                    <span className="text-xs text-gray-400">Freq: {ad.display_frequency}</span>
-                    {ad.position === 'click_based' && (
-                      <span className="bg-green-600 text-xs px-2 py-1 rounded">Click-Based</span>
-                    )}
+                  <div className="flex items-center mb-3 flex-wrap gap-2">
+                    <span className="bg-blue-600 text-xs px-2 py-1 rounded capitalize">
+                      {ad.ad_type.replace('_', ' ')}
+                    </span>
+                    <span className="bg-gray-600 text-xs px-2 py-1 rounded">
+                      {ad.position.replace(/_/g, ' ')}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      Freq: {ad.display_frequency === 0 ? 'Click-based' : `${ad.display_frequency}x`}
+                    </span>
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      ad.is_active ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                    }`}>
+                      {ad.is_active ? 'Active' : 'Inactive'}
+                    </span>
                   </div>
                   
                   {ad.content_url && (
-                    <div className="mb-2">
-                      <div className="h-16 bg-gray-800 rounded overflow-hidden border border-gray-600">
+                    <div className="mb-3">
+                      <div className="h-20 bg-gray-800 rounded overflow-hidden border border-gray-600">
                         <img 
                           src={ad.content_url}
                           alt={ad.ad_name}
@@ -250,15 +313,26 @@ const AdsTab = ({
                     </div>
                   )}
                   
-                  {ad.target_url && (
-                    <div className="text-xs text-blue-400 truncate">
-                      Target URL: {ad.target_url}
-                    </div>
+                  {ad.description && (
+                    <p className="text-sm text-gray-300 mb-2 line-clamp-2">
+                      {ad.description}
+                    </p>
                   )}
                   
-                  <div className="mt-2 text-xs text-gray-400">
-                    Created: {new Date(ad.created_at).toLocaleDateString()}
+                  <div className="flex justify-between items-center text-xs text-gray-400">
+                    <span>
+                      Target: {ad.target_countries?.[0] || 'Global'} | {ad.target_devices?.[0] || 'All'}
+                    </span>
+                    <span>
+                      {ad.start_date} - {ad.end_date || 'Ongoing'}
+                    </span>
                   </div>
+                  
+                  {ad.target_url && (
+                    <div className="text-xs text-blue-400 truncate mt-1">
+                      → {ad.target_url}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -222,6 +222,11 @@ const MovieDetail = () => {
         </div>
       </header>
 
+      {/* Header Ad Banner */}
+      <div className="container mx-auto px-4 py-2">
+        <AdBanner position="header_banner" />
+      </div>
+
       {/* Ad banner top */}
       <div className="container mx-auto px-4 py-4">
         <AdBanner position="movie_detail_top" />
@@ -357,6 +362,9 @@ const MovieDetail = () => {
         </div>
       </section>
 
+      {/* Floating Ad */}
+      <AdBanner position="floating_corner" className="fixed bottom-20 right-4 z-30" />
+
       {/* Ad banner before storyline */}
       <div className="container mx-auto px-4 mb-8">
         <AdBanner position="movie_detail_middle" />
@@ -369,6 +377,9 @@ const MovieDetail = () => {
           <p className="whitespace-pre-line">{movie.storyline || "No storyline available for this title."}</p>
         </div>
       </section>
+
+      {/* Sidebar Ad */}
+      <AdBanner position="sidebar_fixed" className="fixed left-4 top-1/2 transform -translate-y-1/2 z-20 hidden lg:block" />
 
       {/* Trailer Section */}
       {youtubeId && (
@@ -460,7 +471,7 @@ const MovieDetail = () => {
             
             {/* Download disclaimer */}
             <div className="mt-8 bg-gray-800 rounded-lg p-4 text-sm text-gray-400">
-              <p>Disclaimer: MFlix does not host any files on its servers. All content is provided by non-affiliated third parties.</p>
+              <p>Disclaimer: MFlix does not host any files on its server. All contents are provided by non-affiliated third parties.</p>
             </div>
           </div>
         </section>
@@ -471,7 +482,7 @@ const MovieDetail = () => {
         <AdBanner position="movie_detail_bottom" />
       </div>
       
-      {/* Related Movies Section - New Component */}
+      {/* Related Movies Section - Enhanced Component */}
       <RelatedMoviesSection 
         currentMovie={{
           movie_id: movie.movie_id,
@@ -480,6 +491,14 @@ const MovieDetail = () => {
           title: movie.title
         }}
       />
+
+      {/* Sticky Bottom Ad */}
+      <AdBanner position="mobile_sticky" className="md:hidden fixed bottom-0 left-0 right-0 z-40" />
+
+      {/* Footer Banner Ad */}
+      <div className="container mx-auto px-4 py-4">
+        <AdBanner position="footer_banner" />
+      </div>
 
       {/* Footer */}
       <footer className="bg-gray-800 py-8 mt-12">
