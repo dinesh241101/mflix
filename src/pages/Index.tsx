@@ -128,17 +128,9 @@ const Index = () => {
                 </Button>
               )}
               
-              {!isMobile && (
-                <div className="flex space-x-2">
-                  <Button variant="ghost" size="sm" onClick={() => navigate('/admin/login')}>
-                    <LogIn className="mr-2" size={16} />
-                    Admin
-                  </Button>
-                </div>
-              )}
             </div>
           </div>
-          
+
           {/* Mobile Menu */}
           {isMobile && mobileMenuOpen && (
             <div className="mt-4 pb-4 border-t border-gray-700 pt-4">
@@ -193,20 +185,6 @@ const Index = () => {
                 >
                   <Video size={24} className="mb-2" />
                   <span className="text-sm">Shorts</span>
-                </Button>
-              </div>
-              <div className="mt-4 pt-4 border-t border-gray-700">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => {
-                    navigate('/admin/login');
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full"
-                >
-                  <LogIn className="mr-2" size={16} />
-                  Admin Login
                 </Button>
               </div>
             </div>
