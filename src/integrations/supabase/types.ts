@@ -9,6 +9,78 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ad_clicks: {
+        Row: {
+          ad_id: string | null
+          clicked_at: string | null
+          id: string
+          interstitial_ad_id: string | null
+          referrer_page: string | null
+          user_agent: string | null
+          user_ip: string | null
+        }
+        Insert: {
+          ad_id?: string | null
+          clicked_at?: string | null
+          id?: string
+          interstitial_ad_id?: string | null
+          referrer_page?: string | null
+          user_agent?: string | null
+          user_ip?: string | null
+        }
+        Update: {
+          ad_id?: string | null
+          clicked_at?: string | null
+          id?: string
+          interstitial_ad_id?: string | null
+          referrer_page?: string | null
+          user_agent?: string | null
+          user_ip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_clicks_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "ads"
+            referencedColumns: ["ad_id"]
+          },
+          {
+            foreignKeyName: "ad_clicks_interstitial_ad_id_fkey"
+            columns: ["interstitial_ad_id"]
+            isOneToOne: false
+            referencedRelation: "interstitial_ads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_settings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       ads: {
         Row: {
           ad_id: string
@@ -26,11 +98,14 @@ export type Database = {
           is_active: boolean | null
           position: string | null
           revenue: number | null
+          skip_delay: number | null
+          skip_enabled: boolean | null
           start_date: string | null
           target_countries: string[] | null
           target_devices: string[] | null
           target_url: string | null
           updated_at: string | null
+          view_duration: number | null
         }
         Insert: {
           ad_id?: string
@@ -48,11 +123,14 @@ export type Database = {
           is_active?: boolean | null
           position?: string | null
           revenue?: number | null
+          skip_delay?: number | null
+          skip_enabled?: boolean | null
           start_date?: string | null
           target_countries?: string[] | null
           target_devices?: string[] | null
           target_url?: string | null
           updated_at?: string | null
+          view_duration?: number | null
         }
         Update: {
           ad_id?: string
@@ -70,11 +148,14 @@ export type Database = {
           is_active?: boolean | null
           position?: string | null
           revenue?: number | null
+          skip_delay?: number | null
+          skip_enabled?: boolean | null
           start_date?: string | null
           target_countries?: string[] | null
           target_devices?: string[] | null
           target_url?: string | null
           updated_at?: string | null
+          view_duration?: number | null
         }
         Relationships: []
       }
@@ -308,6 +389,45 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      interstitial_ads: {
+        Row: {
+          ad_content_url: string | null
+          ad_name: string
+          created_at: string | null
+          display_duration: number | null
+          id: string
+          is_active: boolean | null
+          skip_after: number | null
+          target_url: string | null
+          trigger_event: string
+          updated_at: string | null
+        }
+        Insert: {
+          ad_content_url?: string | null
+          ad_name: string
+          created_at?: string | null
+          display_duration?: number | null
+          id?: string
+          is_active?: boolean | null
+          skip_after?: number | null
+          target_url?: string | null
+          trigger_event: string
+          updated_at?: string | null
+        }
+        Update: {
+          ad_content_url?: string | null
+          ad_name?: string
+          created_at?: string | null
+          display_duration?: number | null
+          id?: string
+          is_active?: boolean | null
+          skip_after?: number | null
+          target_url?: string | null
+          trigger_event?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

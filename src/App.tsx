@@ -9,6 +9,7 @@ import Anime from "./pages/Anime";
 import WebSeries from "./pages/WebSeries";
 import MovieDetail from "./pages/MovieDetail";
 import DownloadPage from "./pages/DownloadPage";
+import DownloadWithAds from "./pages/DownloadWithAds";
 import MobileShortsPage from "./pages/MobileShortsPage";
 import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
@@ -38,9 +39,13 @@ function App() {
           <Route path="/anime/:id" element={<MovieDetail />} />
           <Route path="/series/:id" element={<MovieDetail />} />
           <Route path="/download/:id/:linkId" element={<DownloadPage />} />
+          <Route path="/download-ads/:id/:linkId" element={<DownloadWithAds />} />
           <Route path="/shorts" element={<MobileShortsPage />} />
+          
+          {/* Admin Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/content" element={<ContentManagementPage />} />
           <Route path="/admin/movies" element={<MoviesPage />} />
           <Route path="/admin/movies/edit/:id" element={<MovieEditPage />} />
@@ -49,6 +54,8 @@ function App() {
           <Route path="/admin/shorts" element={<ShortsPage />} />
           <Route path="/admin/ads" element={<AdsManagementPage />} />
           <Route path="/admin/genres" element={<GenresPage />} />
+          
+          {/* 404 Not Found */}
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />

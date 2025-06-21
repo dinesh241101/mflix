@@ -1,582 +1,84 @@
 
-import { useEffect, useState, useRef } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { toast } from "@/components/ui/use-toast";
+import UniversalHeader from "@/components/universal/UniversalHeader";
+import UniversalAdsWrapper from "@/components/ads/UniversalAdsWrapper";
+import EnhancedMovieGrid from "@/components/enhanced/EnhancedMovieGrid";
+import ClickableAdBanner from "@/components/ads/ClickableAdBanner";
 import LoadingScreen from "@/components/LoadingScreen";
-import { Search, Home, Film, Tv, Video } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import MFlixLogo from "@/components/MFlixLogo";
-import MovieGrid from "@/components/MovieGrid";
-import AdBanner from "@/components/ads/AdBanner";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-
-const ITEMS_PER_PAGE = 12;
 
 const WebSeries = () => {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [initialLoading, setInitialLoading] = useState(true);
+  const isMobile = useIsMobile();
   const [series, setSeries] = useState<any[]>([]);
-  const [allSeries, setAllSeries] = useState<any[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
-  const [selectedGenre, setSelectedGenre] = useState("All");
-  const [genres, setGenres] = useState<string[]>([]);
-  const [showShorts, setShowShorts] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [isSearching, setIsSearching] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Get query from URL if exists
   useEffect(() => {
-    const query = searchParams.get("q");
-    const genre = searchParams.get("genre");
-    
-    if (query) {
-      setSearchQuery(query);
-    }
-    
-    if (genre && genre !== "All") {
-      setSelectedGenre(genre);
-    }
-  }, [searchParams]);
-
-  // Fetch series data
-  useEffect(() => {
-    const fetchSeries = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('movies')
-          .select('*')
-          .eq('content_type', 'series')
-          .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        setAllSeries(data || []);
-        
-        // Apply pagination
-        const totalItems = data?.length || 0;
-        setTotalPages(Math.ceil(totalItems / ITEMS_PER_PAGE));
-        
-        // Apply initial pagination
-        const paginatedSeries = data?.slice(0, ITEMS_PER_PAGE) || [];
-        setSeries(paginatedSeries);
-        
-        // Extract unique genres
-        const allGenres = data?.flatMap(series => series.genre || []) || [];
-        const uniqueGenres = [...new Set(allGenres)];
-        setGenres(["All", ...uniqueGenres]);
-        
-        // Track analytics
-        await supabase.from('analytics').insert({
-          page_visited: 'web-series',
-          browser: navigator.userAgent,
-          device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
-          operating_system: navigator.platform
-        });
-      } catch (error) {
-        console.error("Error fetching series:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load web series. Please try again later.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-        setInitialLoading(false);
-      }
-    };
-    
     fetchSeries();
-  }, [toast]);
+  }, []);
 
-  // Handle pagination
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    const startIndex = (page - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    
-    // If we're searching or filtering by genre, paginate the filtered results
-    let dataToSlice = allSeries;
-    
-    if (selectedGenre !== "All") {
-      dataToSlice = allSeries.filter(series => series.genre?.includes(selectedGenre));
-    }
-    
-    if (searchQuery && isSearching) {
-      dataToSlice = allSeries.filter(series => 
-        series.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        (series.storyline && series.storyline.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (series.genre && series.genre.some((g: string) => g.toLowerCase().includes(searchQuery.toLowerCase()))) ||
-        (series.seo_tags && series.seo_tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase())))
-      );
-    }
-    
-    const paginatedSeries = dataToSlice.slice(startIndex, endIndex);
-    setSeries(paginatedSeries);
-    
-    // Scroll to top
-    window.scrollTo(0, 0);
-  };
-
-  // Filter series by genre
-  useEffect(() => {
-    if (initialLoading) return;
-    
-    let filteredSeries = [...allSeries];
-    
-    if (selectedGenre !== "All") {
-      filteredSeries = filteredSeries.filter(series => series.genre?.includes(selectedGenre));
-    }
-    
-    if (searchQuery && isSearching) {
-      filteredSeries = filteredSeries.filter(series => 
-        series.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        (series.storyline && series.storyline.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (series.genre && series.genre.some((g: string) => g.toLowerCase().includes(searchQuery.toLowerCase()))) ||
-        (series.seo_tags && series.seo_tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase())))
-      );
-    }
-    
-    const totalFilteredItems = filteredSeries.length;
-    setTotalPages(Math.ceil(totalFilteredItems / ITEMS_PER_PAGE));
-    
-    // Reset to first page when filters change
-    setCurrentPage(1);
-    setSeries(filteredSeries.slice(0, ITEMS_PER_PAGE));
-  }, [selectedGenre, isSearching, searchQuery, initialLoading, allSeries]);
-
-  // Handle search suggestions
-  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    
-    // Clear previous timeout
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-    
-    if (query.trim().length >= 2) {
-      // Set timeout for search suggestions to avoid too many API calls
-      searchTimeoutRef.current = setTimeout(async () => {
-        try {
-          // Generate search suggestions from local data first (for quick response)
-          const localSuggestions = allSeries
-            .filter(series => 
-              series.title.toLowerCase().includes(query.toLowerCase()) ||
-              (series.genre && series.genre.some((g: string) => g.toLowerCase().includes(query.toLowerCase()))) ||
-              (series.seo_tags && series.seo_tags.some((tag: string) => tag.toLowerCase().includes(query.toLowerCase())))
-            )
-            .slice(0, 5);
-            
-          setSearchSuggestions(localSuggestions);
-          
-          // Then fetch from API for more comprehensive results
-          const { data: searchResults, error } = await supabase.rpc<any, { search_term: string }>('search_series', { 
-            search_term: query.toLowerCase()
-          });
-          
-          if (error) {
-            console.error("Error in search suggestions:", error);
-            return;
-          }
-          
-          if (searchResults && Array.isArray(searchResults)) {
-            // Search for series by title
-            const titleMatches = searchResults.filter(series => 
-              series.title.toLowerCase().includes(query.toLowerCase())
-            ).slice(0, 5);
-            
-            // Search for series by genre
-            const genreMatches = searchResults.filter(series =>
-              series.genre && series.genre.some((g: string) => g.toLowerCase().includes(query.toLowerCase()))
-            ).slice(0, 3);
-            
-            // Search for series by content_type
-            const typeMatches = searchResults.filter(series =>
-              series.content_type.toLowerCase().includes(query.toLowerCase())
-            ).slice(0, 3);
-            
-            // Search for series by seo_tags
-            const tagMatches = searchResults.filter(series =>
-              series.seo_tags && series.seo_tags.some((tag: string) => tag.toLowerCase().includes(query.toLowerCase()))
-            ).slice(0, 3);
-            
-            // Combine results, remove duplicates by id
-            const allMatches = [...titleMatches, ...genreMatches, ...typeMatches, ...tagMatches];
-            const uniqueMatches = Array.from(new Map(allMatches.map(item => [item.movie_id, item])).values());
-            
-            setSearchSuggestions(uniqueMatches.slice(0, 5));
-          }
-        } catch (error) {
-          console.error("Error searching series:", error);
-        }
-      }, 300);
-    } else {
-      setSearchSuggestions([]);
-    }
-  };
-
-  // Handle search form submission
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Update search params in URL
-    if (searchQuery.trim()) {
-      setSearchParams({ q: searchQuery });
-      setIsSearching(true);
+  const fetchSeries = async () => {
+    try {
+      setLoading(true);
       
-      try {
-        setLoading(true);
-        toast({
-          title: "Searching",
-          description: `Finding results for: "${searchQuery}"`,
-        });
-        
-        // API call for search using the stored procedure
-        const { data: searchResults, error } = await supabase.rpc<any, { search_term: string }>('search_series', { 
-          search_term: searchQuery.toLowerCase()
-        });
-        
-        if (error) {
-          console.error("Search error:", error);
-          
-          // Fallback to client-side filtering if API fails
-          const results = allSeries.filter(series => 
-            series.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-            (series.storyline && series.storyline.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            (series.genre && series.genre.some((g: string) => g.toLowerCase().includes(searchQuery.toLowerCase()))) ||
-            (series.seo_tags && series.seo_tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase())))
-          );
-          
-          setSeries(results.slice(0, ITEMS_PER_PAGE));
-          setTotalPages(Math.ceil(results.length / ITEMS_PER_PAGE));
-          
-          if (results.length === 0) {
-            toast({
-              title: "No Results",
-              description: `No web series found matching '${searchQuery}'`,
-            });
-          } else {
-            toast({
-              title: "Search Results",
-              description: `Found ${results.length} results for "${searchQuery}"`,
-            });
-          }
-        } else if (searchResults && Array.isArray(searchResults)) {
-          // Use API results
-          setSeries(searchResults.slice(0, ITEMS_PER_PAGE));
-          setTotalPages(Math.ceil(searchResults.length / ITEMS_PER_PAGE));
-          
-          if (searchResults.length === 0) {
-            toast({
-              title: "No Results",
-              description: `No web series found matching '${searchQuery}'`,
-            });
-          } else {
-            toast({
-              title: "Search Results",
-              description: `Found ${searchResults.length} results for "${searchQuery}"`,
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Search error:", error);
-        toast({
-          title: "Search Error",
-          description: "Failed to perform search. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-        setSearchSuggestions([]);
-      }
+      const { data: seriesData, error: seriesError } = await supabase
+        .from('movies')
+        .select('*')
+        .eq('content_type', 'series')
+        .eq('is_visible', true)
+        .order('created_at', { ascending: false })
+        .limit(24);
+      
+      if (seriesError) throw seriesError;
+      setSeries(seriesData || []);
+      
+    } catch (error: any) {
+      console.error("Error fetching series:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load web series",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Handle genre filter change
-  const handleGenreChange = (genre: string) => {
-    setSelectedGenre(genre);
-    if (genre !== "All") {
-      setSearchParams({ genre: genre });
-    } else {
-      setSearchParams({});
-    }
-    setCurrentPage(1);
-  };
-
-  // Clear search
-  const clearSearch = () => {
-    setSearchQuery("");
-    setIsSearching(false);
-    setSearchParams({});
-    handlePageChange(1);
-  };
-
-  if (initialLoading) {
-    return <LoadingScreen />;
+  if (loading) {
+    return <LoadingScreen message="Loading Web Series..." />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      {/* Header/Navigation */}
-      <header className="bg-gray-800 shadow-md">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <Link to="/">
-              <MFlixLogo />
-            </Link>
-            <nav>
-              <ul className="flex space-x-6">
-                <li><Link to="/" className="hover:text-blue-400 flex items-center"><Home className="mr-1" size={16} /> Home</Link></li>
-                <li><Link to="/movies" className="hover:text-blue-400 flex items-center"><Film className="mr-1" size={16} /> Movies</Link></li>
-                <li><Link to="/web-series" className="text-blue-400 flex items-center"><Tv className="mr-1" size={16} /> Web Series</Link></li>
-                <li><Link to="/anime" className="hover:text-blue-400 flex items-center"><Tv className="mr-1" size={16} /> Anime</Link></li>
-                <li>
-                  <button 
-                    onClick={() => setShowShorts(true)} 
-                    className="hover:text-blue-400 flex items-center"
-                  >
-                    <Video className="mr-1" size={16} /> Shorts
-                  </button>
-                </li>
-              </ul>
-            </nav>
-          </div>
-        </div>
-      </header>
+    <UniversalAdsWrapper>
+      <UniversalHeader />
 
-      {/* Search Bar */}
-      <section className="py-4 bg-gray-800 border-b border-gray-700">
-        <div className="container mx-auto px-4">
-          <form onSubmit={handleSearch} className="relative">
-            <Search className="absolute left-3 top-3 text-gray-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search web series by title, description..." 
-              className="w-full py-2 pl-10 pr-20 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={searchQuery}
-              onChange={handleSearchInputChange}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSearch(e);
-                }
-              }}
+      <main className="container mx-auto px-4 py-8 space-y-12">
+        
+        {/* Content Top Ad */}
+        <ClickableAdBanner position="content-top" />
+        
+        {/* Series Grid */}
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-8">Latest Web Series</h1>
+          
+          {series.length > 0 ? (
+            <EnhancedMovieGrid 
+              movies={series} 
+              title="" 
+              showAds={true}
             />
-            <Button 
-              type="submit"
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 px-4 py-1 rounded-md"
-            >
-              Search
-            </Button>
-            
-            {/* Search Suggestions Dropdown */}
-            {searchSuggestions.length > 0 && (
-              <div className="absolute z-50 mt-1 w-full bg-gray-800 border border-gray-700 rounded-md shadow-lg">
-                {searchSuggestions.map((item) => (
-                  <Link 
-                    key={item.movie_id}
-                    to={`/movie/${item.movie_id}`}
-                    className="flex items-center p-3 hover:bg-gray-700 border-b border-gray-700 last:border-0"
-                  >
-                    <div className="w-12 h-16 bg-gray-700 rounded overflow-hidden mr-3">
-                      {item.poster_url ? (
-                        <img 
-                          src={item.poster_url} 
-                          alt={item.title}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Film size={16} className="text-gray-500" />
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm">{item.title}</h4>
-                      <div className="text-xs text-gray-400">
-                        {item.year && <span>{item.year} • </span>}
-                        <span className="capitalize">{item.content_type}</span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-                
-                <div className="p-2 text-center border-t border-gray-700">
-                  <button 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleSearch(e as unknown as React.FormEvent);
-                    }}
-                    className="text-sm text-blue-400 hover:text-blue-300"
-                  >
-                    See all results for "{searchQuery}"
-                  </button>
-                </div>
-              </div>
-            )}
-          </form>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-400 text-lg">No web series found</p>
+            </div>
+          )}
         </div>
-      </section>
-
-      {/* Ad Banner */}
-      <div className="container mx-auto px-4 my-4">
-        <AdBanner position="series_top" />
-      </div>
-
-      {/* Genre Filter */}
-      <section className="py-4 container mx-auto px-4">
-        <h2 className="text-xl font-bold mb-3">Filter by Genre</h2>
-        <div className="flex flex-wrap gap-2">
-          {genres.map((genre) => (
-            <Button
-              key={genre}
-              variant={selectedGenre === genre ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleGenreChange(genre)}
-            >
-              {genre}
-            </Button>
-          ))}
-        </div>
-      </section>
-
-      {/* Active Filters */}
-      {(isSearching || selectedGenre !== "All") && (
-        <section className="container mx-auto px-4 py-2">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400">Active filters:</span>
-            {isSearching && (
-              <div className="bg-blue-900/50 text-blue-300 px-2 py-1 rounded flex items-center gap-1">
-                <span>Search: {searchQuery}</span>
-                <button onClick={clearSearch} className="ml-1 text-blue-300 hover:text-white">×</button>
-              </div>
-            )}
-            {selectedGenre !== "All" && (
-              <div className="bg-blue-900/50 text-blue-300 px-2 py-1 rounded flex items-center gap-1">
-                <span>Genre: {selectedGenre}</span>
-                <button onClick={() => handleGenreChange("All")} className="ml-1 text-blue-300 hover:text-white">×</button>
-              </div>
-            )}
-            {(isSearching || selectedGenre !== "All") && (
-              <button 
-                onClick={() => {
-                  clearSearch();
-                  handleGenreChange("All");
-                }} 
-                className="text-sm text-blue-400 hover:underline"
-              >
-                Clear all filters
-              </button>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* Loading indicator */}
-      {loading && (
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
-          </div>
-        </div>
-      )}
-
-      {/* Series Grid */}
-      <div className="container mx-auto px-4">
-        <MovieGrid 
-          movies={series} 
-          title={isSearching ? `Search Results for "${searchQuery}"` : selectedGenre !== "All" ? `${selectedGenre} Web Series` : "All Web Series"} 
-        />
-
-        {/* Ad Banner */}
-        <div className="my-8">
-          <AdBanner position="series_grid" />
-        </div>
-
-        {/* Pagination */}
-        {!loading && totalPages > 1 && (
-          <div className="py-8">
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious 
-                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                    className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} 
-                  />
-                </PaginationItem>
-                
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  // Calculate which page numbers to show
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <PaginationItem key={i}>
-                      <PaginationLink 
-                        onClick={() => handlePageChange(pageNum)} 
-                        isActive={currentPage === pageNum}
-                      >
-                        {pageNum}
-                      </PaginationLink>
-                    </PaginationItem>
-                  );
-                })}
-                
-                {totalPages > 5 && currentPage < totalPages - 2 && (
-                  <>
-                    <PaginationItem>
-                      <span className="px-2">...</span>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink onClick={() => handlePageChange(totalPages)}>
-                        {totalPages}
-                      </PaginationLink>
-                    </PaginationItem>
-                  </>
-                )}
-                
-                <PaginationItem>
-                  <PaginationNext 
-                    onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                    className={currentPage >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"} 
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
-        )}
-
-        {/* Ad Banner */}
-        <div className="mb-8">
-          <AdBanner position="series_bottom" />
-        </div>
-      </div>
-
-      {/* Footer */}
-      <footer className="bg-gray-800 py-8 mt-12">
-        <div className="container mx-auto px-4">
-          <div className="text-center text-gray-400">
-            <p>© 2025 MFlix. All rights reserved.</p>
-            <p className="mt-2">Disclaimer: This site does not store any files on its server. All contents are provided by non-affiliated third parties.</p>
-          </div>
-        </div>
-      </footer>
-    </div>
+        
+        {/* Content Bottom Ad */}
+        <ClickableAdBanner position="content-bottom" />
+      </main>
+    </UniversalAdsWrapper>
   );
 };
 

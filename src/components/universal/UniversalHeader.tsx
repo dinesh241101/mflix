@@ -1,125 +1,93 @@
 
 import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Film, Tv, Gamepad2, Video, Menu, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useIsMobile } from "@/hooks/use-mobile";
-import GlobalSearchBar from "@/components/enhanced/GlobalSearchBar";
+import UniversalSearchBar from "./UniversalSearchBar";
+import MFlixLogo from "@/components/MFlixLogo";
 
-interface UniversalHeaderProps {
-  title?: string;
-  showBackButton?: boolean;
-}
+const UniversalHeader = () => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
 
-const UniversalHeader = ({ title = "MFlix", showBackButton = false }: UniversalHeaderProps) => {
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigationItems = [
+    { name: "Home", path: "/" },
+    { name: "Movies", path: "/movies" },
+    { name: "Web Series", path: "/web-series" },
+    { name: "Anime", path: "/anime" },
+    { name: "Shorts", path: "/shorts" }
+  ];
+
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
 
   return (
     <header className="bg-gray-800 border-b border-gray-700 sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            {showBackButton && (
-              <Button variant="ghost" onClick={() => navigate(-1)}>
-                ←
-              </Button>
-            )}
-            <h1 className="text-2xl font-bold text-blue-400">{title}</h1>
-            
-            {!isMobile && (
-              <nav className="flex space-x-6">
-                <Button variant="ghost" onClick={() => navigate('/movies')}>
-                  <Film className="mr-2" size={16} />
-                  Movies
-                </Button>
-                <Button variant="ghost" onClick={() => navigate('/web-series')}>
-                  <Tv className="mr-2" size={16} />
-                  Series
-                </Button>
-                <Button variant="ghost" onClick={() => navigate('/anime')}>
-                  <Gamepad2 className="mr-2" size={16} />
-                  Anime
-                </Button>
-                <Button variant="ghost" onClick={() => navigate('/shorts')}>
-                  <Video className="mr-2" size={16} />
-                  Shorts
-                </Button>
-              </nav>
-            )}
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            {!isMobile && <GlobalSearchBar />}
-            
-            {isMobile && (
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link to="/" className="flex items-center space-x-2">
+            <MFlixLogo className="h-8 w-8" />
+            <span className="text-xl font-bold text-white">MFlix</span>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center space-x-6">
+            {navigationItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive(item.path)
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-300 hover:text-white hover:bg-gray-700"
+                }`}
               >
-                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </Button>
-            )}
+                {item.name}
+              </Link>
+            ))}
+          </nav>
+
+          {/* Search Bar - Desktop */}
+          <div className="hidden lg:block flex-1 max-w-md mx-8">
+            <UniversalSearchBar />
           </div>
+
+          {/* Mobile menu button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="md:hidden text-gray-400 hover:text-white"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </Button>
         </div>
 
-        {/* Mobile Menu */}
-        {isMobile && mobileMenuOpen && (
-          <div className="mt-4 pb-4 border-t border-gray-700 pt-4">
-            <div className="mb-4">
-              <GlobalSearchBar />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => {
-                  navigate('/movies');
-                  setMobileMenuOpen(false);
-                }}
-                className="flex flex-col items-center p-4 h-auto"
-              >
-                <Film size={24} className="mb-2" />
-                <span className="text-sm">Movies</span>
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => {
-                  navigate('/web-series');
-                  setMobileMenuOpen(false);
-                }}
-                className="flex flex-col items-center p-4 h-auto"
-              >
-                <Tv size={24} className="mb-2" />
-                <span className="text-sm">Series</span>
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => {
-                  navigate('/anime');
-                  setMobileMenuOpen(false);
-                }}
-                className="flex flex-col items-center p-4 h-auto"
-              >
-                <Gamepad2 size={24} className="mb-2" />
-                <span className="text-sm">Anime</span>
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => {
-                  navigate('/shorts');
-                  setMobileMenuOpen(false);
-                }}
-                className="flex flex-col items-center p-4 h-auto"
-              >
-                <Video size={24} className="mb-2" />
-                <span className="text-sm">Shorts</span>
-              </Button>
+        {/* Search Bar - Mobile (below header) */}
+        <div className="lg:hidden pb-4">
+          <UniversalSearchBar />
+        </div>
+
+        {/* Mobile Navigation Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden">
+            <div className="px-2 pt-2 pb-3 space-y-1 bg-gray-800 border-t border-gray-700">
+              {navigationItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                    isActive(item.path)
+                      ? "bg-blue-600 text-white"
+                      : "text-gray-300 hover:text-white hover:bg-gray-700"
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {item.name}
+                </Link>
+              ))}
             </div>
           </div>
         )}

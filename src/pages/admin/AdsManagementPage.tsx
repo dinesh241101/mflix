@@ -3,10 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminHeader from "@/components/admin/AdminHeader";
-import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import AdsTab from "@/components/admin/ads/AdsTab";
 import AnalyticsDashboard from "@/components/admin/ads/AnalyticsDashboard";
 import AffiliateLinksManager from "@/components/admin/ads/AffiliateLinksManager";
+import InterstitialAdsForm from "@/components/admin/ads/InterstitialAdsForm";
 import LoadingScreen from "@/components/LoadingScreen";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DateRange } from "react-day-picker";
@@ -16,16 +16,35 @@ const AdsManagementPage = () => {
   const [adminEmail, setAdminEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [ads, setAds] = useState<any[]>([]);
+  const [interstitialAds, setInterstitialAds] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("ads");
   
   // Ad form state
   const [adForm, setAdForm] = useState({
     name: "",
     adType: "banner",
-    position: "home",
+    position: "home_top",
     contentUrl: "",
     targetUrl: "",
-    displayFrequency: 2
+    displayFrequency: 2,
+    isActive: true,
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: '',
+    targetCountries: ['Global'],
+    targetDevices: ['All'],
+    clickBased: false,
+    description: ''
+  });
+  
+  // Interstitial ad form state
+  const [interstitialForm, setInterstitialForm] = useState({
+    ad_name: "",
+    trigger_event: "download_click",
+    ad_content_url: "",
+    target_url: "",
+    display_duration: 5,
+    skip_after: 3,
+    is_active: true
   });
   
   // Affiliate form state
@@ -102,7 +121,7 @@ const AdsManagementPage = () => {
         setAdminEmail(email || user.email || "admin@example.com");
         
         // Load ads data
-        fetchAds();
+        await Promise.all([fetchAds(), fetchInterstitialAds()]);
         
       } catch (error) {
         console.error("Auth error:", error);
@@ -118,7 +137,6 @@ const AdsManagementPage = () => {
   // Fetch ads data
   const fetchAds = async () => {
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('ads')
         .select('*')
@@ -135,6 +153,21 @@ const AdsManagementPage = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch interstitial ads
+  const fetchInterstitialAds = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('interstitial_ads')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setInterstitialAds(data || []);
+    } catch (error: any) {
+      console.error("Error fetching interstitial ads:", error);
     }
   };
   
@@ -158,7 +191,13 @@ const AdsManagementPage = () => {
         position: adForm.position,
         content_url: adForm.contentUrl,
         target_url: adForm.targetUrl,
-        display_frequency: parseInt(adForm.displayFrequency.toString())
+        display_frequency: parseInt(adForm.displayFrequency.toString()),
+        is_active: adForm.isActive,
+        start_date: adForm.startDate,
+        end_date: adForm.endDate || null,
+        target_countries: adForm.targetCountries,
+        target_devices: adForm.targetDevices,
+        description: adForm.description
       };
       
       const { error } = await supabase
@@ -176,10 +215,17 @@ const AdsManagementPage = () => {
       setAdForm({
         name: "",
         adType: "banner",
-        position: "home",
+        position: "home_top",
         contentUrl: "",
         targetUrl: "",
-        displayFrequency: 2
+        displayFrequency: 2,
+        isActive: true,
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: '',
+        targetCountries: ['Global'],
+        targetDevices: ['All'],
+        clickBased: false,
+        description: ''
       });
       
       // Reload ad data
@@ -196,6 +242,50 @@ const AdsManagementPage = () => {
       setLoading(false);
     }
   };
+
+  // Handle upload interstitial ad
+  const handleUploadInterstitialAd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('interstitial_ads')
+        .insert(interstitialForm);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Interstitial ad created successfully!",
+      });
+      
+      // Reset form
+      setInterstitialForm({
+        ad_name: "",
+        trigger_event: "download_click",
+        ad_content_url: "",
+        target_url: "",
+        display_duration: 5,
+        skip_after: 3,
+        is_active: true
+      });
+      
+      // Reload data
+      fetchInterstitialAds();
+      
+    } catch (error: any) {
+      console.error("Error creating interstitial ad:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create interstitial ad",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Handle add affiliate
   const handleAddAffiliate = async (e: React.FormEvent) => {
@@ -203,14 +293,12 @@ const AdsManagementPage = () => {
     
     try {
       setLoading(true);
-      // In a real app, this would insert into an affiliates table
       
       toast({
         title: "Success",
         description: "Affiliate link added successfully!",
       });
       
-      // Reset form
       setAffiliateForm({
         name: "",
         url: "",
@@ -272,6 +360,7 @@ const AdsManagementPage = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-8">
             <TabsTrigger value="ads">Ad Campaigns</TabsTrigger>
+            <TabsTrigger value="interstitial">Interstitial Ads</TabsTrigger>
             <TabsTrigger value="analytics">Ad Analytics</TabsTrigger>
             <TabsTrigger value="affiliates">Affiliate Links</TabsTrigger>
           </TabsList>
@@ -283,6 +372,56 @@ const AdsManagementPage = () => {
               setAdForm={setAdForm}
               handleUploadAd={handleUploadAd}
             />
+          </TabsContent>
+          
+          <TabsContent value="interstitial">
+            <div className="bg-gray-800 p-6 rounded-lg">
+              <h2 className="text-xl font-bold mb-6">Interstitial Ads Management</h2>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Create Interstitial Ad</h3>
+                  <InterstitialAdsForm 
+                    adForm={interstitialForm}
+                    setAdForm={setInterstitialForm}
+                    onSubmit={handleUploadInterstitialAd}
+                  />
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Active Interstitial Ads ({interstitialAds.length})</h3>
+                  
+                  {interstitialAds.length > 0 ? (
+                    <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                      {interstitialAds.map((ad) => (
+                        <div key={ad.id} className="bg-gray-700 rounded-lg p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-medium text-white">{ad.ad_name}</h4>
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              ad.is_active ? 'bg-green-600' : 'bg-red-600'
+                            }`}>
+                              {ad.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-300 space-y-1">
+                            <p>Trigger: {ad.trigger_event.replace('_', ' ')}</p>
+                            <p>Duration: {ad.display_duration}s</p>
+                            <p>Skip after: {ad.skip_after}s</p>
+                            {ad.target_url && (
+                              <p className="text-blue-400 truncate">→ {ad.target_url}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-gray-700 rounded-lg p-6 text-center">
+                      <p className="text-gray-400">No interstitial ads found.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </TabsContent>
           
           <TabsContent value="analytics">
