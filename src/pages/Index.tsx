@@ -1,8 +1,9 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { Play, Film, Tv, Gamepad2, Video, Users, User, LogIn } from "lucide-react";
+import { Play, Film, Tv, Gamepad2, Video, Users, User, LogIn, Menu, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ImprovedFeaturedSlider from "@/components/ImprovedFeaturedSlider";
 import GlobalSearchBar from "@/components/enhanced/GlobalSearchBar";
@@ -18,6 +19,7 @@ const Index = () => {
   const [anime, setAnime] = useState<any[]>([]);
   const [featuredMovies, setFeaturedMovies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     fetchContent();
@@ -113,38 +115,101 @@ const Index = () => {
               )}
             </div>
             
-            {/* <div className="flex items-center space-x-4">
-              <GlobalSearchBar />
+            <div className="flex items-center space-x-4">
+              {!isMobile && <GlobalSearchBar />}
               
-              <div className="flex space-x-2">
-                <Button variant="ghost" size="sm" onClick={() => navigate('/admin/login')}>
+              {isMobile && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                >
+                  {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                </Button>
+              )}
+              
+              {!isMobile && (
+                <div className="flex space-x-2">
+                  <Button variant="ghost" size="sm" onClick={() => navigate('/admin/login')}>
+                    <LogIn className="mr-2" size={16} />
+                    Admin
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Mobile Menu */}
+          {isMobile && mobileMenuOpen && (
+            <div className="mt-4 pb-4 border-t border-gray-700 pt-4">
+              <div className="mb-4">
+                <GlobalSearchBar />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    navigate('/movies');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex flex-col items-center p-4 h-auto"
+                >
+                  <Film size={24} className="mb-2" />
+                  <span className="text-sm">Movies</span>
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    navigate('/web-series');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex flex-col items-center p-4 h-auto"
+                >
+                  <Tv size={24} className="mb-2" />
+                  <span className="text-sm">Series</span>
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    navigate('/anime');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex flex-col items-center p-4 h-auto"
+                >
+                  <Gamepad2 size={24} className="mb-2" />
+                  <span className="text-sm">Anime</span>
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    navigate('/shorts');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex flex-col items-center p-4 h-auto"
+                >
+                  <Video size={24} className="mb-2" />
+                  <span className="text-sm">Shorts</span>
+                </Button>
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-700">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    navigate('/admin/login');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full"
+                >
                   <LogIn className="mr-2" size={16} />
-                  Admin
+                  Admin Login
                 </Button>
               </div>
             </div>
-          </div> */}
-          
-          {/* Mobile Navigation */}
-          {isMobile && (
-            <nav className="flex space-x-4 mt-4 overflow-x-auto">
-              <Button variant="ghost" size="sm" onClick={() => navigate('/movies')}>
-                <Film className="mr-1" size={14} />
-                Movies
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/web-series')}>
-                <Tv className="mr-1" size={14} />
-                Series
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/anime')}>
-                <Gamepad2 className="mr-1" size={14} />
-                Anime
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/shorts')}>
-                <Video className="mr-1" size={14} />
-                Shorts
-              </Button>
-            </nav>
           )}
         </div>
       </header>

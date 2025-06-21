@@ -15,6 +15,7 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import ContentManagementPage from "./pages/admin/ContentManagementPage";
 import MoviesPage from "./pages/admin/MoviesPage";
+import MovieEditPage from "./pages/admin/MovieEditPage";
 import AnimePage from "./pages/admin/AnimePage";
 import WebSeriesPage from "./pages/admin/WebSeriesPage";
 import ShortsPage from "./pages/admin/ShortsPage";
@@ -36,12 +37,13 @@ function App() {
           <Route path="/movie/:id" element={<MovieDetail />} />
           <Route path="/anime/:id" element={<MovieDetail />} />
           <Route path="/series/:id" element={<MovieDetail />} />
-          <Route path="/download/:id" element={<DownloadPage />} />
+          <Route path="/download/:id/:linkId" element={<DownloadPage />} />
           <Route path="/shorts" element={<MobileShortsPage />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/content" element={<ContentManagementPage />} />
           <Route path="/admin/movies" element={<MoviesPage />} />
+          <Route path="/admin/movies/edit/:id" element={<MovieEditPage />} />
           <Route path="/admin/anime" element={<AnimePage />} />
           <Route path="/admin/web-series" element={<WebSeriesPage />} />
           <Route path="/admin/shorts" element={<ShortsPage />} />

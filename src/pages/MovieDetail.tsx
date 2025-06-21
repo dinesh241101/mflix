@@ -1,9 +1,11 @@
+
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { Film, Star, Calendar, Clock, Download, Globe, PlayCircle } from "lucide-react";
+import { Film, Star, Calendar, Clock, Download, Globe, PlayCircle, Menu, X } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import LoadingScreen from "@/components/LoadingScreen";
 import MFlixLogo from "@/components/MFlixLogo";
 import ShareLinks from "@/components/ShareLinks";
@@ -22,8 +24,10 @@ const MovieDetail = () => {
   const [cast, setCast] = useState<any[]>([]);
   const [relatedMovies, setRelatedMovies] = useState<any[]>([]);
   const [showPopupAd, setShowPopupAd] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const videoRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
   // Show popup ad after 3 seconds
   useEffect(() => {
@@ -128,7 +132,7 @@ const MovieDetail = () => {
           operating_system: navigator.platform
         });
         
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching movie data:", error);
         toast({
           title: "Error",
@@ -204,21 +208,77 @@ const MovieDetail = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <MFlixLogo />
+            
+            {/* Desktop Navigation */}
             <nav className="hidden md:block">
               <ul className="flex space-x-6">
                 <li><Link to="/" className="hover:text-blue-400">Home</Link></li>
                 <li><Link to="/movies" className="hover:text-blue-400">Movies</Link></li>
-                <li><Link to="/series" className="hover:text-blue-400">Web Series</Link></li>
+                <li><Link to="/web-series" className="hover:text-blue-400">Web Series</Link></li>
                 <li><Link to="/anime" className="hover:text-blue-400">Anime</Link></li>
+                <li><Link to="/shorts" className="hover:text-blue-400">Shorts</Link></li>
               </ul>
             </nav>
-            <button className="md:hidden text-white">
-              <span className="sr-only">Open menu</span>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+            
+            {/* Mobile Menu Button */}
+            {isMobile && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </Button>
+            )}
           </div>
+          
+          {/* Mobile Menu */}
+          {isMobile && mobileMenuOpen && (
+            <div className="mt-4 pb-4 border-t border-gray-700 pt-4">
+              <div className="grid grid-cols-2 gap-3">
+                <Link 
+                  to="/" 
+                  className="flex flex-col items-center p-4 rounded-lg hover:bg-gray-700 transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Film size={20} className="mb-2" />
+                  <span className="text-sm">Home</span>
+                </Link>
+                <Link 
+                  to="/movies" 
+                  className="flex flex-col items-center p-4 rounded-lg hover:bg-gray-700 transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Film size={20} className="mb-2" />
+                  <span className="text-sm">Movies</span>
+                </Link>
+                <Link 
+                  to="/web-series" 
+                  className="flex flex-col items-center p-4 rounded-lg hover:bg-gray-700 transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <PlayCircle size={20} className="mb-2" />
+                  <span className="text-sm">Series</span>
+                </Link>
+                <Link 
+                  to="/anime" 
+                  className="flex flex-col items-center p-4 rounded-lg hover:bg-gray-700 transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Star size={20} className="mb-2" />
+                  <span className="text-sm">Anime</span>
+                </Link>
+                <Link 
+                  to="/shorts" 
+                  className="flex flex-col items-center p-4 rounded-lg hover:bg-gray-700 transition-colors col-span-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <PlayCircle size={20} className="mb-2" />
+                  <span className="text-sm">Shorts</span>
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
@@ -418,7 +478,7 @@ const MovieDetail = () => {
                       />
                     ) : (
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zm-4 7a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        <path strokeLinecap="round" strokeLinejoin="roun" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zm-4 7a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                     )}
                   </div>

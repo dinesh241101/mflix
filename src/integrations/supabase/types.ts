@@ -14,11 +14,21 @@ export type Database = {
           ad_id: string
           ad_name: string
           ad_type: string
+          click_based: boolean | null
+          clicks: number | null
           content_url: string | null
+          conversions: number | null
           created_at: string | null
+          description: string | null
           display_frequency: number | null
+          end_date: string | null
+          impressions: number | null
           is_active: boolean | null
           position: string | null
+          revenue: number | null
+          start_date: string | null
+          target_countries: string[] | null
+          target_devices: string[] | null
           target_url: string | null
           updated_at: string | null
         }
@@ -26,11 +36,21 @@ export type Database = {
           ad_id?: string
           ad_name: string
           ad_type: string
+          click_based?: boolean | null
+          clicks?: number | null
           content_url?: string | null
+          conversions?: number | null
           created_at?: string | null
+          description?: string | null
           display_frequency?: number | null
+          end_date?: string | null
+          impressions?: number | null
           is_active?: boolean | null
           position?: string | null
+          revenue?: number | null
+          start_date?: string | null
+          target_countries?: string[] | null
+          target_devices?: string[] | null
           target_url?: string | null
           updated_at?: string | null
         }
@@ -38,11 +58,21 @@ export type Database = {
           ad_id?: string
           ad_name?: string
           ad_type?: string
+          click_based?: boolean | null
+          clicks?: number | null
           content_url?: string | null
+          conversions?: number | null
           created_at?: string | null
+          description?: string | null
           display_frequency?: number | null
+          end_date?: string | null
+          impressions?: number | null
           is_active?: boolean | null
           position?: string | null
+          revenue?: number | null
+          start_date?: string | null
+          target_countries?: string[] | null
+          target_devices?: string[] | null
           target_url?: string | null
           updated_at?: string | null
         }
@@ -473,51 +503,11 @@ export type Database = {
       }
       search_movies: {
         Args: Record<PropertyKey, never> | { search_term: string }
-        Returns: {
-          content_type: string
-          country: string | null
-          created_at: string | null
-          director: string | null
-          downloads: number | null
-          featured: boolean | null
-          genre: string[] | null
-          imdb_rating: number | null
-          is_latest: boolean | null
-          movie_id: string
-          poster_url: string | null
-          production_house: string | null
-          quality: string | null
-          seo_tags: string[] | null
-          storyline: string | null
-          title: string
-          updated_at: string | null
-          user_rating: number | null
-          year: number | null
-        }[]
+        Returns: undefined
       }
       search_series: {
         Args: Record<PropertyKey, never> | { search_term: string }
-        Returns: {
-          content_type: string
-          country: string | null
-          created_at: string | null
-          director: string | null
-          downloads: number | null
-          featured: boolean | null
-          genre: string[] | null
-          imdb_rating: number | null
-          is_latest: boolean | null
-          movie_id: string
-          poster_url: string | null
-          production_house: string | null
-          quality: string | null
-          seo_tags: string[] | null
-          storyline: string | null
-          title: string
-          updated_at: string | null
-          user_rating: number | null
-          year: number | null
-        }[]
+        Returns: undefined
       }
     }
     Enums: {

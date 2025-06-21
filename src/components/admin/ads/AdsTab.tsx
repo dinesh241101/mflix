@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -28,13 +29,13 @@ const AdsTab = ({
   // Handle edit ad
   const handleEditAd = (ad: any) => {
     setAdForm({
-      name: ad.ad_name,
-      adType: ad.ad_type,
-      position: ad.position,
-      contentUrl: ad.content_url,
-      targetUrl: ad.target_url,
-      displayFrequency: ad.display_frequency,
-      isActive: ad.is_active,
+      name: ad.ad_name || "",
+      adType: ad.ad_type || "banner",
+      position: ad.position || "home_top",
+      contentUrl: ad.content_url || "",
+      targetUrl: ad.target_url || "",
+      displayFrequency: ad.display_frequency || 2,
+      isActive: ad.is_active !== undefined ? ad.is_active : true,
       startDate: ad.start_date || new Date().toISOString().split('T')[0],
       endDate: ad.end_date || '',
       targetCountries: ad.target_countries || ['Global'],
@@ -249,7 +250,7 @@ const AdsTab = ({
                   }`}
                 >
                   <div className="flex justify-between items-start mb-3">
-                    <h4 className="font-medium text-white">{ad.ad_name}</h4>
+                    <h4 className="font-medium text-white">{ad.ad_name || 'Unnamed Ad'}</h4>
                     <div className="flex space-x-2">
                       <Button 
                         variant="ghost" 
@@ -285,13 +286,13 @@ const AdsTab = ({
                   
                   <div className="flex items-center mb-3 flex-wrap gap-2">
                     <span className="bg-blue-600 text-xs px-2 py-1 rounded capitalize">
-                      {ad.ad_type.replace('_', ' ')}
+                      {(ad.ad_type || 'banner').replace('_', ' ')}
                     </span>
                     <span className="bg-gray-600 text-xs px-2 py-1 rounded">
-                      {ad.position.replace(/_/g, ' ')}
+                      {(ad.position || 'home_top').replace(/_/g, ' ')}
                     </span>
                     <span className="text-xs text-gray-400">
-                      Freq: {ad.display_frequency === 0 ? 'Click-based' : `${ad.display_frequency}x`}
+                      Freq: {ad.display_frequency === 0 ? 'Click-based' : `${ad.display_frequency || 2}x`}
                     </span>
                     <span className={`text-xs px-2 py-1 rounded ${
                       ad.is_active ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
@@ -305,8 +306,11 @@ const AdsTab = ({
                       <div className="h-20 bg-gray-800 rounded overflow-hidden border border-gray-600">
                         <img 
                           src={ad.content_url}
-                          alt={ad.ad_name}
+                          alt={ad.ad_name || 'Ad'}
                           className="h-full w-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
                         />
                       </div>
                     </div>
@@ -320,10 +324,10 @@ const AdsTab = ({
                   
                   <div className="flex justify-between items-center text-xs text-gray-400">
                     <span>
-                      Target: {ad.target_countries?.[0] || 'Global'} | {ad.target_devices?.[0] || 'All'}
+                      Target: {(ad.target_countries && ad.target_countries[0]) || 'Global'} | {(ad.target_devices && ad.target_devices[0]) || 'All'}
                     </span>
                     <span>
-                      {ad.start_date} - {ad.end_date || 'Ongoing'}
+                      {ad.start_date || 'N/A'} - {ad.end_date || 'Ongoing'}
                     </span>
                   </div>
                   
@@ -350,7 +354,7 @@ const AdsTab = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Are you sure you want to delete the ad campaign "{selectedAd?.ad_name}"? This action cannot be undone.
+              Are you sure you want to delete the ad campaign "{selectedAd?.ad_name || 'this ad'}"? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
