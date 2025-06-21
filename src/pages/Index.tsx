@@ -113,7 +113,7 @@ const Index = () => {
               )}
             </div>
             
-            <div className="flex items-center space-x-4">
+            {/* <div className="flex items-center space-x-4">
               <GlobalSearchBar />
               
               <div className="flex space-x-2">
@@ -123,7 +123,7 @@ const Index = () => {
                 </Button>
               </div>
             </div>
-          </div>
+          </div> */}
           
           {/* Mobile Navigation */}
           {isMobile && (
