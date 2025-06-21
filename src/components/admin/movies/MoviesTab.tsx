@@ -3,7 +3,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Edit, Trash2, Eye, Search, Plus } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Edit, Trash2, Eye, EyeOff, Search, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -125,6 +126,33 @@ const MoviesTab = ({
     window.open(`/${contentTypeUrl}/${movie.movie_id}`, '_blank');
   };
 
+  const handleToggleVisibility = async (movie: any, isVisible: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('movies')
+        .update({ is_visible: isVisible })
+        .eq('movie_id', movie.movie_id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: `Movie visibility ${isVisible ? 'enabled' : 'disabled'} successfully!`,
+      });
+      
+      // Reload page to refresh data
+      window.location.reload();
+      
+    } catch (error: any) {
+      console.error("Error toggling visibility:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update visibility",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="bg-gray-800 p-6 rounded-lg">
       <h2 className="text-xl font-bold mb-6">Movies Management</h2>
@@ -144,7 +172,7 @@ const MoviesTab = ({
         {/* Movies List */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Movies ({filteredMovies.length})</h3>
+            <h3 className="text-lg font-semibold">All Content ({filteredMovies.length})</h3>
           </div>
           
           {/* Search and Filter */}
@@ -153,7 +181,7 @@ const MoviesTab = ({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
               <Input
                 type="text"
-                placeholder="Search movies..."
+                placeholder="Search content..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -195,7 +223,18 @@ const MoviesTab = ({
                       </div>
                     </div>
                     
-                    <div className="flex space-x-2">
+                    <div className="flex items-center space-x-2">
+                      {/* Visibility Toggle */}
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={movie.is_visible !== false}
+                          onCheckedChange={(checked) => handleToggleVisibility(movie, checked)}
+                        />
+                        <span className="text-xs text-gray-400">
+                          {movie.is_visible !== false ? 'Visible' : 'Hidden'}
+                        </span>
+                      </div>
+                      
                       <Button 
                         variant="ghost" 
                         size="sm"
@@ -265,11 +304,11 @@ const MoviesTab = ({
             </div>
           ) : (
             <div className="bg-gray-700 rounded-lg p-6 text-center border border-gray-600">
-              <p className="text-gray-400">No movies found.</p>
+              <p className="text-gray-400">No content found.</p>
               <p className="text-sm text-gray-500 mt-2">
                 {searchTerm || contentTypeFilter !== "all" 
                   ? "Try adjusting your search or filters." 
-                  : "Upload your first movie using the form."}
+                  : "Upload your first content using the form."}
               </p>
             </div>
           )}

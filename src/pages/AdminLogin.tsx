@@ -29,7 +29,7 @@ const AdminLogin = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      navigate("/admin/login", { replace: true });
+      navigate("/admin/dashboard", { replace: true });
     }
   }, [isAuthenticated, authLoading, navigate]);
 
