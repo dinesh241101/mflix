@@ -136,7 +136,8 @@ const MoviesTab = ({
           <MovieUploadForm 
             movieForm={movieForm}
             setMovieForm={setMovieForm}
-            onSubmit={handleUploadMovie}
+            handleUploadMovie={handleUploadMovie}
+            isEditing={isEditing}
           />
         </div>
         
