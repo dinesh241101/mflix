@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
@@ -93,14 +92,13 @@ const MoviesPage = () => {
     checkAuth();
   }, [navigate]);
 
-  // Fetch movies data
+  // Fetch movies data - now fetch all content types
   const fetchMovies = async () => {
     try {
       setLoading(true);
       const { data: movieData, error: movieError } = await supabase
         .from('movies')
         .select('*')
-        .eq('content_type', 'movie')
         .order('created_at', { ascending: false });
       
       if (movieError) throw movieError;
@@ -151,6 +149,7 @@ const MoviesPage = () => {
         seo_tags: movieForm.seoTags ? movieForm.seoTags.split(',').map(t => t.trim()) : [],
         poster_url: movieForm.posterUrl || "",
         featured: movieForm.featured || false,
+        is_visible: true,
         downloads: 0
       };
       

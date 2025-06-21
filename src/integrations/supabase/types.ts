@@ -392,6 +392,7 @@ export type Database = {
           genre: string[] | null
           imdb_rating: number | null
           is_latest: boolean | null
+          is_visible: boolean | null
           movie_id: string
           poster_url: string | null
           production_house: string | null
@@ -413,6 +414,7 @@ export type Database = {
           genre?: string[] | null
           imdb_rating?: number | null
           is_latest?: boolean | null
+          is_visible?: boolean | null
           movie_id?: string
           poster_url?: string | null
           production_house?: string | null
@@ -434,6 +436,7 @@ export type Database = {
           genre?: string[] | null
           imdb_rating?: number | null
           is_latest?: boolean | null
+          is_visible?: boolean | null
           movie_id?: string
           poster_url?: string | null
           production_house?: string | null

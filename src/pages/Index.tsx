@@ -30,7 +30,7 @@ const Index = () => {
         .from('movies')
         .select('*')
         .eq('featured', true)
-        .neq('is_visible', false)
+        .eq('is_visible', true)
         .limit(5);
       
       if (featuredError) throw featuredError;
@@ -41,7 +41,7 @@ const Index = () => {
         .from('movies')
         .select('*')
         .eq('content_type', 'movie')
-        .neq('is_visible', false)
+        .eq('is_visible', true)
         .order('created_at', { ascending: false })
         .limit(12);
       
@@ -53,7 +53,7 @@ const Index = () => {
         .from('movies')
         .select('*')
         .eq('content_type', 'series')
-        .neq('is_visible', false)
+        .eq('is_visible', true)
         .order('created_at', { ascending: false })
         .limit(12);
       
@@ -65,7 +65,7 @@ const Index = () => {
         .from('movies')
         .select('*')
         .eq('content_type', 'anime')
-        .neq('is_visible', false)
+        .eq('is_visible', true)
         .order('created_at', { ascending: false })
         .limit(12);
       
