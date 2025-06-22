@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
@@ -25,6 +24,7 @@ import AdsManagementPage from "./pages/admin/AdsManagementPage";
 import GenresPage from "./pages/admin/GenresPage";
 import HeaderConfigPage from "./pages/admin/HeaderConfigPage";
 import SearchResults from "./pages/SearchResults";
+import DownloadLinksPage from "./pages/DownloadLinksPage";
 
 function App() {
   return (
@@ -58,6 +58,7 @@ function App() {
             <Route path="/admin/ads" element={<AdsManagementPage />} />
             <Route path="/admin/genres" element={<GenresPage />} />
             <Route path="/admin/header" element={<HeaderConfigPage />} />
+            <Route path="/admin/download-links" element={<DownloadLinksPage />} />
             
             {/* 404 Not Found */}
             <Route path="*" element={<NotFound />} />

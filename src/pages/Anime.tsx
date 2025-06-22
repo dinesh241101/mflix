@@ -1,9 +1,8 @@
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "@/components/ui/use-toast";
-import EnhancedHeader from "@/components/universal/EnhancedHeader";
+import HeaderWithAds from "@/components/universal/HeaderWithAds";
 import GlobalAdInterceptor from "@/components/ads/GlobalAdInterceptor";
 import UniversalAdsWrapper from "@/components/ads/UniversalAdsWrapper";
 import ClickableAdBanner from "@/components/ads/ClickableAdBanner";
@@ -63,59 +62,56 @@ const Anime = () => {
   }
 
   return (
-    <GlobalAdInterceptor>
-      <UniversalAdsWrapper>
-        <EnhancedHeader />
-
-        <main className="container mx-auto px-4 py-8 space-y-8">
-          
-          {/* Content Top Ad */}
-          <ClickableAdBanner position="content-top" />
-          
-          {/* Anime Grid */}
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl md:text-3xl font-bold text-white">Latest Anime</h1>
-              <span className="text-gray-400 text-sm">
-                {totalCount} anime found
-              </span>
-            </div>
-            
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-              </div>
-            ) : anime.length > 0 ? (
-              <>
-                <EnhancedMovieGrid 
-                  movies={anime} 
-                  title="" 
-                  showAds={true}
-                />
-                
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="mt-8">
-                    <Pagination
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={setCurrentPage}
-                    />
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-400 text-lg">No anime found</p>
-              </div>
-            )}
+    <UniversalAdsWrapper>
+      <HeaderWithAds />
+      <main className="container mx-auto px-4 py-8 space-y-8">
+        
+        {/* Content Top Ad */}
+        <ClickableAdBanner position="content-top" />
+        
+        {/* Anime Grid */}
+        <div>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold text-white">Latest Anime</h1>
+            <span className="text-gray-400 text-sm">
+              {totalCount} anime found
+            </span>
           </div>
           
-          {/* Content Bottom Ad */}
-          <ClickableAdBanner position="content-bottom" />
-        </main>
-      </UniversalAdsWrapper>
-    </GlobalAdInterceptor>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            </div>
+          ) : anime.length > 0 ? (
+            <>
+              <EnhancedMovieGrid 
+                movies={anime} 
+                title="" 
+                showAds={true}
+              />
+              
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-8">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-400 text-lg">No anime found</p>
+            </div>
+          )}
+        </div>
+        
+        {/* Content Bottom Ad */}
+        <ClickableAdBanner position="content-bottom" />
+      </main>
+    </UniversalAdsWrapper>
   );
 };
 

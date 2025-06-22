@@ -1,41 +1,125 @@
-
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
+import { Plus, X } from "lucide-react";
+import CountrySelector from "./CountrySelector";
+
+const formSchema = z.object({
+  title: z.string().min(2, {
+    message: "Title must be at least 2 characters.",
+  }),
+  content_type: z.enum(["movie", "series", "anime", "short"]),
+  year: z.string().regex(/^\d+$/, { message: "Year must be a number." }).min(4, { message: "Year must be 4 digits." }).max(4, { message: "Year must be 4 digits." }),
+  imdb_rating: z.string().regex(/^[0-9]+(\.[0-9]+)?$/, { message: "IMDB Rating must be a number." }).refine((value) => parseFloat(value) <= 10, { message: "IMDB Rating must be less than or equal to 10." }),
+  duration: z.string().optional(),
+  director: z.string().optional(),
+  production_house: z.string().optional(),
+  country: z.string().optional(),
+  storyline: z.string().optional(),
+  poster_url: z.string().url({ message: "Poster URL must be a valid URL." }),
+  trailer_url: z.string().url({ message: "Trailer URL must be a valid URL." }).optional(),
+  download_links: z.array(z.object({
+    quality: z.string(),
+    file_size: z.string(),
+    download_url: z.string().url({ message: "Download URL must be a valid URL." }),
+  })).optional(),
+  genre: z.array(z.string()).optional(),
+  seo_tags: z.array(z.string()).optional(),
+  featured: z.boolean().default(false),
+  is_visible: z.boolean().default(true),
+});
 
 interface EnhancedMovieUploadFormProps {
-  movieForm: any;
-  setMovieForm: (form: any) => void;
-  handleUploadMovie: (e: React.FormEvent) => void;
-  isEditing: boolean;
+  movieId?: string;
+  onSuccess?: () => void;
 }
 
-const EnhancedMovieUploadForm = ({ 
-  movieForm, 
-  setMovieForm, 
-  handleUploadMovie, 
-  isEditing 
-}: EnhancedMovieUploadFormProps) => {
-  const [availableGenres, setAvailableGenres] = useState<any[]>([]);
-  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+const EnhancedMovieUploadForm = ({ movieId, onSuccess }: EnhancedMovieUploadFormProps) => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [genres, setGenres] = useState<any[]>([]);
+    const [allSeoTags, setAllSeoTags] = useState<string[]>([]);
   const [newGenre, setNewGenre] = useState("");
+    const [newSeoTag, setNewSeoTag] = useState("");
   const [showGenreInput, setShowGenreInput] = useState(false);
+    const [showSeoTagInput, setShowSeoTagInput] = useState(false);
+  const [initialValues, setInitialValues] = useState<z.infer<typeof formSchema> | undefined>(undefined);
+
+  const { control, register, handleSubmit, setValue, formState: { errors } } = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: initialValues,
+    mode: "onChange"
+  });
 
   useEffect(() => {
     fetchGenres();
-    if (movieForm.genre && Array.isArray(movieForm.genre)) {
-      setSelectedGenres(movieForm.genre);
+        fetchAllSeoTags();
+    if (movieId) {
+      fetchMovieData(movieId);
     }
-  }, [movieForm.genre]);
+  }, [movieId]);
+
+  const fetchMovieData = async (movieId: string) => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('movies')
+        .select('*')
+        .eq('movie_id', movieId)
+        .single();
+
+      if (error) throw error;
+
+      // Convert IMDB rating to string
+      const imdb_rating = data.imdb_rating !== null ? data.imdb_rating.toString() : "";
+
+      setInitialValues({
+        title: data.title,
+        content_type: data.content_type,
+        year: data.year.toString(),
+        imdb_rating: imdb_rating,
+        duration: data.duration || "",
+        director: data.director || "",
+        production_house: data.production_house || "",
+        country: data.country || "",
+        storyline: data.storyline || "",
+        poster_url: data.poster_url,
+        trailer_url: data.trailer_url || "",
+        download_links: data.download_links || [],
+        genre: data.genre || [],
+        seo_tags: data.seo_tags || [],
+        featured: data.featured || false,
+        is_visible: data.is_visible || true,
+      });
+
+      // Set form values after initialValues is set
+      Object.keys(data).forEach(key => {
+        setValue(key as keyof z.infer<typeof formSchema>, data[key]);
+      });
+
+    } catch (error: any) {
+      console.error("Error fetching movie data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load movie data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchGenres = async () => {
     try {
@@ -43,353 +127,383 @@ const EnhancedMovieUploadForm = ({
         .from('genres')
         .select('*')
         .order('name');
-      
-      if (!error && data) {
-        setAvailableGenres(data);
-      }
+
+      if (error) throw error;
+      setGenres(data || []);
     } catch (error) {
       console.error('Error fetching genres:', error);
     }
   };
 
-  const handleGenreToggle = (genreName: string) => {
-    const updatedGenres = selectedGenres.includes(genreName)
-      ? selectedGenres.filter(g => g !== genreName)
-      : [...selectedGenres, genreName];
-    
-    setSelectedGenres(updatedGenres);
-    setMovieForm({ ...movieForm, genre: updatedGenres });
+    const fetchAllSeoTags = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('movies')
+                .select('seo_tags');
+
+            if (error) {
+                console.error("Error fetching SEO tags:", error);
+                return;
+            }
+
+            // Extract all unique SEO tags from the movies
+            const tags = new Set<string>();
+            data.forEach(movie => {
+                if (movie.seo_tags && Array.isArray(movie.seo_tags)) {
+                    movie.seo_tags.forEach(tag => tags.add(tag));
+                }
+            });
+
+            setAllSeoTags(Array.from(tags));
+        } catch (error) {
+            console.error("Error fetching SEO tags:", error);
+        }
+    };
+
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('movies')
+        .upsert({
+          movie_id: movieId || undefined,
+          ...data,
+          year: parseInt(data.year),
+          imdb_rating: parseFloat(data.imdb_rating),
+        }, { onConflict: 'movie_id' });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Content ${movieId ? 'updated' : 'uploaded'} successfully`,
+      });
+      onSuccess && onSuccess();
+      navigate('/admin/movies');
+    } catch (error: any) {
+      console.error("Error uploading content:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload content",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddNewGenre = async () => {
+  const handleAddGenre = async () => {
     if (!newGenre.trim()) return;
 
     try {
       const { data, error } = await supabase
         .from('genres')
-        .insert({
-          name: newGenre.trim(),
-          description: `${newGenre.trim()} genre`,
-          color: '#3b82f6'
-        })
+        .insert({ name: newGenre.trim() })
         .select()
         .single();
 
       if (error) throw error;
 
-      setAvailableGenres([...availableGenres, data]);
-      handleGenreToggle(data.name);
+      setGenres([...genres, data]);
       setNewGenre("");
       setShowGenreInput(false);
-      
       toast({
         title: "Success",
-        description: "New genre added successfully!",
+        description: "Genre added successfully",
       });
     } catch (error: any) {
+      console.error("Error adding genre:", error);
       toast({
         title: "Error",
-        description: "Failed to add new genre",
+        description: error.message || "Failed to add genre",
         variant: "destructive"
       });
     }
   };
 
-  const categories = [
-    { value: "bollywood", label: "Bollywood" },
-    { value: "hollywood", label: "Hollywood" },
-    { value: "tollywood", label: "Tollywood" },
-    { value: "kollywood", label: "Kollywood" },
-    { value: "international", label: "International" }
-  ];
+    const handleAddSeoTag = () => {
+        if (newSeoTag.trim() && !allSeoTags.includes(newSeoTag.trim())) {
+            setAllSeoTags([...allSeoTags, newSeoTag.trim()]);
+            setNewSeoTag("");
+            setShowSeoTagInput(false);
+        }
+    };
 
-  const languages = [
-    { value: "hindi", label: "Hindi" },
-    { value: "english", label: "English" },
-    { value: "telugu", label: "Telugu" },
-    { value: "tamil", label: "Tamil" },
-    { value: "malayalam", label: "Malayalam" },
-    { value: "kannada", label: "Kannada" },
-    { value: "punjabi", label: "Punjabi" },
-    { value: "dual-audio", label: "Dual Audio" }
-  ];
+  const handleToggleGenre = (genreName: string) => {
+    const currentGenres = control._formValues.genre as string[] || [];
+    if (currentGenres.includes(genreName)) {
+      setValue("genre", currentGenres.filter(g => g !== genreName));
+    } else {
+      setValue("genre", [...currentGenres, genreName]);
+    }
+  };
+
+    const handleToggleSeoTag = (seoTag: string) => {
+        const currentSeoTags = control._formValues.seo_tags as string[] || [];
+        if (currentSeoTags.includes(seoTag)) {
+            setValue("seo_tags", currentSeoTags.filter(tag => tag !== seoTag));
+        } else {
+            setValue("seo_tags", [...currentSeoTags, seoTag]);
+        }
+    };
+
+    const handleCountryChange = (country: string) => {
+        setValue("country", country);
+    };
 
   return (
-    <Card>
+    <Card className="bg-gray-800 border-gray-700">
       <CardHeader>
-        <CardTitle>{isEditing ? 'Edit Movie' : 'Upload New Movie'}</CardTitle>
+        <CardTitle className="text-white">
+          {movieId ? "Edit Content" : "Upload New Content"}
+        </CardTitle>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleUploadMovie} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="title">Movie Title *</Label>
-                <Input
-                  id="title"
-                  type="text"
-                  value={movieForm.title}
-                  onChange={(e) => setMovieForm({ ...movieForm, title: e.target.value })}
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="year">Release Year</Label>
-                <Input
-                  id="year"
-                  type="number"
-                  value={movieForm.year}
-                  onChange={(e) => setMovieForm({ ...movieForm, year: e.target.value })}
-                  placeholder="2024"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="contentType">Content Type</Label>
-                <Select 
-                  value={movieForm.contentType} 
-                  onValueChange={(value) => setMovieForm({ ...movieForm, contentType: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="movie">Movie</SelectItem>
-                    <SelectItem value="series">Web Series</SelectItem>
-                    <SelectItem value="anime">Anime</SelectItem>
-                    <SelectItem value="shorts">Shorts</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Select 
-                  value={movieForm.category} 
-                  onValueChange={(value) => setMovieForm({ ...movieForm, category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="language">Language</Label>
-                <Select 
-                  value={movieForm.language} 
-                  onValueChange={(value) => setMovieForm({ ...movieForm, language: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {languages.map((lang) => (
-                      <SelectItem key={lang.value} value={lang.value}>
-                        {lang.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="quality">Quality</Label>
-                <Select 
-                  value={movieForm.quality} 
-                  onValueChange={(value) => setMovieForm({ ...movieForm, quality: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="360p">360p</SelectItem>
-                    <SelectItem value="480p">480p</SelectItem>
-                    <SelectItem value="720p">720p</SelectItem>
-                    <SelectItem value="1080p">1080p</SelectItem>
-                    <SelectItem value="1440p">1440p</SelectItem>
-                    <SelectItem value="2160p">2160p (4K)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="director">Director</Label>
-                <Input
-                  id="director"
-                  type="text"
-                  value={movieForm.director}
-                  onChange={(e) => setMovieForm({ ...movieForm, director: e.target.value })}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="productionHouse">Production House</Label>
-                <Input
-                  id="productionHouse"
-                  type="text"
-                  value={movieForm.productionHouse}
-                  onChange={(e) => setMovieForm({ ...movieForm, productionHouse: e.target.value })}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="imdbRating">IMDB Rating</Label>
-                <Input
-                  id="imdbRating"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="10"
-                  value={movieForm.imdbRating}
-                  onChange={(e) => setMovieForm({ ...movieForm, imdbRating: e.target.value })}
-                  placeholder="8.5"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="posterUrl">Poster URL</Label>
-                <Input
-                  id="posterUrl"
-                  type="url"
-                  value={movieForm.posterUrl}
-                  onChange={(e) => setMovieForm({ ...movieForm, posterUrl: e.target.value })}
-                  placeholder="https://..."
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="youtubeTrailer">YouTube Trailer URL</Label>
-                <Input
-                  id="youtubeTrailer"
-                  type="url"
-                  value={movieForm.youtubeTrailer}
-                  onChange={(e) => setMovieForm({ ...movieForm, youtubeTrailer: e.target.value })}
-                  placeholder="https://youtube.com/watch?v=..."
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="featured"
-                    checked={movieForm.featured}
-                    onCheckedChange={(checked) => setMovieForm({ ...movieForm, featured: checked })}
-                  />
-                  <Label htmlFor="featured">Featured Movie</Label>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="isVisible"
-                    checked={movieForm.isVisible !== false}
-                    onCheckedChange={(checked) => setMovieForm({ ...movieForm, isVisible: checked })}
-                  />
-                  <Label htmlFor="isVisible">Visible on Website</Label>
-                </div>
-              </div>
-            </div>
+      <CardContent className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <Label htmlFor="title">Title</Label>
+            <Input
+              id="title"
+              type="text"
+              placeholder="Enter title"
+              className="bg-gray-700 border-gray-600 text-white"
+              {...register("title")}
+            />
+            {errors.title && (
+              <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>
+            )}
           </div>
-          
-          {/* Genre Selection */}
-          <div className="space-y-4">
-            <div>
-              <Label>Genres</Label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {selectedGenres.map((genre) => (
-                  <Badge key={genre} variant="secondary" className="flex items-center gap-1">
-                    {genre}
-                    <X 
-                      size={12} 
-                      className="cursor-pointer hover:text-red-500" 
-                      onClick={() => handleGenreToggle(genre)}
-                    />
-                  </Badge>
-                ))}
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
-                {availableGenres.map((genre) => (
-                  <div key={genre.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`genre-${genre.id}`}
-                      checked={selectedGenres.includes(genre.name)}
-                      onCheckedChange={() => handleGenreToggle(genre.name)}
-                    />
-                    <Label htmlFor={`genre-${genre.id}`} className="text-sm">
-                      {genre.name}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-              
-              {showGenreInput ? (
-                <div className="flex gap-2">
-                  <Input
-                    value={newGenre}
-                    onChange={(e) => setNewGenre(e.target.value)}
-                    placeholder="Enter new genre name"
-                    className="flex-1"
-                  />
-                  <Button type="button" onClick={handleAddNewGenre}>
-                    Add
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setShowGenreInput(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowGenreInput(true)}
-                  className="flex items-center gap-2"
+
+          <div>
+            <Label htmlFor="content_type">Content Type</Label>
+            <Select onValueChange={(value) => setValue("content_type", value as "movie" | "series" | "anime" | "short")}>
+              <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                <SelectValue placeholder="Select content type" defaultValue={initialValues?.content_type} />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-600 text-white">
+                <SelectItem value="movie">Movie</SelectItem>
+                <SelectItem value="series">Series</SelectItem>
+                <SelectItem value="anime">Anime</SelectItem>
+                <SelectItem value="short">Short</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.content_type && (
+              <p className="text-red-500 text-sm mt-1">{errors.content_type.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="year">Year</Label>
+            <Input
+              id="year"
+              type="text"
+              placeholder="Enter year"
+              className="bg-gray-700 border-gray-600 text-white"
+              {...register("year")}
+            />
+            {errors.year && (
+              <p className="text-red-500 text-sm mt-1">{errors.year.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="imdb_rating">IMDB Rating</Label>
+            <Input
+              id="imdb_rating"
+              type="text"
+              placeholder="Enter IMDB rating"
+              className="bg-gray-700 border-gray-600 text-white"
+              {...register("imdb_rating")}
+            />
+            {errors.imdb_rating && (
+              <p className="text-red-500 text-sm mt-1">{errors.imdb_rating.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="duration">Duration</Label>
+            <Input
+              id="duration"
+              type="text"
+              placeholder="Enter duration"
+              className="bg-gray-700 border-gray-600 text-white"
+              {...register("duration")}
+            />
+            {errors.duration && (
+              <p className="text-red-500 text-sm mt-1">{errors.duration.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="director">Director</Label>
+            <Input
+              id="director"
+              type="text"
+              placeholder="Enter director"
+              className="bg-gray-700 border-gray-600 text-white"
+              {...register("director")}
+            />
+            {errors.director && (
+              <p className="text-red-500 text-sm mt-1">{errors.director.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="production_house">Production House</Label>
+            <Input
+              id="production_house"
+              type="text"
+              placeholder="Enter production house"
+              className="bg-gray-700 border-gray-600 text-white"
+              {...register("production_house")}
+            />
+            {errors.production_house && (
+              <p className="text-red-500 text-sm mt-1">{errors.production_house.message}</p>
+            )}
+          </div>
+
+          <CountrySelector
+            selectedCountry={control._formValues.country as string}
+            onCountryChange={handleCountryChange}
+          />
+
+          <div>
+            <Label htmlFor="storyline">Storyline</Label>
+            <Textarea
+              id="storyline"
+              placeholder="Enter storyline"
+              className="bg-gray-700 border-gray-600 text-white"
+              {...register("storyline")}
+            />
+            {errors.storyline && (
+              <p className="text-red-500 text-sm mt-1">{errors.storyline.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="poster_url">Poster URL</Label>
+            <Input
+              id="poster_url"
+              type="text"
+              placeholder="Enter poster URL"
+              className="bg-gray-700 border-gray-600 text-white"
+              {...register("poster_url")}
+            />
+            {errors.poster_url && (
+              <p className="text-red-500 text-sm mt-1">{errors.poster_url.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="trailer_url">Trailer URL</Label>
+            <Input
+              id="trailer_url"
+              type="text"
+              placeholder="Enter trailer URL"
+              className="bg-gray-700 border-gray-600 text-white"
+              {...register("trailer_url")}
+            />
+            {errors.trailer_url && (
+              <p className="text-red-500 text-sm mt-1">{errors.trailer_url.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label>Genres</Label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {genres.map((genre) => (
+                <Badge
+                  key={genre.id}
+                  variant="secondary"
+                  className={`cursor-pointer ${control._formValues.genre && (control._formValues.genre as string[]).includes(genre.name) ? 'bg-blue-500 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'}`}
+                  onClick={() => handleToggleGenre(genre.name)}
                 >
-                  <Plus size={16} />
-                  Add New Genre
+                  {genre.name}
+                </Badge>
+              ))}
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={() => setShowGenreInput(true)}>
+              Add Genre
+            </Button>
+
+            {showGenreInput && (
+              <div className="mt-2 flex items-center space-x-2">
+                <Input
+                  type="text"
+                  placeholder="New genre name"
+                  value={newGenre}
+                  onChange={(e) => setNewGenre(e.target.value)}
+                  className="bg-gray-700 border-gray-600 text-white"
+                />
+                <Button type="button" size="sm" onClick={handleAddGenre}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add
                 </Button>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="storyline">Storyline</Label>
-              <Textarea
-                id="storyline"
-                value={movieForm.storyline}
-                onChange={(e) => setMovieForm({ ...movieForm, storyline: e.target.value })}
-                rows={4}
-                placeholder="Enter movie storyline..."
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="seoTags">SEO Tags (comma separated)</Label>
-              <Input
-                id="seoTags"
-                type="text"
-                value={movieForm.seoTags}
-                onChange={(e) => setMovieForm({ ...movieForm, seoTags: e.target.value })}
-                placeholder="movie download, bollywood, action"
-              />
-            </div>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setShowGenreInput(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
-          
-          <Button type="submit" className="w-full">
-            {isEditing ? 'Update Movie' : 'Upload Movie'}
+
+            <div>
+                <Label>SEO Tags</Label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                    {allSeoTags.map((tag, index) => (
+                        <Badge
+                            key={index}
+                            variant="secondary"
+                            className={`cursor-pointer ${control._formValues.seo_tags && (control._formValues.seo_tags as string[]).includes(tag) ? 'bg-blue-500 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'}`}
+                            onClick={() => handleToggleSeoTag(tag)}
+                        >
+                            {tag}
+                        </Badge>
+                    ))}
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={() => setShowSeoTagInput(true)}>
+                    Add SEO Tag
+                </Button>
+
+                {showSeoTagInput && (
+                    <div className="mt-2 flex items-center space-x-2">
+                        <Input
+                            type="text"
+                            placeholder="New SEO tag"
+                            value={newSeoTag}
+                            onChange={(e) => setNewSeoTag(e.target.value)}
+                            className="bg-gray-700 border-gray-600 text-white"
+                        />
+                        <Button type="button" size="sm" onClick={handleAddSeoTag}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add
+                        </Button>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setShowSeoTagInput(false)}>
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
+                )}
+            </div>
+
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="featured">Featured</Label>
+            <Checkbox
+              id="featured"
+              checked={control._formValues.featured === true}
+              onCheckedChange={(checked) => setValue("featured", checked || false)}
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="is_visible">Is Visible</Label>
+            <Checkbox
+              id="is_visible"
+              checked={control._formValues.is_visible === true}
+              onCheckedChange={(checked) => setValue("is_visible", checked || false)}
+            />
+          </div>
+
+          <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700">
+            {loading ? "Uploading..." : "Upload Content"}
           </Button>
         </form>
       </CardContent>

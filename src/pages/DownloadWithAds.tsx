@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Download, ArrowLeft } from "lucide-react";
-import UniversalHeader from "@/components/universal/UniversalHeader";
+import HeaderWithAds from "@/components/universal/HeaderWithAds";
 import UniversalAdsWrapper from "@/components/ads/UniversalAdsWrapper";
 import InterstitialAd from "@/components/ads/InterstitialAd";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -112,7 +111,7 @@ const DownloadWithAds = () => {
   if (!movie || !downloadLink) {
     return (
       <UniversalAdsWrapper>
-        <UniversalHeader />
+        <HeaderWithAds />
         <div className="container mx-auto px-4 py-8 text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Download Not Found</h1>
           <Button onClick={() => navigate('/')} variant="outline">
@@ -126,7 +125,7 @@ const DownloadWithAds = () => {
 
   return (
     <UniversalAdsWrapper>
-      <UniversalHeader />
+      <HeaderWithAds />
       
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto">

@@ -1,9 +1,8 @@
-
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
-import EnhancedHeader from "@/components/universal/EnhancedHeader";
+import HeaderWithAds from "@/components/universal/HeaderWithAds";
 import UniversalAdsWrapper from "@/components/ads/UniversalAdsWrapper";
 import EnhancedMovieGrid from "@/components/enhanced/EnhancedMovieGrid";
 import ClickableAdBanner from "@/components/ads/ClickableAdBanner";
@@ -136,60 +135,57 @@ const Movies = () => {
   }
 
   return (
-    <GlobalAdInterceptor>
-      <UniversalAdsWrapper>
-        <EnhancedHeader />
-
-        <main className="container mx-auto px-4 py-8 space-y-8">
-          
-          {/* Content Top Ad */}
-          <ClickableAdBanner position="content-top" />
-          
-          {/* Movies Section */}
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl md:text-3xl font-bold text-white">{getPageTitle()}</h1>
-              <span className="text-gray-400 text-sm">
-                {totalCount} movies found
-              </span>
-            </div>
-            
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-              </div>
-            ) : movies.length > 0 ? (
-              <>
-                <EnhancedMovieGrid 
-                  movies={movies} 
-                  title="" 
-                  showAds={true}
-                />
-                
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="mt-8">
-                    <Pagination
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={setCurrentPage}
-                    />
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-400 text-lg">No movies found</p>
-                <p className="text-gray-500 text-sm mt-2">Try adjusting your filters</p>
-              </div>
-            )}
+    <UniversalAdsWrapper>
+      <HeaderWithAds />
+      <main className="container mx-auto px-4 py-8 space-y-8">
+        
+        {/* Content Top Ad */}
+        <ClickableAdBanner position="content-top" />
+        
+        {/* Movies Section */}
+        <div>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold text-white">{getPageTitle()}</h1>
+            <span className="text-gray-400 text-sm">
+              {totalCount} movies found
+            </span>
           </div>
           
-          {/* Content Bottom Ad */}
-          <ClickableAdBanner position="content-bottom" />
-        </main>
-      </UniversalAdsWrapper>
-    </GlobalAdInterceptor>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            </div>
+          ) : movies.length > 0 ? (
+            <>
+              <EnhancedMovieGrid 
+                movies={movies} 
+                title="" 
+                showAds={true}
+              />
+              
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-8">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-400 text-lg">No movies found</p>
+              <p className="text-gray-500 text-sm mt-2">Try adjusting your filters</p>
+            </div>
+          )}
+        </div>
+        
+        {/* Content Bottom Ad */}
+        <ClickableAdBanner position="content-bottom" />
+      </main>
+    </UniversalAdsWrapper>
   );
 };
 
