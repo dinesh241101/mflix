@@ -1,9 +1,14 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "@/components/ui/use-toast";
 import EnhancedHeader from "@/components/universal/EnhancedHeader";
 import GlobalAdInterceptor from "@/components/ads/GlobalAdInterceptor";
+import UniversalAdsWrapper from "@/components/ads/UniversalAdsWrapper";
+import ClickableAdBanner from "@/components/ads/ClickableAdBanner";
+import EnhancedMovieGrid from "@/components/enhanced/EnhancedMovieGrid";
+import LoadingScreen from "@/components/LoadingScreen";
 import Pagination from "@/components/Pagination";
 
 const ITEMS_PER_PAGE = 24;

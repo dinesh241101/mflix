@@ -72,12 +72,17 @@ const GlobalAdInterceptor = ({ children }: GlobalAdInterceptorProps) => {
     return clickCount > 0 && clickCount % frequency === 0;
   };
 
-  const handleAdClose = () => {
+  const handleAdComplete = () => {
     setShowInterstitialAd(false);
     if (pendingAction) {
       pendingAction();
       setPendingAction(null);
     }
+  };
+
+  const handleAdClose = () => {
+    setShowInterstitialAd(false);
+    setPendingAction(null);
   };
 
   return (
@@ -87,6 +92,7 @@ const GlobalAdInterceptor = ({ children }: GlobalAdInterceptorProps) => {
         <InterstitialAd
           isOpen={showInterstitialAd}
           onClose={handleAdClose}
+          onComplete={handleAdComplete}
           triggerEvent="global_click"
         />
       )}
