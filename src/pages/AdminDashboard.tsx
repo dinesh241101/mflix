@@ -7,7 +7,7 @@ import AdminHeader from "@/components/admin/AdminHeader";
 import LoadingScreen from "@/components/LoadingScreen";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Film, Tv, Gamepad2, Video, BarChart3, Settings, Users } from "lucide-react";
+import { Film, Tv, Gamepad2, Video, BarChart3, Settings, Users, Menu } from "lucide-react";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -248,13 +248,20 @@ const AdminDashboard = () => {
             <CardHeader>
               <CardTitle className="text-white">System Settings</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               <Button 
                 onClick={() => navigate('/admin/genres')} 
                 className="w-full bg-gray-600 hover:bg-gray-700"
               >
                 <Settings className="mr-2" size={16} />
                 Manage Genres
+              </Button>
+              <Button 
+                onClick={() => navigate('/admin/header')} 
+                className="w-full bg-indigo-600 hover:bg-indigo-700"
+              >
+                <Menu className="mr-2" size={16} />
+                Header Configuration
               </Button>
             </CardContent>
           </Card>

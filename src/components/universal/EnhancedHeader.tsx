@@ -23,7 +23,7 @@ const EnhancedHeader = () => {
   const generateYears = () => {
     const currentYear = new Date().getFullYear();
     const yearsList = [];
-    for (let year = currentYear; year >= 2010; year--) {
+    for (let year = currentYear; year >= 2000; year--) {
       yearsList.push(year);
     }
     setYears(yearsList);
@@ -135,13 +135,22 @@ const EnhancedHeader = () => {
       <div className="bg-gray-800 py-2">
         <div className="container mx-auto px-4">
           <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-            <Button className="bg-green-600 hover:bg-green-700 text-white text-xs px-4 py-1 rounded-full">
+            <Button 
+              onClick={() => navigate('/movies?category=bollywood')}
+              className="bg-green-600 hover:bg-green-700 text-white text-xs px-4 py-1 rounded-full"
+            >
               BOLLYWOOD MOVIES
             </Button>
-            <Button className="bg-red-600 hover:bg-red-700 text-white text-xs px-4 py-1 rounded-full">
+            <Button 
+              onClick={() => navigate('/movies?audio=dual')}
+              className="bg-red-600 hover:bg-red-700 text-white text-xs px-4 py-1 rounded-full"
+            >
               DUAL AUDIO CONTENT
             </Button>
-            <Button className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-4 py-1 rounded-full">
+            <Button 
+              onClick={() => navigate('/movies?category=hollywood')}
+              className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-4 py-1 rounded-full"
+            >
               HOLLYWOOD MOVIES
             </Button>
             <Button className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-1 rounded-full flex items-center gap-1">
