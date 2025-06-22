@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
@@ -24,7 +25,7 @@ import AdsManagementPage from "./pages/admin/AdsManagementPage";
 import GenresPage from "./pages/admin/GenresPage";
 import HeaderConfigPage from "./pages/admin/HeaderConfigPage";
 import SearchResults from "./pages/SearchResults";
-import DownloadLinksPage from "./pages/DownloadLinksPage";
+import DownloadLinksPage from "./pages/admin/DownloadLinksPage";
 
 function App() {
   return (

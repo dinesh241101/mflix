@@ -83,7 +83,6 @@ const WebSeries = () => {
               <EnhancedMovieGrid 
                 movies={series} 
                 title="Latest Web Series"
-                showTitle={false}
               />
 
               {totalPages > 1 && (
