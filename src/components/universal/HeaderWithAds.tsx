@@ -55,7 +55,7 @@ const HeaderWithAds = () => {
   const generateYears = () => {
     const currentYear = new Date().getFullYear();
     const yearsList = [];
-    for (let year = currentYear; year >= 1990; year--) {
+    for (let year = currentYear; year >= 1980; year--) {
       yearsList.push(year);
     }
     setYears(yearsList);
@@ -78,13 +78,30 @@ const HeaderWithAds = () => {
 
   const fetchCountries = async () => {
     try {
-      const { data, error } = await supabase
+      // Get unique countries from movies table
+      const { data: movieCountries, error: movieError } = await supabase
+        .from('movies')
+        .select('country')
+        .not('country', 'is', null)
+        .not('country', 'eq', '');
+
+      if (!movieError && movieCountries) {
+        const uniqueCountries = [...new Set(movieCountries.map(m => m.country))].filter(Boolean);
+        const countryObjects = uniqueCountries.map(country => ({ name: country }));
+        setCountries(countryObjects);
+      }
+
+      // Also fetch from countries table if it exists
+      const { data: countriesData, error: countriesError } = await supabase
         .from('countries')
         .select('*')
         .order('name');
       
-      if (!error && data) {
-        setCountries(data);
+      if (!countriesError && countriesData) {
+        // Merge with existing countries, avoiding duplicates
+        const existingNames = countries.map(c => c.name);
+        const newCountries = countriesData.filter(c => !existingNames.includes(c.name));
+        setCountries(prev => [...prev, ...newCountries]);
       }
     } catch (error) {
       console.error('Error fetching countries:', error);
@@ -162,7 +179,7 @@ const HeaderWithAds = () => {
       icon: "🎭",
       dropdownItems: genres.map(genre => ({
         name: genre.name,
-        path: `/movies?genre=${genre.name.toLowerCase()}`
+        path: `/movies?genre=${encodeURIComponent(genre.name.toLowerCase())}`
       }))
     },
     { 
@@ -172,7 +189,7 @@ const HeaderWithAds = () => {
       icon: "🌍",
       dropdownItems: countries.map(country => ({
         name: country.name,
-        path: `/movies?country=${country.name.toLowerCase()}`
+        path: `/movies?country=${encodeURIComponent(country.name.toLowerCase())}`
       }))
     },
     { 
@@ -276,7 +293,7 @@ const HeaderWithAds = () => {
               <div className="relative">
                 <Input
                   type="text"
-                  placeholder="Search..."
+                  placeholder="Search movies, series, anime..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-64 pl-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-yellow-400"
@@ -343,7 +360,7 @@ const HeaderWithAds = () => {
                   {/* Mobile dropdown items */}
                   {item.hasDropdown && item.dropdownItems && (
                     <div className="pl-6 space-y-1">
-                      {item.dropdownItems.slice(0, 5).map((dropdownItem, index) => (
+                      {item.dropdownItems.slice(0, 8).map((dropdownItem, index) => (
                         <Link
                           key={index}
                           to={dropdownItem.path}
