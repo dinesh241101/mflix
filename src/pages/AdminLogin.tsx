@@ -1,18 +1,17 @@
 
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { LoaderCircle, AtSign, Lock, KeyRound, Eye, EyeOff, Shield } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
 import MFlixLogo from "@/components/MFlixLogo";
-import { useSecureAuth } from "@/hooks/useSecureAuth";
-import { sanitizeInput } from "@/utils/security";
+import { useAuth } from "@/hooks/useAuth";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading: authLoading, login } = useSecureAuth();
+  const { user, loading: authLoading, isAdmin, signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -26,17 +25,17 @@ const AdminLogin = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated and is admin
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
+    if (!authLoading && user && isAdmin) {
       navigate("/admin/dashboard", { replace: true });
     }
-  }, [isAuthenticated, authLoading, navigate]);
+  }, [user, isAdmin, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (loginAttempts >= 3) {
+    if (loginAttempts >= 5) {
       toast({
         title: "Too many attempts",
         description: "Please wait before trying again.",
@@ -48,15 +47,16 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      const sanitizedEmail = sanitizeInput(email);
-      const sanitizedPassword = sanitizeInput(password);
+      const { error } = await signIn(email, password);
       
-      const success = await login(sanitizedEmail, sanitizedPassword);
-      
-      if (success) {
-        navigate("/admin/dashboard", { replace: true });
-      } else {
+      if (error) {
         setLoginAttempts(prev => prev + 1);
+      } else {
+        // Success will be handled by useEffect redirect
+        toast({
+          title: "Login successful",
+          description: "Redirecting to admin dashboard...",
+        });
       }
     } catch (error: any) {
       setLoginAttempts(prev => prev + 1);
@@ -94,7 +94,7 @@ const AdminLogin = () => {
               <Input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(sanitizeInput(e.target.value))}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="Admin Email"
                 className="bg-gray-700 border-gray-600 text-white pl-10"
                 required
@@ -127,7 +127,7 @@ const AdminLogin = () => {
             <Button 
               type="submit" 
               className="w-full bg-blue-600 hover:bg-blue-700"
-              disabled={isLoading || loginAttempts >= 3}
+              disabled={isLoading || loginAttempts >= 5}
             >
               {isLoading ? (
                 <>
@@ -146,7 +146,7 @@ const AdminLogin = () => {
               <p>Protected by advanced security measures</p>
               {loginAttempts > 0 && (
                 <p className="text-yellow-500 mt-1">
-                  {3 - loginAttempts} attempts remaining
+                  {5 - loginAttempts} attempts remaining
                 </p>
               )}
             </div>
@@ -154,9 +154,9 @@ const AdminLogin = () => {
         </form>
         
         <div className="mt-6 text-center">
-          <Link to="/" className="text-blue-400 hover:text-blue-300">
+          <a href="/" className="text-blue-400 hover:text-blue-300">
             Back to Website
-          </Link>
+          </a>
         </div>
       </div>
     </div>
