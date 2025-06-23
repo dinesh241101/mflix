@@ -25,7 +25,8 @@ const AdminLogin = () => {
   // Check if already logged in
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
-    if (token) {
+    const isAuth = localStorage.getItem("isAuthenticated");
+    if (token && isAuth === "true") {
       navigate("/admin/dashboard", { replace: true });
     }
   }, [navigate]);
@@ -33,7 +34,10 @@ const AdminLogin = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (email !== "dinesh001kaushik@gmail.com" || password !== "dinesh001") {
+    const correctEmail = "dinesh001kaushik@gmail.com";
+    const correctPassword = "dinesh001";
+    
+    if (email.trim() !== correctEmail || password.trim() !== correctPassword) {
       toast({
         title: "Login failed",
         description: "Invalid credentials provided.",
@@ -48,17 +52,21 @@ const AdminLogin = () => {
       // Simulate login delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Set admin credentials
+      // Set admin credentials with proper flags
       localStorage.setItem("adminToken", `admin-${Date.now()}`);
       localStorage.setItem("adminEmail", email);
       localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("sessionExpiry", (Date.now() + (8 * 60 * 60 * 1000)).toString());
       
       toast({
         title: "Login successful",
         description: "Welcome to the admin dashboard!",
       });
       
-      navigate("/admin/dashboard", { replace: true });
+      // Force navigation to admin dashboard
+      setTimeout(() => {
+        navigate("/admin/dashboard", { replace: true });
+      }, 500);
       
     } catch (error: any) {
       toast({
@@ -99,7 +107,6 @@ const AdminLogin = () => {
                 placeholder="Admin Email"
                 className="bg-gray-700 border-gray-600 text-white pl-10"
                 required
-                readOnly
               />
             </div>
             
@@ -112,7 +119,6 @@ const AdminLogin = () => {
                 placeholder="Password"
                 className="bg-gray-700 border-gray-600 text-white pl-10 pr-10"
                 required
-                readOnly
               />
               <button
                 type="button"
@@ -142,7 +148,7 @@ const AdminLogin = () => {
             </Button>
             
             <div className="text-center text-sm text-gray-500">
-              <p>Hardcoded credentials for demo</p>
+              <p>Demo credentials:</p>
               <p className="text-green-400 mt-1">Email: dinesh001kaushik@gmail.com</p>
               <p className="text-green-400">Password: dinesh001</p>
             </div>

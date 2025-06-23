@@ -1,20 +1,22 @@
 
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Star, Download, Play, Eye, Users, Globe, Film } from "lucide-react";
+import { Calendar, Star, Download, Play, Eye, Users, Globe } from "lucide-react";
 import ScrollableHeader from "@/components/universal/ScrollableHeader";
 import RelatedMoviesSection from "@/components/RelatedMoviesSection";
 import ShareLinks from "@/components/ShareLinks";
 import ImprovedYouTubePlayer from "@/components/ImprovedYouTubePlayer";
 import AdBanner from "@/components/ads/AdBanner";
 import SmartAdManager from "@/components/ads/SmartAdManager";
+import DownloadLinksSection from "@/components/movie/DownloadLinksSection";
 
 const MovieDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [movie, setMovie] = useState<any>(null);
   const [downloadLinks, setDownloadLinks] = useState<any[]>([]);
   const [cast, setCast] = useState<any[]>([]);
@@ -81,6 +83,10 @@ const MovieDetail = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGenreClick = (genre: string) => {
+    navigate(`/movies?genre=${encodeURIComponent(genre.toLowerCase())}`);
   };
 
   if (loading) {
@@ -226,7 +232,12 @@ const MovieDetail = () => {
                     <span className="text-gray-400">Genres:</span>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {movie.genre.map((g: string, idx: number) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
+                        <Badge 
+                          key={idx} 
+                          variant="secondary" 
+                          className="text-xs cursor-pointer hover:bg-blue-600 hover:text-white transition-colors"
+                          onClick={() => handleGenreClick(g)}
+                        >
                           {g}
                         </Badge>
                       ))}
@@ -252,79 +263,10 @@ const MovieDetail = () => {
 
           {/* Download Links Section */}
           <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4 text-center">
-              <span className="text-cyan-400">Download Links</span>
-            </h2>
-            
-            {downloadLinks.length > 0 ? (
-              <div className="space-y-6">
-                {/* Quality Section */}
-                <div className="text-center mb-6">
-                  <h3 className="text-xl font-bold text-red-500 mb-4">1080p</h3>
-                  <div className="space-y-3">
-                    {downloadLinks.filter(link => link.quality === '1080p').map((link, index) => (
-                      <Link 
-                        key={link.link_id} 
-                        to={`/download-ads/${movie.movie_id}/${link.link_id}`}
-                        className="block"
-                      >
-                        <Button className="w-full max-w-md mx-auto bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold py-3 px-6">
-                          ⚡ CLICK HERE TO DOWNLOAD [4GB] ⚡
-                        </Button>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Additional Links Section */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-bold text-center text-red-500">
-                    Free, High-quality Download From Other Sites #
-                  </h3>
-                  
-                  {/* High Speed Links */}
-                  <div className="space-y-2">
-                    <h4 className="text-red-500 font-bold">High Speed Links#</h4>
-                    {['1FICHIER', 'DESIUPLOAD', 'DOODRIVE', 'FIKPER', 'MEGAUP', 'NITROFLARE', 'RAPIDGATOR', 'TURBOBIT'].map((site, index) => (
-                      <Button key={index} className="w-full bg-teal-500 hover:bg-teal-600 text-white">
-                        ⚡ {site} ⚡
-                      </Button>
-                    ))}
-                  </div>
-
-                  {/* Watch Online Links */}
-                  <div className="space-y-2 mt-6">
-                    <h4 className="text-red-500 font-bold">Watch Online Links#</h4>
-                    {['DOODSTREAM', 'MEDIA', 'MIXDROP', 'WAAW', 'STREAMTAPE', 'LISTEAMED'].map((site, index) => (
-                      <Button key={index} className="w-full bg-teal-500 hover:bg-teal-600 text-white">
-                        ⚡ {site} ⚡
-                      </Button>
-                    ))}
-                  </div>
-
-                  {/* Cloud Storage Links */}
-                  <div className="space-y-2 mt-6">
-                    {[
-                      { name: 'V-Cloud [Resumable]', color: 'bg-red-500' },
-                      { name: 'Filepress [G-Drive]', color: 'bg-yellow-500' },
-                      { name: 'GDToT [G-Drive]', color: 'bg-purple-500' },
-                      { name: 'DropGalaxy', color: 'bg-gray-500' }
-                    ].map((link, index) => (
-                      <Button key={index} className={`w-full ${link.color} hover:opacity-90 text-white`}>
-                        ⚡ {link.name} ⚡
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <Card className="bg-gray-800 border-gray-700">
-                <CardContent className="p-6 text-center">
-                  <Film size={48} className="mx-auto mb-4 text-gray-500" />
-                  <p className="text-gray-400">Download links will be available soon!</p>
-                </CardContent>
-              </Card>
-            )}
+            <DownloadLinksSection 
+              downloadLinks={downloadLinks} 
+              movieId={movie.movie_id} 
+            />
           </div>
 
           {/* Trailer Section */}

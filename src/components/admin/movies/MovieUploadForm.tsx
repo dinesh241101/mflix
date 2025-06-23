@@ -1,212 +1,290 @@
 
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import ImageUploader from "./ImageUploader";
 import MultipleImageUploader from "./MultipleImageUploader";
+import CountrySelector from "./CountrySelector";
+import GenreSelector from "./GenreSelector";
 
-interface MovieUploadFormProps {
-  movieForm: any;
-  setMovieForm: (form: any) => void;
-  handleUploadMovie: (e: React.FormEvent) => void;
-  isEditing: boolean;
-}
+const MovieUploadForm = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [countries, setCountries] = useState<any[]>([]);
+  const [formData, setFormData] = useState({
+    title: "",
+    storyline: "",
+    year: new Date().getFullYear(),
+    imdb_rating: "",
+    director: "",
+    production_house: "",
+    genre: [] as string[],
+    quality: "",
+    country: "",
+    content_type: "movie",
+    poster_url: "",
+    screenshots: [] as string[],
+    featured: false,
+    is_visible: true,
+    seo_tags: [] as string[]
+  });
 
-const MovieUploadForm = ({ movieForm, setMovieForm, handleUploadMovie, isEditing }: MovieUploadFormProps) => {
+  useEffect(() => {
+    fetchCountries();
+  }, []);
+
+  const fetchCountries = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('countries')
+        .select('*')
+        .order('name');
+      
+      if (!error && data) {
+        setCountries(data);
+      }
+    } catch (error) {
+      console.error('Error fetching countries:', error);
+    }
+  };
+
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleGenresChange = (genres: string[]) => {
+    setFormData(prev => ({
+      ...prev,
+      genre: genres
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title.trim()) {
+      toast({
+        title: "Error",
+        description: "Title is required",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const movieData = {
+        ...formData,
+        imdb_rating: formData.imdb_rating ? parseFloat(formData.imdb_rating) : null,
+        seo_tags: formData.title.toLowerCase().split(' ')
+      };
+
+      const { data, error } = await supabase
+        .from('movies')
+        .insert([movieData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Movie uploaded successfully!",
+      });
+
+      // Reset form
+      setFormData({
+        title: "",
+        storyline: "",
+        year: new Date().getFullYear(),
+        imdb_rating: "",
+        director: "",
+        production_house: "",
+        genre: [],
+        quality: "",
+        country: "",
+        content_type: "movie",
+        poster_url: "",
+        screenshots: [],
+        featured: false,
+        is_visible: true,
+        seo_tags: []
+      });
+
+    } catch (error: any) {
+      console.error('Error uploading movie:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload movie",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{isEditing ? 'Edit Movie' : 'Upload New Movie'}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleUploadMovie} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="title">Movie Title *</Label>
-                <Input
-                  id="title"
-                  type="text"
-                  value={movieForm.title}
-                  onChange={(e) => setMovieForm({ ...movieForm, title: e.target.value })}
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="year">Release Year</Label>
-                <Input
-                  id="year"
-                  type="number"
-                  value={movieForm.year}
-                  onChange={(e) => setMovieForm({ ...movieForm, year: e.target.value })}
-                  placeholder="2024"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="contentType">Content Type</Label>
-                <Select value={movieForm.contentType} onValueChange={(value) => setMovieForm({ ...movieForm, contentType: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="movie">Movie</SelectItem>
-                    <SelectItem value="series">Web Series</SelectItem>
-                    <SelectItem value="anime">Anime</SelectItem>
-                    <SelectItem value="shorts">Shorts</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="genre">Genre (comma separated)</Label>
-                <Input
-                  id="genre"
-                  type="text"
-                  value={movieForm.genre}
-                  onChange={(e) => setMovieForm({ ...movieForm, genre: e.target.value })}
-                  placeholder="Action, Drama, Thriller"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="quality">Quality</Label>
-                <Select value={movieForm.quality} onValueChange={(value) => setMovieForm({ ...movieForm, quality: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="360p">360p</SelectItem>
-                    <SelectItem value="480p">480p</SelectItem>
-                    <SelectItem value="720p">720p</SelectItem>
-                    <SelectItem value="1080p">1080p</SelectItem>
-                    <SelectItem value="1440p">1440p</SelectItem>
-                    <SelectItem value="2160p">2160p (4K)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="country">Country</Label>
-                <Input
-                  id="country"
-                  type="text"
-                  value={movieForm.country}
-                  onChange={(e) => setMovieForm({ ...movieForm, country: e.target.value })}
-                  placeholder="USA"
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="director">Director</Label>
-                <Input
-                  id="director"
-                  type="text"
-                  value={movieForm.director}
-                  onChange={(e) => setMovieForm({ ...movieForm, director: e.target.value })}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="productionHouse">Production House</Label>
-                <Input
-                  id="productionHouse"
-                  type="text"
-                  value={movieForm.productionHouse}
-                  onChange={(e) => setMovieForm({ ...movieForm, productionHouse: e.target.value })}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="imdbRating">IMDB Rating</Label>
-                <Input
-                  id="imdbRating"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="10"
-                  value={movieForm.imdbRating}
-                  onChange={(e) => setMovieForm({ ...movieForm, imdbRating: e.target.value })}
-                  placeholder="8.5"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="posterUrl">Poster URL</Label>
-                <Input
-                  id="posterUrl"
-                  type="url"
-                  value={movieForm.posterUrl}
-                  onChange={(e) => setMovieForm({ ...movieForm, posterUrl: e.target.value })}
-                  placeholder="https://..."
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="youtubeTrailer">YouTube Trailer URL</Label>
-                <Input
-                  id="youtubeTrailer"
-                  type="url"
-                  value={movieForm.youtubeTrailer}
-                  onChange={(e) => setMovieForm({ ...movieForm, youtubeTrailer: e.target.value })}
-                  placeholder="https://youtube.com/watch?v=..."
-                />
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="featured"
-                  checked={movieForm.featured}
-                  onCheckedChange={(checked) => setMovieForm({ ...movieForm, featured: checked })}
-                />
-                <Label htmlFor="featured">Featured Movie</Label>
-              </div>
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="storyline">Storyline</Label>
-              <Textarea
-                id="storyline"
-                value={movieForm.storyline}
-                onChange={(e) => setMovieForm({ ...movieForm, storyline: e.target.value })}
-                rows={4}
-                placeholder="Enter movie storyline..."
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="seoTags">SEO Tags (comma separated)</Label>
-              <Input
-                id="seoTags"
-                type="text"
-                value={movieForm.seoTags}
-                onChange={(e) => setMovieForm({ ...movieForm, seoTags: e.target.value })}
-                placeholder="movie download, bollywood, action"
-              />
-            </div>
-            
-            {/* Multiple Screenshots Upload */}
-            <MultipleImageUploader
-              screenshots={movieForm.screenshots || []}
-              onScreenshotsChange={(screenshots) => setMovieForm({ ...movieForm, screenshots })}
-              label="Movie Screenshots"
-            />
-          </div>
-          
-          <Button type="submit" className="w-full">
-            {isEditing ? 'Update Movie' : 'Upload Movie'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <form onSubmit={handleSubmit} className="space-y-6 bg-gray-800 p-6 rounded-lg">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Title *</label>
+          <Input
+            value={formData.title}
+            onChange={(e) => handleInputChange('title', e.target.value)}
+            className="bg-gray-700 border-gray-600 text-white"
+            placeholder="Enter movie title"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Content Type</label>
+          <Select value={formData.content_type} onValueChange={(value) => handleInputChange('content_type', value)}>
+            <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+              <SelectValue placeholder="Select content type" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-700 border-gray-600">
+              <SelectItem value="movie">Movie</SelectItem>
+              <SelectItem value="series">Web Series</SelectItem>
+              <SelectItem value="anime">Anime</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Year</label>
+          <Input
+            type="number"
+            value={formData.year}
+            onChange={(e) => handleInputChange('year', parseInt(e.target.value) || new Date().getFullYear())}
+            className="bg-gray-700 border-gray-600 text-white"
+            min="1900"
+            max={new Date().getFullYear() + 5}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">IMDB Rating</label>
+          <Input
+            type="number"
+            step="0.1"
+            min="0"
+            max="10"
+            value={formData.imdb_rating}
+            onChange={(e) => handleInputChange('imdb_rating', e.target.value)}
+            className="bg-gray-700 border-gray-600 text-white"
+            placeholder="e.g., 8.5"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Director</label>
+          <Input
+            value={formData.director}
+            onChange={(e) => handleInputChange('director', e.target.value)}
+            className="bg-gray-700 border-gray-600 text-white"
+            placeholder="Director name"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Production House</label>
+          <Input
+            value={formData.production_house}
+            onChange={(e) => handleInputChange('production_house', e.target.value)}
+            className="bg-gray-700 border-gray-600 text-white"
+            placeholder="Production company"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Quality</label>
+          <Select value={formData.quality} onValueChange={(value) => handleInputChange('quality', value)}>
+            <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+              <SelectValue placeholder="Select quality" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-700 border-gray-600">
+              <SelectItem value="480p">480p</SelectItem>
+              <SelectItem value="720p">720p</SelectItem>
+              <SelectItem value="1080p">1080p</SelectItem>
+              <SelectItem value="4K">4K</SelectItem>
+              <SelectItem value="BluRay">BluRay</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <CountrySelector 
+          countries={countries}
+          selectedCountry={formData.country}
+          onCountryChange={(country) => handleInputChange('country', country)}
+        />
+      </div>
+
+      <GenreSelector 
+        selectedGenres={formData.genre}
+        onGenresChange={handleGenresChange}
+      />
+
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-2">Storyline</label>
+        <Textarea
+          value={formData.storyline}
+          onChange={(e) => handleInputChange('storyline', e.target.value)}
+          className="bg-gray-700 border-gray-600 text-white"
+          placeholder="Enter movie storyline/description"
+          rows={4}
+        />
+      </div>
+
+      <ImageUploader
+        onImageUploaded={(url) => handleInputChange('poster_url', url)}
+        currentImage={formData.poster_url}
+        label="Poster Image"
+      />
+
+      <MultipleImageUploader
+        onImagesUploaded={(urls) => handleInputChange('screenshots', urls)}
+        currentImages={formData.screenshots}
+        label="Screenshots"
+        maxImages={10}
+      />
+
+      <div className="flex items-center space-x-4">
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            checked={formData.featured}
+            onChange={(e) => handleInputChange('featured', e.target.checked)}
+            className="mr-2"
+          />
+          <span className="text-gray-300">Featured Content</span>
+        </label>
+
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            checked={formData.is_visible}
+            onChange={(e) => handleInputChange('is_visible', e.target.checked)}
+            className="mr-2"
+          />
+          <span className="text-gray-300">Visible to Public</span>
+        </label>
+      </div>
+
+      <Button
+        type="submit"
+        disabled={isLoading}
+        className="w-full bg-blue-600 hover:bg-blue-700"
+      >
+        {isLoading ? "Uploading..." : "Upload Movie"}
+      </Button>
+    </form>
   );
 };
 
