@@ -82,12 +82,12 @@ const Anime = () => {
     <div className="min-h-screen bg-gray-900 text-white">
       <ScrollableHeader />
       
-      <SmartAdManager>
+      <SmartAdManager position="anime_page">
         <div className="container mx-auto px-4 py-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">{getPageTitle()}</h1>
             <p className="text-gray-400">
-              Showing {anime.length} anime titles
+              {loading ? 'Loading...' : `Showing ${anime.length} anime titles`}
             </p>
           </div>
 
@@ -95,7 +95,7 @@ const Anime = () => {
             <AdBanner position="anime_top" />
           </div>
 
-          <EnhancedMovieGrid movies={anime} loading={loading} />
+          <EnhancedMovieGrid movies={anime} />
 
           <div className="mt-8">
             <AdBanner position="anime_bottom" />

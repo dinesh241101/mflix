@@ -71,7 +71,8 @@ const EnhancedMovieGrid = ({ movies, title = "Movies", showAds = true }: Enhance
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-white">{title}</h2>
       
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      {/* Mobile-optimized grid layout matching reference image */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
         {displayedMovies.map((item, index) => {
           if (isAdItem(item)) {
             return (
@@ -85,11 +86,11 @@ const EnhancedMovieGrid = ({ movies, title = "Movies", showAds = true }: Enhance
           return (
             <Card 
               key={movie.movie_id}
-              className="group cursor-pointer bg-gray-800 border-gray-700 hover:border-blue-500 transition-all duration-300 hover:scale-105"
+              className="group cursor-pointer bg-gray-800 border-gray-700 hover:border-blue-500 transition-all duration-300 hover:scale-105 overflow-hidden"
               onClick={() => handleMovieClick(movie.movie_id, movie.content_type)}
             >
               <CardContent className="p-0">
-                <div className="relative aspect-[2/3] overflow-hidden rounded-t-lg">
+                <div className="relative aspect-[2/3] overflow-hidden">
                   {movie.poster_url ? (
                     <img
                       src={movie.poster_url}
@@ -111,9 +112,14 @@ const EnhancedMovieGrid = ({ movies, title = "Movies", showAds = true }: Enhance
                     </div>
                   </div>
                   
-                  {/* Content type badge */}
+                  {/* Date overlay */}
+                  <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                    {movie.year && `${movie.year}`}
+                  </div>
+                  
+                  {/* Quality/Content type badge */}
                   <Badge 
-                    className="absolute top-2 left-2 bg-blue-600 text-white text-xs"
+                    className="absolute top-2 right-2 bg-blue-600 text-white text-xs"
                     variant="secondary"
                   >
                     {movie.content_type.toUpperCase()}
@@ -122,60 +128,26 @@ const EnhancedMovieGrid = ({ movies, title = "Movies", showAds = true }: Enhance
                   {/* Rating badge */}
                   {movie.imdb_rating && (
                     <Badge 
-                      className="absolute top-2 right-2 bg-yellow-600 text-black text-xs flex items-center gap-1"
+                      className="absolute bottom-2 right-2 bg-yellow-600 text-black text-xs flex items-center gap-1"
                       variant="secondary"
                     >
-                      <Star size={12} fill="currentColor" />
+                      <Star size={10} fill="currentColor" />
                       {movie.imdb_rating}
                     </Badge>
                   )}
                 </div>
                 
-                <div className="p-3 space-y-2">
-                  <h3 className="font-medium text-white text-sm line-clamp-2 group-hover:text-blue-400 transition-colors">
+                {/* Movie info overlay at bottom */}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-3 text-white">
+                  <h3 className="font-medium text-sm line-clamp-2 mb-1">
                     {movie.title}
                   </h3>
                   
-                  {/* Year and Country */}
-                  <div className="flex items-center justify-between text-xs text-gray-400">
-                    {movie.year && (
-                      <div className="flex items-center gap-1">
-                        <Calendar size={12} />
-                        {movie.year}
-                      </div>
-                    )}
-                    {movie.country && (
-                      <span className="truncate">{movie.country}</span>
-                    )}
+                  {/* Quality info */}
+                  <div className="flex items-center justify-between text-xs text-gray-300">
+                    <span>HD CAMRip</span>
+                    <span>720p - 480p - 1080p</span>
                   </div>
-                  
-                  {/* Genres */}
-                  {movie.genre && movie.genre.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {movie.genre.slice(0, 2).map((g, idx) => (
-                        <Badge 
-                          key={idx}
-                          variant="outline" 
-                          className="text-xs text-gray-300 border-gray-600"
-                        >
-                          {g}
-                        </Badge>
-                      ))}
-                      {movie.genre.length > 2 && (
-                        <Badge variant="outline" className="text-xs text-gray-400 border-gray-600">
-                          +{movie.genre.length - 2}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Downloads count */}
-                  {movie.downloads > 0 && (
-                    <div className="flex items-center gap-1 text-xs text-gray-400">
-                      <Download size={12} />
-                      {movie.downloads.toLocaleString()} downloads
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>

@@ -1,105 +1,77 @@
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { CopyCheck, Share2, Facebook, Twitter, Linkedin, Link, CheckCircle } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Share2, Copy, Facebook, Twitter, MessageCircle } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
-export interface ShareLinksProps {
-  url: string;
-  title: string;
-  customLinks?: { text: string; url: string }[];
+interface ShareLinksProps {
+  title?: string;
 }
 
-const ShareLinks = ({ url, title, customLinks = [] }: ShareLinksProps) => {
-  const { toast } = useToast();
-  const [copied, setCopied] = useState(false);
-  
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    toast({
-      title: "Link copied",
-      description: "The link has been copied to your clipboard."
-    });
-    
-    setTimeout(() => setCopied(false), 2000);
+const ShareLinks = ({ title = "Share this content" }: ShareLinksProps) => {
+  const [showShare, setShowShare] = useState(false);
+  const currentUrl = window.location.href;
+  const shareText = `Check out this amazing content: ${title}`;
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(currentUrl);
+      toast({
+        title: "Link copied!",
+        description: "The link has been copied to your clipboard.",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to copy",
+        description: "Could not copy the link to clipboard.",
+        variant: "destructive"
+      });
+    }
   };
-  
-  const shareOnFacebook = () => {
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(title)}`, '_blank');
+
+  const shareToFacebook = () => {
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`;
+    window.open(url, '_blank', 'width=600,height=400');
   };
-  
-  const shareOnTwitter = () => {
-    window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`, '_blank');
+
+  const shareToTwitter = () => {
+    const url = `https://twitter.com/intent/tweet?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(shareText)}`;
+    window.open(url, '_blank', 'width=600,height=400');
   };
-  
-  const shareOnLinkedIn = () => {
-    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
+
+  const shareToWhatsApp = () => {
+    const url = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + currentUrl)}`;
+    window.open(url, '_blank');
   };
 
   return (
-    <div className="bg-gray-800 p-4 rounded-lg">
-      <h3 className="text-lg font-medium mb-3 flex items-center">
-        <Share2 className="mr-2" size={18} />
-        Share this content
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+        <Share2 size={20} />
+        Share This Content
       </h3>
       
-      <div className="flex items-center mb-4">
-        <div className="flex-1 bg-gray-700 p-2 rounded-l-lg text-sm text-gray-300 truncate">
-          {url}
-        </div>
-        <Button 
-          onClick={copyToClipboard}
-          className={`rounded-l-none ${copied ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
-        >
-          {copied ? <CheckCircle size={16} className="mr-1" /> : <Link size={16} className="mr-1" />}
-          {copied ? 'Copied' : 'Copy'}
+      <div className="flex flex-wrap gap-3">
+        <Button onClick={copyToClipboard} variant="outline" size="sm">
+          <Copy size={16} className="mr-2" />
+          Copy Link
         </Button>
-      </div>
-      
-      <div className="flex space-x-2">
-        <Button 
-          onClick={shareOnFacebook}
-          variant="outline" 
-          className="flex-1 flex items-center justify-center bg-gray-700 hover:bg-blue-800 border-none"
-        >
-          <Facebook size={18} className="mr-2" />
+        
+        <Button onClick={shareToFacebook} variant="outline" size="sm" className="text-blue-500 border-blue-500">
+          <Facebook size={16} className="mr-2" />
           Facebook
         </Button>
         
-        <Button 
-          onClick={shareOnTwitter}
-          variant="outline" 
-          className="flex-1 flex items-center justify-center bg-gray-700 hover:bg-blue-800 border-none"
-        >
-          <Twitter size={18} className="mr-2" />
+        <Button onClick={shareToTwitter} variant="outline" size="sm" className="text-blue-400 border-blue-400">
+          <Twitter size={16} className="mr-2" />
           Twitter
         </Button>
         
-        <Button 
-          onClick={shareOnLinkedIn}
-          variant="outline" 
-          className="flex-1 flex items-center justify-center bg-gray-700 hover:bg-blue-800 border-none"
-        >
-          <Linkedin size={18} className="mr-2" />
-          LinkedIn
+        <Button onClick={shareToWhatsApp} variant="outline" size="sm" className="text-green-500 border-green-500">
+          <MessageCircle size={16} className="mr-2" />
+          WhatsApp
         </Button>
       </div>
-
-      {customLinks && customLinks.length > 0 && (
-        <div className="mt-4 space-y-2">
-          {customLinks.map((link, index) => (
-            <Button 
-              key={index}
-              onClick={() => window.open(link.url, '_blank')}
-              variant="outline" 
-              className="w-full flex items-center justify-center bg-gray-700 hover:bg-gray-600 border-none"
-            >
-              {link.text}
-            </Button>
-          ))}
-        </div>
-      )}
     </div>
   );
 };

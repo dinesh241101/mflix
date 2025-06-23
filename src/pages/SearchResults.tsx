@@ -11,7 +11,7 @@ const SearchResults = () => {
     <div className="min-h-screen bg-gray-900 text-white">
       <ScrollableHeader />
       
-      <SmartAdManager>
+      <SmartAdManager position="search_page">
         <div className="container mx-auto px-4 py-4">
           {/* Top Ad Banner */}
           <div className="mb-6">

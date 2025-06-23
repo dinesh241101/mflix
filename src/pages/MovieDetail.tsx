@@ -117,12 +117,33 @@ const MovieDetail = () => {
     <div className="min-h-screen bg-gray-900 text-white">
       <ScrollableHeader />
       
-      <SmartAdManager>
+      <SmartAdManager position="movie_detail">
         <div className="container mx-auto px-4 py-8">
           {/* Top Ad Banner */}
           <div className="mb-8">
             <AdBanner position="movie_detail_top" />
           </div>
+
+          {/* Screenshots Section */}
+          {movie.screenshots && movie.screenshots.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-bold mb-4 text-center text-cyan-400">
+                Screenshots: (Must See Before Downloading)...
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                {movie.screenshots.map((screenshot: string, index: number) => (
+                  <div key={index} className="relative aspect-video bg-gray-800 rounded overflow-hidden">
+                    <img
+                      src={screenshot}
+                      alt={`Screenshot ${index + 1}`}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                      loading="lazy"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Movie Header */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
@@ -229,6 +250,83 @@ const MovieDetail = () => {
             <AdBanner position="movie_detail_middle" />
           </div>
 
+          {/* Download Links Section */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4 text-center">
+              <span className="text-cyan-400">Download Links</span>
+            </h2>
+            
+            {downloadLinks.length > 0 ? (
+              <div className="space-y-6">
+                {/* Quality Section */}
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-bold text-red-500 mb-4">1080p</h3>
+                  <div className="space-y-3">
+                    {downloadLinks.filter(link => link.quality === '1080p').map((link, index) => (
+                      <Link 
+                        key={link.link_id} 
+                        to={`/download-ads/${movie.movie_id}/${link.link_id}`}
+                        className="block"
+                      >
+                        <Button className="w-full max-w-md mx-auto bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold py-3 px-6">
+                          ⚡ CLICK HERE TO DOWNLOAD [4GB] ⚡
+                        </Button>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Additional Links Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-bold text-center text-red-500">
+                    Free, High-quality Download From Other Sites #
+                  </h3>
+                  
+                  {/* High Speed Links */}
+                  <div className="space-y-2">
+                    <h4 className="text-red-500 font-bold">High Speed Links#</h4>
+                    {['1FICHIER', 'DESIUPLOAD', 'DOODRIVE', 'FIKPER', 'MEGAUP', 'NITROFLARE', 'RAPIDGATOR', 'TURBOBIT'].map((site, index) => (
+                      <Button key={index} className="w-full bg-teal-500 hover:bg-teal-600 text-white">
+                        ⚡ {site} ⚡
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Watch Online Links */}
+                  <div className="space-y-2 mt-6">
+                    <h4 className="text-red-500 font-bold">Watch Online Links#</h4>
+                    {['DOODSTREAM', 'MEDIA', 'MIXDROP', 'WAAW', 'STREAMTAPE', 'LISTEAMED'].map((site, index) => (
+                      <Button key={index} className="w-full bg-teal-500 hover:bg-teal-600 text-white">
+                        ⚡ {site} ⚡
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Cloud Storage Links */}
+                  <div className="space-y-2 mt-6">
+                    {[
+                      { name: 'V-Cloud [Resumable]', color: 'bg-red-500' },
+                      { name: 'Filepress [G-Drive]', color: 'bg-yellow-500' },
+                      { name: 'GDToT [G-Drive]', color: 'bg-purple-500' },
+                      { name: 'DropGalaxy', color: 'bg-gray-500' }
+                    ].map((link, index) => (
+                      <Button key={index} className={`w-full ${link.color} hover:opacity-90 text-white`}>
+                        ⚡ {link.name} ⚡
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6 text-center">
+                  <Film size={48} className="mx-auto mb-4 text-gray-500" />
+                  <p className="text-gray-400">Download links will be available soon!</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
           {/* Trailer Section */}
           {trailerUrl && (
             <div className="mb-8">
@@ -237,24 +335,6 @@ const MovieDetail = () => {
                 Official Trailer
               </h2>
               <ImprovedYouTubePlayer videoUrl={trailerUrl} />
-            </div>
-          )}
-
-          {/* Screenshots */}
-          {movie.screenshots && movie.screenshots.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold mb-4">Screenshots</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {movie.screenshots.map((screenshot: string, index: number) => (
-                  <div key={index} className="aspect-video bg-gray-800 rounded overflow-hidden">
-                    <img
-                      src={screenshot}
-                      alt={`Screenshot ${index + 1}`}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                    />
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 
@@ -280,46 +360,9 @@ const MovieDetail = () => {
             </div>
           )}
 
-          {/* Download Links */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <Download className="text-green-500" />
-              Download Links
-            </h2>
-            {downloadLinks.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {downloadLinks.map((link) => (
-                  <Card key={link.link_id} className="bg-gray-800 border-gray-700">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <Badge className="bg-blue-600 text-white">
-                          {link.quality}
-                        </Badge>
-                        <span className="text-sm text-gray-400">{link.file_size}</span>
-                      </div>
-                      <Link to={`/download/${movie.movie_id}?quality=${link.quality}`}>
-                        <Button className="w-full bg-green-600 hover:bg-green-700">
-                          <Download size={16} className="mr-2" />
-                          Download {link.quality}
-                        </Button>
-                      </Link>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card className="bg-gray-800 border-gray-700">
-                <CardContent className="p-6 text-center">
-                  <Film size={48} className="mx-auto mb-4 text-gray-500" />
-                  <p className="text-gray-400">Download links will be available soon!</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
           {/* Share Links */}
           <div className="mb-8">
-            <ShareLinks movieTitle={movie.title} />
+            <ShareLinks title={movie.title} />
           </div>
 
           {/* Bottom Ad Banner */}
@@ -329,7 +372,7 @@ const MovieDetail = () => {
 
           {/* Related Movies */}
           <RelatedMoviesSection 
-            currentMovieId={movie.movie_id}
+            currentMovie={movie.movie_id}
             genres={movie.genre || []}
             contentType={movie.content_type}
           />

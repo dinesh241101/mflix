@@ -79,7 +79,7 @@ const Index = () => {
     <div className="min-h-screen bg-gray-900 text-white">
       <ScrollableHeader />
       
-      <SmartAdManager>
+      <SmartAdManager position="home_page">
         {/* Hero Section with Featured Movies */}
         <section className="relative">
           <FeaturedMovieSlider movies={featuredMovies} />
@@ -141,7 +141,7 @@ const Index = () => {
 
           {/* Latest Uploads Section */}
           <section>
-            <LatestUploadsSection />
+            <LatestUploadsSection movies={latestMovies} />
           </section>
 
           {/* Bottom Ad Banner */}

@@ -103,13 +103,13 @@ const Movies = () => {
     <div className="min-h-screen bg-gray-900 text-white">
       <ScrollableHeader />
       
-      <SmartAdManager>
+      <SmartAdManager position="movies_page">
         <div className="container mx-auto px-4 py-8">
           {/* Page Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">{getPageTitle()}</h1>
             <p className="text-gray-400">
-              Showing {movies.length} movies
+              {loading ? 'Loading...' : `Showing ${movies.length} movies`}
             </p>
           </div>
 
@@ -119,7 +119,7 @@ const Movies = () => {
           </div>
 
           {/* Movies Grid */}
-          <EnhancedMovieGrid movies={movies} loading={loading} />
+          <EnhancedMovieGrid movies={movies} />
 
           {/* Bottom Ad Banner */}
           <div className="mt-8">

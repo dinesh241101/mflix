@@ -5,18 +5,20 @@ import AdBanner from './AdBanner';
 import ClickAdModal from './ClickAdModal';
 
 interface SmartAdManagerProps {
-  position: string;
+  children: React.ReactNode;
+  position?: string;
   className?: string;
-  children?: React.ReactNode;
 }
 
-const SmartAdManager = ({ position, className = "", children }: SmartAdManagerProps) => {
+const SmartAdManager = ({ children, position = "general", className = "" }: SmartAdManagerProps) => {
   const [shouldShowAd, setShouldShowAd] = useState(false);
   const [adData, setAdData] = useState<any>(null);
   const [pageViews, setPageViews] = useState(0);
 
   useEffect(() => {
-    checkAdDisplay();
+    if (position) {
+      checkAdDisplay();
+    }
   }, [position]);
 
   const checkAdDisplay = async () => {
@@ -35,7 +37,7 @@ const SmartAdManager = ({ position, className = "", children }: SmartAdManagerPr
       
       // Check display frequency
       const currentViews = parseInt(localStorage.getItem(`views_${position}`) || '0');
-      const shouldDisplay = currentViews % ad.display_frequency === 0;
+      const shouldDisplay = currentViews % (ad.display_frequency || 3) === 0;
       
       if (shouldDisplay) {
         setAdData(ad);
@@ -66,34 +68,17 @@ const SmartAdManager = ({ position, className = "", children }: SmartAdManagerPr
     }
   };
 
-  if (!shouldShowAd || !adData) {
-    return <>{children}</>;
-  }
-
-  // Handle different ad types
-  if (adData.ad_type === 'inline' || adData.ad_type === 'native') {
-    return (
-      <div className={`ad-container ${className}`}>
-        {children}
-        <AdBanner position={position} className="my-4" />
-      </div>
-    );
-  }
-
-  if (adData.ad_type === 'popup' || adData.ad_type === 'modal') {
-    return (
-      <>
-        {children}
-        <ClickAdModal />
-      </>
-    );
-  }
-
-  // Default banner ad
   return (
     <div className={`ad-container ${className}`}>
-      <AdBanner position={position} />
       {children}
+      {shouldShowAd && adData && (
+        <div className="my-4">
+          <AdBanner position={position} />
+        </div>
+      )}
+      {shouldShowAd && adData?.ad_type === 'popup' && (
+        <ClickAdModal />
+      )}
     </div>
   );
 };
