@@ -13,7 +13,6 @@ import GenreSelector from "./GenreSelector";
 
 const MovieUploadForm = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [countries, setCountries] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     storyline: "",
@@ -31,25 +30,6 @@ const MovieUploadForm = () => {
     is_visible: true,
     seo_tags: [] as string[]
   });
-
-  useEffect(() => {
-    fetchCountries();
-  }, []);
-
-  const fetchCountries = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('countries')
-        .select('*')
-        .order('name');
-      
-      if (!error && data) {
-        setCountries(data);
-      }
-    } catch (error) {
-      console.error('Error fetching countries:', error);
-    }
-  };
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -220,7 +200,6 @@ const MovieUploadForm = () => {
         </div>
 
         <CountrySelector 
-          countries={countries}
           selectedCountry={formData.country}
           onCountryChange={(country) => handleInputChange('country', country)}
         />
@@ -243,14 +222,14 @@ const MovieUploadForm = () => {
       </div>
 
       <ImageUploader
-        onImageUploaded={(url) => handleInputChange('poster_url', url)}
-        currentImage={formData.poster_url}
+        currentImageUrl={formData.poster_url}
+        onImageUrlChange={(url) => handleInputChange('poster_url', url)}
         label="Poster Image"
       />
 
       <MultipleImageUploader
-        onImagesUploaded={(urls) => handleInputChange('screenshots', urls)}
         currentImages={formData.screenshots}
+        onImageUrlsChange={(urls) => handleInputChange('screenshots', urls)}
         label="Screenshots"
         maxImages={10}
       />

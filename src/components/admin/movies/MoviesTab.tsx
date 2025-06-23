@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -161,12 +160,7 @@ const MoviesTab = ({
         {/* Upload Form */}
         <div>
           <h3 className="text-lg font-semibold mb-4">Upload New Movie</h3>
-          <MovieUploadForm 
-            movieForm={movieForm}
-            setMovieForm={setMovieForm}
-            handleUploadMovie={handleUploadMovie}
-            isEditing={isEditing}
-          />
+          <MovieUploadForm />
         </div>
         
         {/* Movies List */}
