@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -245,14 +244,7 @@ const MovieDetailsDialog = ({
                 <p className="text-gray-400">Share this content on social media or copy the direct link.</p>
                 
                 <div className="bg-gray-700 p-4 rounded-lg">
-                  <ShareLinks 
-                    url={`https://mflix.com/movie/${selectedMovie.id}`} 
-                    title={selectedMovie.title}
-                    customLinks={[
-                      { text: "WhatsApp", url: `https://wa.me/?text=Check out ${selectedMovie.title} on MFlix: https://mflix.com/movie/${selectedMovie.id}` },
-                      { text: "Telegram", url: `https://t.me/share/url?url=https://mflix.com/movie/${selectedMovie.id}&text=Check out ${selectedMovie.title} on MFlix!` }
-                    ]}
-                  />
+                  <ShareLinks title={selectedMovie.title} />
                 </div>
               </div>
             </TabsContent>
