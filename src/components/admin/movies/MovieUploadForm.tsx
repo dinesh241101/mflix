@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import MultipleImageUploader from "./MultipleImageUploader";
 
 interface MovieUploadFormProps {
   movieForm: any;
@@ -191,6 +192,13 @@ const MovieUploadForm = ({ movieForm, setMovieForm, handleUploadMovie, isEditing
                 placeholder="movie download, bollywood, action"
               />
             </div>
+            
+            {/* Multiple Screenshots Upload */}
+            <MultipleImageUploader
+              screenshots={movieForm.screenshots || []}
+              onScreenshotsChange={(screenshots) => setMovieForm({ ...movieForm, screenshots })}
+              label="Movie Screenshots"
+            />
           </div>
           
           <Button type="submit" className="w-full">

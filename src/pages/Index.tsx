@@ -1,150 +1,156 @@
-import { useEffect, useState } from "react";
+
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { toast } from "@/components/ui/use-toast";
-import HeaderWithAds from "@/components/universal/HeaderWithAds";
-import UniversalAdsWrapper from "@/components/ads/UniversalAdsWrapper";
-import ImprovedFeaturedSlider from "@/components/ImprovedFeaturedSlider";
-import EnhancedMovieGrid from "@/components/enhanced/EnhancedMovieGrid";
-import ResponsiveAdPlaceholder from "@/components/ResponsiveAdPlaceholder";
+import FeaturedMovieSlider from "@/components/FeaturedMovieSlider";
+import MovieCarousel from "@/components/MovieCarousel";
+import LatestUploadsSection from "@/components/LatestUploadsSection";
+import ScrollableHeader from "@/components/universal/ScrollableHeader";
+import AdBanner from "@/components/ads/AdBanner";
+import SmartAdManager from "@/components/ads/SmartAdManager";
 
 const Index = () => {
-  const isMobile = useIsMobile();
-  const [movies, setMovies] = useState<any[]>([]);
-  const [series, setSeries] = useState<any[]>([]);
-  const [anime, setAnime] = useState<any[]>([]);
   const [featuredMovies, setFeaturedMovies] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [latestMovies, setLatestMovies] = useState<any[]>([]);
+  const [popularMovies, setPopularMovies] = useState<any[]>([]);
+  const [bollywoodMovies, setBollywoodMovies] = useState<any[]>([]);
+  const [hollywoodMovies, setHollywoodMovies] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchContent();
+    fetchMovies();
   }, []);
 
-  const fetchContent = async () => {
+  const fetchMovies = async () => {
     try {
-      setLoading(true);
-      
-      // Fetch featured movies
-      const { data: featured, error: featuredError } = await supabase
+      // Featured movies
+      const { data: featured } = await supabase
         .from('movies')
         .select('*')
         .eq('featured', true)
         .eq('is_visible', true)
+        .order('created_at', { ascending: false })
         .limit(5);
-      
-      if (featuredError) throw featuredError;
+
+      // Latest movies
+      const { data: latest } = await supabase
+        .from('movies')
+        .select('*')
+        .eq('is_visible', true)
+        .order('created_at', { ascending: false })
+        .limit(12);
+
+      // Popular movies (by downloads)
+      const { data: popular } = await supabase
+        .from('movies')
+        .select('*')
+        .eq('is_visible', true)
+        .order('downloads', { ascending: false })
+        .limit(12);
+
+      // Bollywood movies
+      const { data: bollywood } = await supabase
+        .from('movies')
+        .select('*')
+        .eq('is_visible', true)
+        .contains('seo_tags', ['bollywood'])
+        .order('created_at', { ascending: false })
+        .limit(12);
+
+      // Hollywood movies
+      const { data: hollywood } = await supabase
+        .from('movies')
+        .select('*')
+        .eq('is_visible', true)
+        .contains('seo_tags', ['hollywood'])
+        .order('created_at', { ascending: false })
+        .limit(12);
+
       setFeaturedMovies(featured || []);
-      
-      // Fetch latest movies
-      const { data: moviesData, error: moviesError } = await supabase
-        .from('movies')
-        .select('*')
-        .eq('content_type', 'movie')
-        .eq('is_visible', true)
-        .order('created_at', { ascending: false })
-        .limit(12);
-      
-      if (moviesError) throw moviesError;
-      setMovies(moviesData || []);
-      
-      // Fetch latest series
-      const { data: seriesData, error: seriesError } = await supabase
-        .from('movies')
-        .select('*')
-        .eq('content_type', 'series')
-        .eq('is_visible', true)
-        .order('created_at', { ascending: false })
-        .limit(12);
-      
-      if (seriesError) throw seriesError;
-      setSeries(seriesData || []);
-      
-      // Fetch latest anime
-      const { data: animeData, error: animeError } = await supabase
-        .from('movies')
-        .select('*')
-        .eq('content_type', 'anime')
-        .eq('is_visible', true)
-        .order('created_at', { ascending: false })
-        .limit(12);
-      
-      if (animeError) throw animeError;
-      setAnime(animeData || []);
-      
-    } catch (error: any) {
-      console.error("Error fetching content:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load content",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
+      setLatestMovies(latest || []);
+      setPopularMovies(popular || []);
+      setBollywoodMovies(bollywood || []);
+      setHollywoodMovies(hollywood || []);
+
+    } catch (error) {
+      console.error('Error fetching movies:', error);
     }
   };
 
   return (
-    <UniversalAdsWrapper>
-      <HeaderWithAds />
-      {/* Featured Movies Slider */}
-      {featuredMovies.length > 0 && (
-        <ImprovedFeaturedSlider movies={featuredMovies} />
-      )}
+    <div className="min-h-screen bg-gray-900 text-white">
+      <ScrollableHeader />
+      
+      <SmartAdManager>
+        {/* Hero Section with Featured Movies */}
+        <section className="relative">
+          <FeaturedMovieSlider movies={featuredMovies} />
+          
+          {/* Ad Banner after hero */}
+          <div className="my-8">
+            <AdBanner position="home_top" />
+          </div>
+        </section>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 space-y-12">
-        
-        {/* Content Top Ad */}
-        <ResponsiveAdPlaceholder position="content-top" />
-        
-        {/* Latest Movies */}
-        {movies.length > 0 && (
-          <EnhancedMovieGrid 
-            movies={movies} 
-            title="Latest Movies" 
-            showAds={true}
-          />
-        )}
-        
-        {/* Content Middle Ad */}
-        <ResponsiveAdPlaceholder position="content-middle" />
-        
-        {/* Latest Series */}
-        {series.length > 0 && (
-          <EnhancedMovieGrid 
-            movies={series} 
-            title="Latest Web Series" 
-            showAds={true}
-          />
-        )}
-        
-        {/* Latest Anime */}
-        {anime.length > 0 && (
-          <EnhancedMovieGrid 
-            movies={anime} 
-            title="Latest Anime" 
-            showAds={true}
-          />
-        )}
-        
-        {/* Content Bottom Ad */}
-        <ResponsiveAdPlaceholder position="content-bottom" />
-      </main>
+        {/* Content Sections */}
+        <div className="container mx-auto px-4 py-8 space-y-12">
+          
+          {/* Latest Movies */}
+          <section>
+            <MovieCarousel 
+              title="🔥 Latest Movies" 
+              movies={latestMovies}
+              viewAllLink="/movies?sort=latest"
+            />
+          </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-800 border-t border-gray-700 mt-16">
-        <ResponsiveAdPlaceholder position="footer" />
-        
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center text-gray-400">
-            <p>&copy; 2024 MFlix. All rights reserved.</p>
-            <p className="text-sm mt-2">
-              Watch and download the latest movies, TV series, and anime.
-            </p>
+          {/* Ad Banner */}
+          <div className="my-8">
+            <AdBanner position="home_middle" />
+          </div>
+
+          {/* Popular Movies */}
+          <section>
+            <MovieCarousel 
+              title="⭐ Popular Movies" 
+              movies={popularMovies}
+              viewAllLink="/movies?sort=popular"
+            />
+          </section>
+
+          {/* Bollywood Movies */}
+          <section>
+            <MovieCarousel 
+              title="🎬 Bollywood Movies" 
+              movies={bollywoodMovies}
+              viewAllLink="/movies?category=bollywood"
+            />
+          </section>
+
+          {/* Ad Banner */}
+          <div className="my-8">
+            <AdBanner position="home_middle_2" />
+          </div>
+
+          {/* Hollywood Movies */}
+          <section>
+            <MovieCarousel 
+              title="🌟 Hollywood Movies" 
+              movies={hollywoodMovies}
+              viewAllLink="/movies?category=hollywood"
+            />
+          </section>
+
+          {/* Latest Uploads Section */}
+          <section>
+            <LatestUploadsSection />
+          </section>
+
+          {/* Bottom Ad Banner */}
+          <div className="my-8">
+            <AdBanner position="home_bottom" />
           </div>
         </div>
-      </footer>
-    </UniversalAdsWrapper>
+      </SmartAdManager>
+    </div>
   );
 };
 

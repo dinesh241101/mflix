@@ -1,117 +1,108 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { toast } from "@/components/ui/use-toast";
-import HeaderWithAds from "@/components/universal/HeaderWithAds";
-import GlobalAdInterceptor from "@/components/ads/GlobalAdInterceptor";
-import UniversalAdsWrapper from "@/components/ads/UniversalAdsWrapper";
-import ClickableAdBanner from "@/components/ads/ClickableAdBanner";
-import EnhancedMovieGrid from "@/components/enhanced/EnhancedMovieGrid";
-import LoadingScreen from "@/components/LoadingScreen";
-import Pagination from "@/components/Pagination";
 
-const ITEMS_PER_PAGE = 24;
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import ScrollableHeader from "@/components/universal/ScrollableHeader";
+import EnhancedMovieGrid from "@/components/enhanced/EnhancedMovieGrid";
+import AdBanner from "@/components/ads/AdBanner";
+import SmartAdManager from "@/components/ads/SmartAdManager";
 
 const Anime = () => {
-  const isMobile = useIsMobile();
+  const [searchParams] = useSearchParams();
   const [anime, setAnime] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
+
+  const genre = searchParams.get('genre');
+  const quality = searchParams.get('quality');
+  const year = searchParams.get('year');
+  const country = searchParams.get('country');
+  const sort = searchParams.get('sort');
 
   useEffect(() => {
-    fetchAnime(currentPage);
-  }, [currentPage]);
+    fetchAnime();
+  }, [searchParams]);
 
-  const fetchAnime = async (page: number = 1) => {
+  const fetchAnime = async () => {
     try {
       setLoading(true);
       
-      const from = (page - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-      
-      const { data: animeData, error: animeError, count } = await supabase
+      let query = supabase
         .from('movies')
-        .select('*', { count: 'exact' })
+        .select('*')
         .eq('content_type', 'anime')
-        .eq('is_visible', true)
-        .order('created_at', { ascending: false })
-        .range(from, to);
-      
-      if (animeError) throw animeError;
-      
-      setAnime(animeData || []);
-      setTotalCount(count || 0);
-      setTotalPages(Math.ceil((count || 0) / ITEMS_PER_PAGE));
-      
-    } catch (error: any) {
-      console.error("Error fetching anime:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load anime",
-        variant: "destructive"
-      });
+        .eq('is_visible', true);
+
+      if (genre) {
+        query = query.contains('genre', [genre]);
+      }
+
+      if (quality) {
+        query = query.eq('quality', quality);
+      }
+
+      if (year) {
+        query = query.eq('year', parseInt(year));
+      }
+
+      if (country) {
+        query = query.ilike('country', `%${country}%`);
+      }
+
+      if (sort === 'latest') {
+        query = query.order('created_at', { ascending: false });
+      } else if (sort === 'popular') {
+        query = query.order('downloads', { ascending: false });
+      } else if (sort === 'rating') {
+        query = query.order('imdb_rating', { ascending: false });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
+
+      const { data, error } = await query.limit(50);
+
+      if (error) throw error;
+      setAnime(data || []);
+
+    } catch (error) {
+      console.error('Error fetching anime:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading && currentPage === 1) {
-    return <LoadingScreen message="Loading Anime..." />;
-  }
+  const getPageTitle = () => {
+    if (genre) return `${genre.charAt(0).toUpperCase() + genre.slice(1)} Anime`;
+    if (quality) return `${quality} Anime`;
+    if (year) return `${year} Anime`;
+    if (country) return `${country.charAt(0).toUpperCase() + country.slice(1)} Anime`;
+    return 'Anime Collection';
+  };
 
   return (
-    <UniversalAdsWrapper>
-      <HeaderWithAds />
-      <main className="container mx-auto px-4 py-8 space-y-8">
-        
-        {/* Content Top Ad */}
-        <ClickableAdBanner position="content-top" />
-        
-        {/* Anime Grid */}
-        <div>
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl md:text-3xl font-bold text-white">Latest Anime</h1>
-            <span className="text-gray-400 text-sm">
-              {totalCount} anime found
-            </span>
+    <div className="min-h-screen bg-gray-900 text-white">
+      <ScrollableHeader />
+      
+      <SmartAdManager>
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2">{getPageTitle()}</h1>
+            <p className="text-gray-400">
+              Showing {anime.length} anime titles
+            </p>
           </div>
-          
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-            </div>
-          ) : anime.length > 0 ? (
-            <>
-              <EnhancedMovieGrid 
-                movies={anime} 
-                title="" 
-                showAds={true}
-              />
-              
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="mt-8">
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                  />
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-gray-400 text-lg">No anime found</p>
-            </div>
-          )}
+
+          <div className="mb-8">
+            <AdBanner position="anime_top" />
+          </div>
+
+          <EnhancedMovieGrid movies={anime} loading={loading} />
+
+          <div className="mt-8">
+            <AdBanner position="anime_bottom" />
+          </div>
         </div>
-        
-        {/* Content Bottom Ad */}
-        <ClickableAdBanner position="content-bottom" />
-      </main>
-    </UniversalAdsWrapper>
+      </SmartAdManager>
+    </div>
   );
 };
 

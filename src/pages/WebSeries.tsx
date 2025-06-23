@@ -1,107 +1,114 @@
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
-import HeaderWithAds from "@/components/universal/HeaderWithAds";
-import UniversalAdsWrapper from "@/components/ads/UniversalAdsWrapper";
+import ScrollableHeader from "@/components/universal/ScrollableHeader";
 import EnhancedMovieGrid from "@/components/enhanced/EnhancedMovieGrid";
-import LoadingScreen from "@/components/LoadingScreen";
-import ClickableAdBanner from "@/components/ads/ClickableAdBanner";
-import Pagination from "@/components/Pagination";
+import AdBanner from "@/components/ads/AdBanner";
+import SmartAdManager from "@/components/ads/SmartAdManager";
 
 const WebSeries = () => {
+  const [searchParams] = useSearchParams();
   const [series, setSeries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const itemsPerPage = 20;
+
+  const genre = searchParams.get('genre');
+  const quality = searchParams.get('quality');
+  const year = searchParams.get('year');
+  const country = searchParams.get('country');
+  const language = searchParams.get('language');
+  const sort = searchParams.get('sort');
 
   useEffect(() => {
     fetchSeries();
-  }, [currentPage]);
+  }, [searchParams]);
 
   const fetchSeries = async () => {
     try {
       setLoading(true);
       
-      // Get total count
-      const { count } = await supabase
-        .from('movies')
-        .select('*', { count: 'exact', head: true })
-        .eq('content_type', 'series')
-        .eq('is_visible', true);
-
-      setTotalPages(Math.ceil((count || 0) / itemsPerPage));
-
-      // Get paginated data
-      const { data, error } = await supabase
+      let query = supabase
         .from('movies')
         .select('*')
         .eq('content_type', 'series')
-        .eq('is_visible', true)
-        .order('created_at', { ascending: false })
-        .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
+        .eq('is_visible', true);
+
+      if (genre) {
+        query = query.contains('genre', [genre]);
+      }
+
+      if (quality) {
+        query = query.eq('quality', quality);
+      }
+
+      if (year) {
+        query = query.eq('year', parseInt(year));
+      }
+
+      if (country) {
+        query = query.ilike('country', `%${country}%`);
+      }
+
+      if (language) {
+        query = query.contains('seo_tags', [language]);
+      }
+
+      if (sort === 'latest') {
+        query = query.order('created_at', { ascending: false });
+      } else if (sort === 'popular') {
+        query = query.order('downloads', { ascending: false });
+      } else if (sort === 'rating') {
+        query = query.order('imdb_rating', { ascending: false });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
+
+      const { data, error } = await query.limit(50);
 
       if (error) throw error;
       setSeries(data || []);
-    } catch (error: any) {
-      console.error("Error fetching web series:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load web series",
-        variant: "destructive"
-      });
+
+    } catch (error) {
+      console.error('Error fetching series:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return <LoadingScreen message="Loading Web Series..." />;
-  }
+  const getPageTitle = () => {
+    if (genre) return `${genre.charAt(0).toUpperCase() + genre.slice(1)} Web Series`;
+    if (quality) return `${quality} Web Series`;
+    if (year) return `${year} Web Series`;
+    if (country) return `${country.charAt(0).toUpperCase() + country.slice(1)} Web Series`;
+    if (language) return `${language.charAt(0).toUpperCase() + language.slice(1)} Web Series`;
+    return 'Web Series';
+  };
 
   return (
-    <UniversalAdsWrapper>
-      <HeaderWithAds />
+    <div className="min-h-screen bg-gray-900 text-white">
+      <ScrollableHeader />
       
-      <div className="min-h-screen bg-gray-900 text-white">
+      <SmartAdManager>
         <div className="container mx-auto px-4 py-8">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold">Web Series</h1>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2">{getPageTitle()}</h1>
+            <p className="text-gray-400">
+              Showing {series.length} web series
+            </p>
           </div>
 
-          {/* Ad Banner */}
-          <ClickableAdBanner position="series_top" className="mb-8" />
+          <div className="mb-8">
+            <AdBanner position="series_top" />
+          </div>
 
-          {series.length === 0 ? (
-            <div className="text-center py-12">
-              <h2 className="text-xl font-semibold mb-2">No Web Series Found</h2>
-              <p className="text-gray-400">Check back later for new series!</p>
-            </div>
-          ) : (
-            <>
-              <EnhancedMovieGrid 
-                movies={series} 
-                title="Latest Web Series"
-              />
+          <EnhancedMovieGrid movies={series} loading={loading} />
 
-              {totalPages > 1 && (
-                <div className="mt-8">
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                  />
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Bottom Ad */}
-          <ClickableAdBanner position="series_bottom" className="mt-8" />
+          <div className="mt-8">
+            <AdBanner position="series_bottom" />
+          </div>
         </div>
-      </div>
-    </UniversalAdsWrapper>
+      </SmartAdManager>
+    </div>
   );
 };
 

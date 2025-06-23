@@ -7,17 +7,14 @@ import { toast } from "@/components/ui/use-toast";
 import { LoaderCircle, AtSign, Lock, KeyRound, Eye, EyeOff, Shield } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
 import MFlixLogo from "@/components/MFlixLogo";
-import { useAuth } from "@/hooks/useAuth";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading, isAdmin, signIn } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("dinesh001kaushik@gmail.com");
+  const [password, setPassword] = useState("dinesh001");
   const [isLoading, setIsLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
-  const [loginAttempts, setLoginAttempts] = useState(0);
   
   // Simulate page load
   useEffect(() => {
@@ -25,20 +22,21 @@ const AdminLogin = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Redirect if already authenticated and is admin
+  // Check if already logged in
   useEffect(() => {
-    if (!authLoading && user && isAdmin) {
+    const token = localStorage.getItem("adminToken");
+    if (token) {
       navigate("/admin/dashboard", { replace: true });
     }
-  }, [user, isAdmin, authLoading, navigate]);
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (loginAttempts >= 5) {
+    if (email !== "dinesh001kaushik@gmail.com" || password !== "dinesh001") {
       toast({
-        title: "Too many attempts",
-        description: "Please wait before trying again.",
+        title: "Login failed",
+        description: "Invalid credentials provided.",
         variant: "destructive"
       });
       return;
@@ -47,19 +45,22 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await signIn(email, password);
+      // Simulate login delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (error) {
-        setLoginAttempts(prev => prev + 1);
-      } else {
-        // Success will be handled by useEffect redirect
-        toast({
-          title: "Login successful",
-          description: "Redirecting to admin dashboard...",
-        });
-      }
+      // Set admin credentials
+      localStorage.setItem("adminToken", `admin-${Date.now()}`);
+      localStorage.setItem("adminEmail", email);
+      localStorage.setItem("isAuthenticated", "true");
+      
+      toast({
+        title: "Login successful",
+        description: "Welcome to the admin dashboard!",
+      });
+      
+      navigate("/admin/dashboard", { replace: true });
+      
     } catch (error: any) {
-      setLoginAttempts(prev => prev + 1);
       toast({
         title: "Login failed",
         description: "An error occurred during login.",
@@ -70,7 +71,7 @@ const AdminLogin = () => {
     }
   };
 
-  if (pageLoading || authLoading) {
+  if (pageLoading) {
     return <LoadingScreen message="Preparing Secure Admin Portal" />;
   }
 
@@ -98,8 +99,7 @@ const AdminLogin = () => {
                 placeholder="Admin Email"
                 className="bg-gray-700 border-gray-600 text-white pl-10"
                 required
-                maxLength={254}
-                autoComplete="email"
+                readOnly
               />
             </div>
             
@@ -112,8 +112,7 @@ const AdminLogin = () => {
                 placeholder="Password"
                 className="bg-gray-700 border-gray-600 text-white pl-10 pr-10"
                 required
-                maxLength={128}
-                autoComplete="current-password"
+                readOnly
               />
               <button
                 type="button"
@@ -127,7 +126,7 @@ const AdminLogin = () => {
             <Button 
               type="submit" 
               className="w-full bg-blue-600 hover:bg-blue-700"
-              disabled={isLoading || loginAttempts >= 5}
+              disabled={isLoading}
             >
               {isLoading ? (
                 <>
@@ -143,12 +142,9 @@ const AdminLogin = () => {
             </Button>
             
             <div className="text-center text-sm text-gray-500">
-              <p>Protected by advanced security measures</p>
-              {loginAttempts > 0 && (
-                <p className="text-yellow-500 mt-1">
-                  {5 - loginAttempts} attempts remaining
-                </p>
-              )}
+              <p>Hardcoded credentials for demo</p>
+              <p className="text-green-400 mt-1">Email: dinesh001kaushik@gmail.com</p>
+              <p className="text-green-400">Password: dinesh001</p>
             </div>
           </div>
         </form>
