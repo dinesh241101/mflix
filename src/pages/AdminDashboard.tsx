@@ -28,28 +28,15 @@ const AdminDashboard = () => {
       try {
         const token = localStorage.getItem("adminToken");
         const email = localStorage.getItem("adminEmail");
+        const isAuth = localStorage.getItem("isAuthenticated");
         
-        if (!token) {
+        if (!token || isAuth !== "true") {
+          console.log("No valid admin token found, redirecting to login");
           navigate("/admin/login");
           return;
         }
         
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          throw new Error("Session expired");
-        }
-        
-        // Check if user is admin
-        const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin', {
-          user_id: user.id
-        });
-        
-        if (adminError || !isAdmin) {
-          throw new Error("Not authorized as admin");
-        }
-        
-        setAdminEmail(email || user.email || "admin@example.com");
+        setAdminEmail(email || "admin@example.com");
         
         // Load dashboard stats
         await loadStats();
@@ -58,6 +45,7 @@ const AdminDashboard = () => {
         console.error("Auth error:", error);
         localStorage.removeItem("adminToken");
         localStorage.removeItem("adminEmail");
+        localStorage.removeItem("isAuthenticated");
         navigate("/admin/login");
       }
     };
@@ -124,6 +112,8 @@ const AdminDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("adminEmail");
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("sessionExpiry");
     navigate("/admin/login");
   };
   

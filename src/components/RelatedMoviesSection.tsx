@@ -51,11 +51,13 @@ const RelatedMoviesSection = ({ currentMovie, genres = [], contentType = "movie"
   }
 
   return (
-    <MovieCarousel 
-      title="🎬 Related Content" 
-      movies={relatedMovies}
-      viewAllLink={`/${contentType}s`}
-    />
+    <div className="bg-gray-900">
+      <MovieCarousel 
+        title="🎬 Related Content" 
+        movies={relatedMovies}
+        viewAllLink={`/${contentType}s`}
+      />
+    </div>
   );
 };
 

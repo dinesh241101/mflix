@@ -7,6 +7,7 @@ import { toast } from "@/components/ui/use-toast";
 import { LoaderCircle, AtSign, Lock, KeyRound, Eye, EyeOff, Shield } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
 import MFlixLogo from "@/components/MFlixLogo";
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -24,37 +25,76 @@ const AdminLogin = () => {
 
   // Check if already logged in
   useEffect(() => {
-    const token = localStorage.getItem("adminToken");
-    const isAuth = localStorage.getItem("isAuthenticated");
-    if (token && isAuth === "true") {
-      navigate("/admin/dashboard", { replace: true });
-    }
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          // Check if user is admin
+          const { data: isAdmin } = await supabase.rpc('is_admin', {
+            user_id: session.user.id
+          });
+          
+          if (isAdmin) {
+            localStorage.setItem("adminToken", `admin-${Date.now()}`);
+            localStorage.setItem("adminEmail", session.user.email || "");
+            localStorage.setItem("isAuthenticated", "true");
+            navigate("/admin/dashboard", { replace: true });
+          }
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+      }
+    };
+
+    checkAuth();
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const correctEmail = "dinesh001kaushik@gmail.com";
-    const correctPassword = "dinesh001";
-    
-    if (email.trim() !== correctEmail || password.trim() !== correctPassword) {
-      toast({
-        title: "Login failed",
-        description: "Invalid credentials provided.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     setIsLoading(true);
 
     try {
-      // Simulate login delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Set admin credentials with proper flags
+      // First try Supabase authentication
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password.trim(),
+      });
+
+      if (error) {
+        // Fallback to demo credentials
+        if (email.trim() === "dinesh001kaushik@gmail.com" && password.trim() === "dinesh001") {
+          localStorage.setItem("adminToken", `admin-${Date.now()}`);
+          localStorage.setItem("adminEmail", email);
+          localStorage.setItem("isAuthenticated", "true");
+          localStorage.setItem("sessionExpiry", (Date.now() + (8 * 60 * 60 * 1000)).toString());
+          
+          toast({
+            title: "Login successful",
+            description: "Welcome to the admin dashboard!",
+          });
+          
+          setTimeout(() => {
+            navigate("/admin/dashboard", { replace: true });
+            window.location.reload(); // Force page refresh to ensure state is updated
+          }, 1000);
+          return;
+        }
+        throw error;
+      }
+
+      // Check if user is admin
+      const { data: isAdmin } = await supabase.rpc('is_admin', {
+        user_id: data.user.id
+      });
+
+      if (!isAdmin) {
+        await supabase.auth.signOut();
+        throw new Error("You don't have admin privileges");
+      }
+
+      // Set admin credentials
       localStorage.setItem("adminToken", `admin-${Date.now()}`);
-      localStorage.setItem("adminEmail", email);
+      localStorage.setItem("adminEmail", data.user.email || "");
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("sessionExpiry", (Date.now() + (8 * 60 * 60 * 1000)).toString());
       
@@ -63,15 +103,16 @@ const AdminLogin = () => {
         description: "Welcome to the admin dashboard!",
       });
       
-      // Force navigation to admin dashboard
       setTimeout(() => {
         navigate("/admin/dashboard", { replace: true });
-      }, 500);
+        window.location.reload(); // Force page refresh
+      }, 1000);
       
     } catch (error: any) {
+      console.error("Login error:", error);
       toast({
         title: "Login failed",
-        description: "An error occurred during login.",
+        description: error.message || "Invalid credentials provided.",
         variant: "destructive"
       });
     } finally {
