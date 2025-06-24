@@ -8,10 +8,12 @@ import { Plus, Trash2, Edit2, Save, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 
+type DownloadButtonType = 'free' | 'premium' | 'external';
+
 interface DownloadButton {
   id: string;
   name: string;
-  type: 'free' | 'premium' | 'external';
+  type: DownloadButtonType;
   url?: string;
   color: string;
   order: number;
@@ -22,7 +24,7 @@ const DownloadButtonConfig = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newButton, setNewButton] = useState({
     name: "",
-    type: "free" as const,
+    type: "free" as DownloadButtonType,
     url: "",
     color: "#3b82f6"
   });
@@ -150,7 +152,7 @@ const DownloadButtonConfig = () => {
                 <label className="block text-sm font-medium text-gray-300 mb-2">Button Type</label>
                 <select
                   value={newButton.type}
-                  onChange={(e) => setNewButton({ ...newButton, type: e.target.value as 'free' | 'premium' | 'external' })}
+                  onChange={(e) => setNewButton({ ...newButton, type: e.target.value as DownloadButtonType })}
                   className="w-full bg-gray-700 border border-gray-600 text-white px-3 py-2 rounded"
                 >
                   <option value="free">Free Download</option>
