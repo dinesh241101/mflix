@@ -150,7 +150,7 @@ const DownloadButtonConfig = () => {
                 <label className="block text-sm font-medium text-gray-300 mb-2">Button Type</label>
                 <select
                   value={newButton.type}
-                  onChange={(e) => setNewButton({ ...newButton, type: e.target.value as any })}
+                  onChange={(e) => setNewButton({ ...newButton, type: e.target.value as 'free' | 'premium' | 'external' })}
                   className="w-full bg-gray-700 border border-gray-600 text-white px-3 py-2 rounded"
                 >
                   <option value="free">Free Download</option>
