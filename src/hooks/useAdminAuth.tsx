@@ -12,50 +12,60 @@ export const useAdminAuth = () => {
   useEffect(() => {
     checkAuthStatus();
     
-    // Set up periodic session refresh every 30 seconds
+    // Set up periodic session refresh every 5 minutes instead of 30 seconds
     const intervalId = setInterval(() => {
       refreshSession();
-    }, 30 * 1000);
+    }, 5 * 60 * 1000);
 
     // Listen for storage changes (for multi-tab support)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'isAuthenticated' && e.newValue === 'false') {
+      if (e.key === 'adminSessionActive' && e.newValue === 'false') {
         setIsAuthenticated(false);
         setAdminEmail('');
       }
     };
 
+    // Listen for page visibility changes to refresh session
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isAuthenticated) {
+        refreshSession();
+      }
+    };
+
     window.addEventListener('storage', handleStorageChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       clearInterval(intervalId);
       window.removeEventListener('storage', handleStorageChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [isAuthenticated]);
 
   const checkAuthStatus = async () => {
     try {
       const token = localStorage.getItem("adminToken");
       const email = localStorage.getItem("adminEmail");
-      const sessionExpiry = localStorage.getItem("sessionExpiry");
-      const authFlag = localStorage.getItem("isAuthenticated");
+      const sessionActive = localStorage.getItem("adminSessionActive");
+      const lastActivity = localStorage.getItem("adminLastActivity");
 
-      console.log("Checking auth status:", { token: !!token, email, authFlag, sessionExpiry });
+      console.log("Checking auth status:", { token: !!token, email, sessionActive, lastActivity });
 
-      if (token && email && authFlag === "true" && sessionExpiry) {
-        const expiryTime = parseInt(sessionExpiry);
+      if (token && email && sessionActive === "true" && lastActivity) {
+        const lastActivityTime = parseInt(lastActivity);
         const currentTime = Date.now();
+        const maxInactiveTime = 24 * 60 * 60 * 1000; // 24 hours
         
-        console.log("Session check:", { expiryTime, currentTime, valid: currentTime < expiryTime });
+        console.log("Session check:", { lastActivityTime, currentTime, timeDiff: currentTime - lastActivityTime });
         
-        if (currentTime < expiryTime) {
+        if (currentTime - lastActivityTime < maxInactiveTime) {
           setIsAuthenticated(true);
           setAdminEmail(email);
           
-          // Extend session on activity
-          extendSession();
+          // Update last activity
+          localStorage.setItem("adminLastActivity", currentTime.toString());
         } else {
-          console.log("Session expired, clearing auth");
+          console.log("Session expired due to inactivity, clearing auth");
           clearAuth();
         }
       } else {
@@ -72,18 +82,18 @@ export const useAdminAuth = () => {
 
   const refreshSession = async () => {
     try {
-      const token = localStorage.getItem("adminToken");
-      const authFlag = localStorage.getItem("isAuthenticated");
-      const sessionExpiry = localStorage.getItem("sessionExpiry");
+      const sessionActive = localStorage.getItem("adminSessionActive");
+      const lastActivity = localStorage.getItem("adminLastActivity");
       
-      if (token && authFlag === "true" && sessionExpiry) {
-        const expiryTime = parseInt(sessionExpiry);
+      if (sessionActive === "true" && lastActivity) {
         const currentTime = Date.now();
+        const lastActivityTime = parseInt(lastActivity);
+        const timeSinceLastActivity = currentTime - lastActivityTime;
         
-        // If session is about to expire in next 30 minutes, extend it
-        if (currentTime > expiryTime - (30 * 60 * 1000)) {
-          console.log("Extending session");
-          extendSession();
+        // Only refresh if there's been recent activity (within 1 hour)
+        if (timeSinceLastActivity < 60 * 60 * 1000) {
+          localStorage.setItem("adminLastActivity", currentTime.toString());
+          console.log("Session refreshed at:", new Date(currentTime));
         }
       }
     } catch (error) {
@@ -91,18 +101,12 @@ export const useAdminAuth = () => {
     }
   };
 
-  const extendSession = () => {
-    const newExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours from now
-    localStorage.setItem("sessionExpiry", newExpiry.toString());
-    console.log("Session extended to:", new Date(newExpiry));
-  };
-
   const clearAuth = () => {
     console.log("Clearing authentication");
     localStorage.removeItem("adminToken");
     localStorage.removeItem("adminEmail");
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("sessionExpiry");
+    localStorage.removeItem("adminSessionActive");
+    localStorage.removeItem("adminLastActivity");
     setIsAuthenticated(false);
     setAdminEmail('');
   };
@@ -126,12 +130,19 @@ export const useAdminAuth = () => {
     return true;
   };
 
+  // Update activity on any admin action
+  const updateActivity = () => {
+    if (isAuthenticated) {
+      localStorage.setItem("adminLastActivity", Date.now().toString());
+    }
+  };
+
   return {
     isAuthenticated,
     isLoading,
     adminEmail,
     logout,
     requireAuth,
-    extendSession
+    updateActivity
   };
 };

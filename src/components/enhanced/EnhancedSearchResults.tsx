@@ -11,20 +11,36 @@ import { toast } from "@/components/ui/use-toast";
 const EnhancedSearchResults = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
+  const genre = searchParams.get("genre") || "";
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (query) {
+    if (query || genre) {
       searchContent();
     }
-  }, [query]);
+  }, [query, genre]);
 
   const searchContent = async () => {
     try {
       setLoading(true);
       
-      // Enhanced search with better fuzzy matching
+      if (genre) {
+        // Genre-based search
+        const { data, error } = await supabase
+          .from('movies')
+          .select('*')
+          .eq('is_visible', true)
+          .contains('genre', [genre])
+          .order('downloads', { ascending: false })
+          .limit(50);
+
+        if (error) throw error;
+        setResults(data || []);
+        return;
+      }
+
+      // Enhanced text search with better fuzzy matching
       const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 0);
       
       // Build multiple search queries for better results
@@ -38,12 +54,12 @@ const EnhancedSearchResults = () => {
           .eq('is_visible', true)
           .ilike('title', `%${query}%`)
           .order('downloads', { ascending: false })
-          .limit(10)
+          .limit(15)
       );
 
-      // 2. Partial title matches
+      // 2. Individual word matches in title
       for (const term of searchTerms) {
-        if (term.length > 2) {
+        if (term.length > 1) {
           searches.push(
             supabase
               .from('movies')
@@ -51,21 +67,23 @@ const EnhancedSearchResults = () => {
               .eq('is_visible', true)
               .ilike('title', `%${term}%`)
               .order('downloads', { ascending: false })
-              .limit(5)
+              .limit(10)
           );
         }
       }
 
       // 3. SEO tags search
-      searches.push(
-        supabase
-          .from('movies')
-          .select('*')
-          .eq('is_visible', true)
-          .contains('seo_tags', searchTerms)
-          .order('downloads', { ascending: false })
-          .limit(8)
-      );
+      if (searchTerms.length > 0) {
+        searches.push(
+          supabase
+            .from('movies')
+            .select('*')
+            .eq('is_visible', true)
+            .overlaps('seo_tags', searchTerms)
+            .order('downloads', { ascending: false })
+            .limit(12)
+        );
+      }
 
       // 4. Genre search
       searches.push(
@@ -73,23 +91,23 @@ const EnhancedSearchResults = () => {
           .from('movies')
           .select('*')
           .eq('is_visible', true)
-          .overlaps('genre', searchTerms)
+          .overlaps('genre', searchTerms.map(term => term.charAt(0).toUpperCase() + term.slice(1)))
           .order('downloads', { ascending: false })
-          .limit(8)
+          .limit(10)
       );
 
       // 5. Director and production house search
-      const directorSearch = searchTerms.map(term => 
+      const directorSearches = searchTerms.map(term => 
         supabase
           .from('movies')
           .select('*')
           .eq('is_visible', true)
           .or(`director.ilike.%${term}%,production_house.ilike.%${term}%`)
           .order('downloads', { ascending: false })
-          .limit(5)
+          .limit(8)
       );
 
-      searches.push(...directorSearch);
+      searches.push(...directorSearches);
 
       // Execute all searches
       const searchResults = await Promise.all(
@@ -125,14 +143,22 @@ const EnhancedSearchResults = () => {
 
         // Individual word matches in title
         searchTerms.forEach(term => {
-          if (title.includes(term)) score += 20;
+          if (title.includes(term)) score += 25;
+          
+          // Partial word matching
+          const titleWords = title.split(' ');
+          titleWords.forEach(word => {
+            if (word.includes(term) || term.includes(word)) {
+              score += 10;
+            }
+          });
         });
 
         // Genre matches
         if (movie.genre) {
           searchTerms.forEach(term => {
             if (movie.genre.some((g: string) => g.toLowerCase().includes(term))) {
-              score += 15;
+              score += 20;
             }
           });
         }
@@ -141,29 +167,32 @@ const EnhancedSearchResults = () => {
         if (movie.seo_tags) {
           searchTerms.forEach(term => {
             if (movie.seo_tags.some((tag: string) => tag.toLowerCase().includes(term))) {
-              score += 10;
+              score += 15;
             }
           });
         }
 
         // Director/Production matches
         if (movie.director && searchTerms.some(term => movie.director.toLowerCase().includes(term))) {
-          score += 25;
+          score += 30;
         }
         if (movie.production_house && searchTerms.some(term => movie.production_house.toLowerCase().includes(term))) {
-          score += 20;
+          score += 25;
         }
 
         // Boost popular content
-        score += Math.log(movie.downloads + 1) * 2;
+        score += Math.log(movie.downloads + 1) * 3;
 
         // Boost recent content
         const daysSinceCreation = (new Date().getTime() - new Date(movie.created_at).getTime()) / (1000 * 60 * 60 * 24);
-        if (daysSinceCreation < 30) score += 10;
-        if (daysSinceCreation < 7) score += 20;
+        if (daysSinceCreation < 30) score += 15;
+        if (daysSinceCreation < 7) score += 25;
 
         // Boost featured content
-        if (movie.featured) score += 15;
+        if (movie.featured) score += 20;
+
+        // Boost higher quality content
+        if (movie.imdb_rating && movie.imdb_rating > 7) score += 10;
 
         return { ...movie, relevance_score: score };
       });
@@ -171,13 +200,13 @@ const EnhancedSearchResults = () => {
       // Sort by relevance score and limit results
       const sortedResults = scoredResults
         .sort((a, b) => b.relevance_score - a.relevance_score)
-        .slice(0, 50); // Limit to 50 results
+        .slice(0, 60);
 
       setResults(sortedResults);
 
       // Track search
       await supabase.from('analytics').insert({
-        page_visited: `search/${encodeURIComponent(query)}`,
+        page_visited: `search/${encodeURIComponent(query || genre)}`,
         browser: navigator.userAgent,
         device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
         operating_system: navigator.platform
@@ -201,7 +230,9 @@ const EnhancedSearchResults = () => {
         <div className="container mx-auto">
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="mt-4 text-gray-400">Searching for "{query}"...</p>
+            <p className="mt-4 text-gray-400">
+              Searching for "{query || genre}"...
+            </p>
           </div>
         </div>
       </div>
@@ -214,7 +245,8 @@ const EnhancedSearchResults = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Search Results</h1>
           <p className="text-gray-400">
-            Found {results.length} results for "<span className="text-white font-medium">{query}</span>"
+            Found {results.length} results for "
+            <span className="text-white font-medium">{query || genre}</span>"
           </p>
         </div>
 
@@ -227,9 +259,10 @@ const EnhancedSearchResults = () => {
               <p>Search suggestions:</p>
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>Use movie titles like "The Big Bang Theory"</li>
-                <li>Try genre names like "Action", "Comedy", "Drama"</li>
-                <li>Search by actor or director names</li>
-                <li>Use quality terms like "1080p", "720p"</li>
+                <li>Try partial names like "big bang" for "The Big Bang Theory"</li>
+                <li>Search by genre names like "Action", "Comedy", "Drama"</li>
+                <li>Use actor or director names</li>
+                <li>Try quality terms like "1080p", "720p"</li>
               </ul>
             </div>
           </div>

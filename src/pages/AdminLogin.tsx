@@ -28,13 +28,19 @@ const AdminLogin = () => {
     const checkAuth = async () => {
       try {
         const token = localStorage.getItem("adminToken");
-        const authFlag = localStorage.getItem("isAuthenticated");
-        const sessionExpiry = localStorage.getItem("sessionExpiry");
+        const sessionActive = localStorage.getItem("adminSessionActive");
+        const lastActivity = localStorage.getItem("adminLastActivity");
 
-        if (token && authFlag === "true" && sessionExpiry && Date.now() < parseInt(sessionExpiry)) {
-          console.log("Already authenticated, redirecting to dashboard");
-          navigate("/admin/dashboard", { replace: true });
-          return;
+        if (token && sessionActive === "true" && lastActivity) {
+          const lastActivityTime = parseInt(lastActivity);
+          const currentTime = Date.now();
+          const maxInactiveTime = 24 * 60 * 60 * 1000; // 24 hours
+          
+          if (currentTime - lastActivityTime < maxInactiveTime) {
+            console.log("Already authenticated, redirecting to dashboard");
+            navigate("/admin/dashboard", { replace: true });
+            return;
+          }
         }
 
         const { data: { session } } = await supabase.auth.getSession();
@@ -44,11 +50,11 @@ const AdminLogin = () => {
           });
           
           if (isAdmin) {
-            const newExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
-            localStorage.setItem("adminToken", `admin-${Date.now()}`);
+            const currentTime = Date.now();
+            localStorage.setItem("adminToken", `admin-${currentTime}`);
             localStorage.setItem("adminEmail", session.user.email || "");
-            localStorage.setItem("isAuthenticated", "true");
-            localStorage.setItem("sessionExpiry", newExpiry.toString());
+            localStorage.setItem("adminSessionActive", "true");
+            localStorage.setItem("adminLastActivity", currentTime.toString());
             navigate("/admin/dashboard", { replace: true });
           }
         }
@@ -77,13 +83,13 @@ const AdminLogin = () => {
         console.log("Supabase auth failed, trying demo credentials");
         // Fallback to demo credentials
         if (email.trim() === "dinesh001kaushik@gmail.com" && password.trim() === "dinesh001") {
-          const sessionExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
-          localStorage.setItem("adminToken", `admin-${Date.now()}`);
+          const currentTime = Date.now();
+          localStorage.setItem("adminToken", `admin-${currentTime}`);
           localStorage.setItem("adminEmail", email);
-          localStorage.setItem("isAuthenticated", "true");
-          localStorage.setItem("sessionExpiry", sessionExpiry.toString());
+          localStorage.setItem("adminSessionActive", "true");
+          localStorage.setItem("adminLastActivity", currentTime.toString());
           
-          console.log("Demo login successful, session expires at:", new Date(sessionExpiry));
+          console.log("Demo login successful, session started at:", new Date(currentTime));
           
           toast({
             title: "Login successful",
@@ -108,14 +114,14 @@ const AdminLogin = () => {
         throw new Error("You don't have admin privileges");
       }
 
-      // Set admin credentials with extended session
-      const sessionExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
-      localStorage.setItem("adminToken", `admin-${Date.now()}`);
+      // Set admin credentials with persistent session
+      const currentTime = Date.now();
+      localStorage.setItem("adminToken", `admin-${currentTime}`);
       localStorage.setItem("adminEmail", data.user.email || "");
-      localStorage.setItem("isAuthenticated", "true");
-      localStorage.setItem("sessionExpiry", sessionExpiry.toString());
+      localStorage.setItem("adminSessionActive", "true");
+      localStorage.setItem("adminLastActivity", currentTime.toString());
       
-      console.log("Supabase login successful, session expires at:", new Date(sessionExpiry));
+      console.log("Supabase login successful, session started at:", new Date(currentTime));
       
       toast({
         title: "Login successful",

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import MFlixLogo from "../MFlixLogo";
 import { useGenreFiltering } from "@/hooks/useGenreFiltering";
+import GlobalSearchBar from "../enhanced/GlobalSearchBar";
 
 const UniversalHeader = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -63,7 +64,7 @@ const UniversalHeader = () => {
         <ChevronDown size={16} />
       </button>
       {activeDropdown === title && (
-        <div className="absolute top-full left-0 mt-2 w-64 bg-gray-800 rounded-lg shadow-lg border border-gray-700 z-[9999] max-h-80 overflow-y-auto">
+        <div className="absolute top-full left-0 mt-2 w-64 bg-gray-800 rounded-lg shadow-2xl border border-gray-700 z-[99999] max-h-80 overflow-y-auto">
           <div className="p-2">
             {items.map((item) => (
               <button
@@ -81,7 +82,7 @@ const UniversalHeader = () => {
   );
 
   return (
-    <header className="bg-gray-900 border-b border-gray-800 sticky top-0 z-[100] w-full">
+    <header className="bg-gray-900 border-b border-gray-800 sticky top-0 z-[1000] w-full">
       <div className="container mx-auto px-4">
         {/* Main Header */}
         <div className="flex items-center justify-between h-16">
@@ -90,24 +91,9 @@ const UniversalHeader = () => {
             <MFlixLogo />
           </Link>
 
-          {/* Desktop Search */}
+          {/* Desktop Search - Use GlobalSearchBar */}
           <div className="hidden md:flex flex-1 max-w-md mx-8">
-            <form onSubmit={handleSearch} className="w-full relative">
-              <Input
-                type="text"
-                placeholder="Search movies, series, anime..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-gray-800 border-gray-700 text-white placeholder-gray-400 pr-10"
-              />
-              <Button
-                type="submit"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 bg-transparent hover:bg-gray-700"
-              >
-                <Search size={18} />
-              </Button>
-            </form>
+            <GlobalSearchBar className="w-full" />
           </div>
 
           {/* Mobile Menu Button */}
@@ -160,24 +146,9 @@ const UniversalHeader = () => {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-gray-800 rounded-lg mt-2 p-4 space-y-4 relative z-[9999]">
-            {/* Mobile Search */}
-            <form onSubmit={handleSearch} className="w-full relative">
-              <Input
-                type="text"
-                placeholder="Search movies, series, anime..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-gray-700 border-gray-600 text-white placeholder-gray-400 pr-10"
-              />
-              <Button
-                type="submit"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 bg-transparent hover:bg-gray-600"
-              >
-                <Search size={18} />
-              </Button>
-            </form>
+          <div className="md:hidden bg-gray-800 rounded-lg mt-2 p-4 space-y-4 relative z-[99999]">
+            {/* Mobile Search - Use GlobalSearchBar */}
+            <GlobalSearchBar className="w-full" />
 
             {/* Mobile Navigation Links */}
             <div className="space-y-2">
@@ -228,12 +199,9 @@ const UniversalHeader = () => {
       {/* Close dropdown when clicking outside - with highest z-index */}
       {activeDropdown && (
         <div
-          className="fixed inset-0 z-[9998]"
+          className="fixed inset-0 z-[99998]"
           onClick={() => setActiveDropdown(null)}
         />
       )}
     </header>
   );
-};
-
-export default UniversalHeader;

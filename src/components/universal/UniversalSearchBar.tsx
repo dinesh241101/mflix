@@ -21,18 +21,19 @@ const UniversalSearchBar = ({
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
     }
   };
 
   return (
-    <form onSubmit={handleSearch} className={`flex gap-2 ${className}`}>
+    <form onSubmit={handleSearch} className={`flex gap-2 w-full ${className}`}>
       <div className="relative flex-1">
         <Input
           type="text"
           placeholder={placeholder}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400"
+          className="pl-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500"
         />
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
       </div>

@@ -24,15 +24,28 @@ const ShareLinks = ({ title = "Share this content" }: ShareLinksProps) => {
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = currentUrl;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
       document.body.appendChild(textArea);
+      textArea.focus();
       textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
       
-      toast({
-        title: "Link copied!",
-        description: "The URL has been copied to your clipboard.",
-      });
+      try {
+        document.execCommand('copy');
+        toast({
+          title: "Link copied!",
+          description: "The URL has been copied to your clipboard.",
+        });
+      } catch (err) {
+        toast({
+          title: "Copy failed",
+          description: "Could not copy the link. Please copy it manually.",
+          variant: "destructive"
+        });
+      }
+      
+      document.body.removeChild(textArea);
     }
   };
 
