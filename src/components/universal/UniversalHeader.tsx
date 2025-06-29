@@ -205,3 +205,6 @@ const UniversalHeader = () => {
       )}
     </header>
   );
+};
+
+export default UniversalHeader;
