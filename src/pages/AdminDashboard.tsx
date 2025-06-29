@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import AdminHeader from "@/components/admin/AdminHeader";
 import LoadingScreen from "@/components/LoadingScreen";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,8 +12,7 @@ import { Film, Tv, Gamepad2, Video, BarChart3, Settings, Users, Menu } from "luc
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [adminEmail, setAdminEmail] = useState("");
-  const [loading, setLoading] = useState(true);
+  const { isAuthenticated, isLoading, adminEmail, logout, requireAuth } = useAdminAuth();
   const [stats, setStats] = useState({
     totalMovies: 0,
     totalSeries: 0,
@@ -21,41 +21,20 @@ const AdminDashboard = () => {
     totalUsers: 0,
     totalDownloads: 0
   });
+  const [statsLoading, setStatsLoading] = useState(true);
 
-  // Check if user is logged in
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem("adminToken");
-        const email = localStorage.getItem("adminEmail");
-        const isAuth = localStorage.getItem("isAuthenticated");
-        
-        if (!token || isAuth !== "true") {
-          console.log("No valid admin token found, redirecting to login");
-          navigate("/admin/login");
-          return;
-        }
-        
-        setAdminEmail(email || "admin@example.com");
-        
-        // Load dashboard stats
-        await loadStats();
-        
-      } catch (error) {
-        console.error("Auth error:", error);
-        localStorage.removeItem("adminToken");
-        localStorage.removeItem("adminEmail");
-        localStorage.removeItem("isAuthenticated");
-        navigate("/admin/login");
+    if (!isLoading) {
+      if (!requireAuth()) {
+        return;
       }
-    };
-    
-    checkAuth();
-  }, [navigate]);
+      loadStats();
+    }
+  }, [isLoading, isAuthenticated]);
 
   const loadStats = async () => {
     try {
-      setLoading(true);
+      setStatsLoading(true);
       
       // Get movies count
       const { count: movieCount } = await supabase
@@ -92,7 +71,7 @@ const AdminDashboard = () => {
         totalSeries: seriesCount || 0,
         totalAnime: animeCount || 0,
         totalShorts: shortsCount || 0,
-        totalUsers: 0, // We don't have access to auth.users count
+        totalUsers: 0,
         totalDownloads
       });
       
@@ -104,26 +83,21 @@ const AdminDashboard = () => {
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setStatsLoading(false);
     }
   };
   
-  // Handle logout
-  const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminEmail");
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("sessionExpiry");
-    navigate("/admin/login");
-  };
-  
-  if (loading) {
+  if (isLoading || statsLoading) {
     return <LoadingScreen message="Loading Admin Dashboard" />;
+  }
+
+  if (!isAuthenticated) {
+    return <LoadingScreen message="Redirecting to login..." />;
   }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      <AdminHeader adminEmail={adminEmail} onLogout={handleLogout} />
+      <AdminHeader adminEmail={adminEmail} onLogout={logout} />
 
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>

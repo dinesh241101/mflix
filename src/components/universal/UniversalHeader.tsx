@@ -63,7 +63,7 @@ const UniversalHeader = () => {
         <ChevronDown size={16} />
       </button>
       {activeDropdown === title && (
-        <div className="absolute top-full left-0 mt-2 w-64 bg-gray-800 rounded-lg shadow-lg border border-gray-700 z-[60] max-h-80 overflow-y-auto">
+        <div className="absolute top-full left-0 mt-2 w-64 bg-gray-800 rounded-lg shadow-lg border border-gray-700 z-[9999] max-h-80 overflow-y-auto">
           <div className="p-2">
             {items.map((item) => (
               <button
@@ -81,7 +81,7 @@ const UniversalHeader = () => {
   );
 
   return (
-    <header className="bg-gray-900 border-b border-gray-800 sticky top-0 z-50 w-full">
+    <header className="bg-gray-900 border-b border-gray-800 sticky top-0 z-[100] w-full">
       <div className="container mx-auto px-4">
         {/* Main Header */}
         <div className="flex items-center justify-between h-16">
@@ -119,16 +119,6 @@ const UniversalHeader = () => {
           >
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </Button>
-
-          {/* Admin Link */}
-          <div className="hidden md:block flex-shrink-0">
-            <Link
-              to="/admin/login"
-              className="text-blue-400 hover:text-blue-300 transition-colors text-sm"
-            >
-              Admin
-            </Link>
-          </div>
         </div>
 
         {/* Desktop Navigation */}
@@ -170,7 +160,7 @@ const UniversalHeader = () => {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-gray-800 rounded-lg mt-2 p-4 space-y-4 relative z-[60]">
+          <div className="md:hidden bg-gray-800 rounded-lg mt-2 p-4 space-y-4 relative z-[9999]">
             {/* Mobile Search */}
             <form onSubmit={handleSearch} className="w-full relative">
               <Input
@@ -230,23 +220,15 @@ const UniversalHeader = () => {
                   </div>
                 </div>
               )}
-
-              <Link
-                to="/admin/login"
-                className="block text-blue-400 hover:text-blue-300 transition-colors py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Admin Panel
-              </Link>
             </div>
           </div>
         )}
       </div>
 
-      {/* Close dropdown when clicking outside - with higher z-index */}
+      {/* Close dropdown when clicking outside - with highest z-index */}
       {activeDropdown && (
         <div
-          className="fixed inset-0 z-[55]"
+          className="fixed inset-0 z-[9998]"
           onClick={() => setActiveDropdown(null)}
         />
       )}

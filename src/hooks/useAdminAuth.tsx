@@ -12,12 +12,25 @@ export const useAdminAuth = () => {
   useEffect(() => {
     checkAuthStatus();
     
-    // Set up periodic session refresh
+    // Set up periodic session refresh every 30 seconds
     const intervalId = setInterval(() => {
       refreshSession();
-    }, 5 * 60 * 1000); // Refresh every 5 minutes
+    }, 30 * 1000);
 
-    return () => clearInterval(intervalId);
+    // Listen for storage changes (for multi-tab support)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'isAuthenticated' && e.newValue === 'false') {
+        setIsAuthenticated(false);
+        setAdminEmail('');
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const checkAuthStatus = async () => {
@@ -27,34 +40,31 @@ export const useAdminAuth = () => {
       const sessionExpiry = localStorage.getItem("sessionExpiry");
       const authFlag = localStorage.getItem("isAuthenticated");
 
-      if (token && email && authFlag === "true") {
-        // Check if session is still valid
-        if (sessionExpiry && Date.now() < parseInt(sessionExpiry)) {
+      console.log("Checking auth status:", { token: !!token, email, authFlag, sessionExpiry });
+
+      if (token && email && authFlag === "true" && sessionExpiry) {
+        const expiryTime = parseInt(sessionExpiry);
+        const currentTime = Date.now();
+        
+        console.log("Session check:", { expiryTime, currentTime, valid: currentTime < expiryTime });
+        
+        if (currentTime < expiryTime) {
           setIsAuthenticated(true);
           setAdminEmail(email);
           
-          // Try to verify with Supabase if possible
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
-            const { data: isAdmin } = await supabase.rpc('is_admin', {
-              user_id: session.user.id
-            });
-            
-            if (isAdmin) {
-              // Extend session
-              extendSession();
-            }
-          }
+          // Extend session on activity
+          extendSession();
         } else {
-          // Session expired, clear auth
+          console.log("Session expired, clearing auth");
           clearAuth();
         }
       } else {
+        console.log("No valid session found");
         setIsAuthenticated(false);
       }
     } catch (error) {
       console.error("Auth check failed:", error);
-      // Don't clear auth on network errors, just log them
+      // Don't clear auth on errors, just log them
     } finally {
       setIsLoading(false);
     }
@@ -63,9 +73,18 @@ export const useAdminAuth = () => {
   const refreshSession = async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      if (token && isAuthenticated) {
-        // Extend session expiry
-        extendSession();
+      const authFlag = localStorage.getItem("isAuthenticated");
+      const sessionExpiry = localStorage.getItem("sessionExpiry");
+      
+      if (token && authFlag === "true" && sessionExpiry) {
+        const expiryTime = parseInt(sessionExpiry);
+        const currentTime = Date.now();
+        
+        // If session is about to expire in next 30 minutes, extend it
+        if (currentTime > expiryTime - (30 * 60 * 1000)) {
+          console.log("Extending session");
+          extendSession();
+        }
       }
     } catch (error) {
       console.error("Session refresh failed:", error);
@@ -73,11 +92,13 @@ export const useAdminAuth = () => {
   };
 
   const extendSession = () => {
-    const newExpiry = Date.now() + (8 * 60 * 60 * 1000); // 8 hours from now
+    const newExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours from now
     localStorage.setItem("sessionExpiry", newExpiry.toString());
+    console.log("Session extended to:", new Date(newExpiry));
   };
 
   const clearAuth = () => {
+    console.log("Clearing authentication");
     localStorage.removeItem("adminToken");
     localStorage.removeItem("adminEmail");
     localStorage.removeItem("isAuthenticated");

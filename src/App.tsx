@@ -31,7 +31,7 @@ function App() {
   return (
     <Router>
       <GlobalAdInterceptor>
-        <div className="min-h-screen bg-gray-900 w-full overflow-x-hidden">
+        <div className="min-h-screen bg-gray-900 w-full">
           <GlobalAdTracker />
           <Routes>
             <Route path="/" element={<Index />} />

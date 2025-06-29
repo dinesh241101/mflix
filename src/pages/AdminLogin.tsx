@@ -32,19 +32,19 @@ const AdminLogin = () => {
         const sessionExpiry = localStorage.getItem("sessionExpiry");
 
         if (token && authFlag === "true" && sessionExpiry && Date.now() < parseInt(sessionExpiry)) {
+          console.log("Already authenticated, redirecting to dashboard");
           navigate("/admin/dashboard", { replace: true });
           return;
         }
 
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          // Check if user is admin
           const { data: isAdmin } = await supabase.rpc('is_admin', {
             user_id: session.user.id
           });
           
           if (isAdmin) {
-            const newExpiry = Date.now() + (8 * 60 * 60 * 1000);
+            const newExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
             localStorage.setItem("adminToken", `admin-${Date.now()}`);
             localStorage.setItem("adminEmail", session.user.email || "");
             localStorage.setItem("isAuthenticated", "true");
@@ -65,6 +65,8 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
+      console.log("Attempting login with:", { email: email.trim() });
+      
       // First try Supabase authentication
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
@@ -72,13 +74,16 @@ const AdminLogin = () => {
       });
 
       if (error) {
+        console.log("Supabase auth failed, trying demo credentials");
         // Fallback to demo credentials
         if (email.trim() === "dinesh001kaushik@gmail.com" && password.trim() === "dinesh001") {
-          const sessionExpiry = Date.now() + (8 * 60 * 60 * 1000);
+          const sessionExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
           localStorage.setItem("adminToken", `admin-${Date.now()}`);
           localStorage.setItem("adminEmail", email);
           localStorage.setItem("isAuthenticated", "true");
           localStorage.setItem("sessionExpiry", sessionExpiry.toString());
+          
+          console.log("Demo login successful, session expires at:", new Date(sessionExpiry));
           
           toast({
             title: "Login successful",
@@ -104,11 +109,13 @@ const AdminLogin = () => {
       }
 
       // Set admin credentials with extended session
-      const sessionExpiry = Date.now() + (8 * 60 * 60 * 1000);
+      const sessionExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
       localStorage.setItem("adminToken", `admin-${Date.now()}`);
       localStorage.setItem("adminEmail", data.user.email || "");
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("sessionExpiry", sessionExpiry.toString());
+      
+      console.log("Supabase login successful, session expires at:", new Date(sessionExpiry));
       
       toast({
         title: "Login successful",
@@ -206,12 +213,6 @@ const AdminLogin = () => {
             </div>
           </div>
         </form>
-        
-        <div className="mt-6 text-center">
-          <a href="/" className="text-blue-400 hover:text-blue-300">
-            Back to Website
-          </a>
-        </div>
       </div>
     </div>
   );
