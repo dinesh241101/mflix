@@ -68,15 +68,15 @@ const EnhancedMovieGrid = ({ movies, title = "Movies", showAds = true }: Enhance
   };
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-white">{title}</h2>
+    <div className="w-full">
+      <h2 className="text-2xl font-bold text-white mb-6">{title}</h2>
       
-      {/* Mobile-optimized grid layout matching reference image */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
+      {/* Mobile-optimized grid layout - removed any black strips or spacing issues */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4 w-full">
         {displayedMovies.map((item, index) => {
           if (isAdItem(item)) {
             return (
-              <div key={item.id} className="col-span-1">
+              <div key={item.id} className="col-span-1 w-full">
                 <ResponsiveAdPlaceholder position="in-content" />
               </div>
             );
@@ -86,10 +86,10 @@ const EnhancedMovieGrid = ({ movies, title = "Movies", showAds = true }: Enhance
           return (
             <Card 
               key={movie.movie_id}
-              className="group cursor-pointer bg-gray-800 border-gray-700 hover:border-blue-500 transition-all duration-300 hover:scale-105 overflow-hidden"
+              className="group cursor-pointer bg-gray-800 border-gray-700 hover:border-blue-500 transition-all duration-300 hover:scale-105 overflow-hidden w-full"
               onClick={() => handleMovieClick(movie.movie_id, movie.content_type)}
             >
-              <CardContent className="p-0">
+              <CardContent className="p-0 relative">
                 <div className="relative aspect-[2/3] overflow-hidden">
                   {movie.poster_url ? (
                     <img
@@ -146,7 +146,7 @@ const EnhancedMovieGrid = ({ movies, title = "Movies", showAds = true }: Enhance
                   {/* Quality info */}
                   <div className="flex items-center justify-between text-xs text-gray-300">
                     <span>HD CAMRip</span>
-                    <span>720p - 480p - 1080p</span>
+                    <span className="hidden sm:inline">720p - 480p - 1080p</span>
                   </div>
                 </div>
               </CardContent>
@@ -157,7 +157,7 @@ const EnhancedMovieGrid = ({ movies, title = "Movies", showAds = true }: Enhance
       
       {/* Bottom ad if showAds is enabled */}
       {showAds && movies.length > 0 && (
-        <div className="mt-8">
+        <div className="mt-8 w-full">
           <ResponsiveAdPlaceholder position="content-bottom" />
         </div>
       )}

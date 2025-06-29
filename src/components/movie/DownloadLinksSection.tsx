@@ -1,9 +1,9 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, ExternalLink, Star, Zap, Globe } from "lucide-react";
+import { Download, ExternalLink, Star, Zap, Globe, Timer } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface DownloadLink {
@@ -24,6 +24,32 @@ const DownloadLinksSection = ({ downloadLinks, movieId }: DownloadLinksSectionPr
   const navigate = useNavigate();
   const [selectedQuality, setSelectedQuality] = useState<string | null>(null);
   const [showSources, setShowSources] = useState(false);
+  const [countdown, setCountdown] = useState(5);
+  const [isTimerActive, setIsTimerActive] = useState(false);
+  const [buttonsEnabled, setButtonsEnabled] = useState(false);
+
+  // Start timer when sources are shown
+  useEffect(() => {
+    if (showSources && !isTimerActive) {
+      setIsTimerActive(true);
+      setButtonsEnabled(false);
+      setCountdown(5);
+      
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setButtonsEnabled(true);
+            setIsTimerActive(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [showSources, isTimerActive]);
 
   // Mock download sources for demonstration
   const downloadSources = [
@@ -38,9 +64,12 @@ const DownloadLinksSection = ({ downloadLinks, movieId }: DownloadLinksSectionPr
   const handleQualitySelect = (quality: string) => {
     setSelectedQuality(quality);
     setShowSources(true);
+    setIsTimerActive(false); // Reset timer state
   };
 
   const handleDownloadClick = (source: any, linkId?: string) => {
+    if (!buttonsEnabled) return;
+    
     if (source.type === 'free') {
       // Navigate to ads page for free downloads
       navigate(`/download-ads/${movieId}/${linkId || 'default'}`);
@@ -95,7 +124,7 @@ const DownloadLinksSection = ({ downloadLinks, movieId }: DownloadLinksSectionPr
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full px-4 sm:px-0">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-white mb-2 flex items-center justify-center gap-2">
           <Download className="text-green-500" />
@@ -114,7 +143,7 @@ const DownloadLinksSection = ({ downloadLinks, movieId }: DownloadLinksSectionPr
                 {links.map((link, index) => (
                   <div
                     key={link.link_id}
-                    className="flex items-center justify-between p-4 rounded-lg bg-gray-700 hover:bg-gray-600 cursor-pointer transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg bg-gray-700 hover:bg-gray-600 cursor-pointer transition-colors gap-4"
                     onClick={() => handleQualitySelect(quality)}
                   >
                     <div className="flex items-center gap-4">
@@ -128,7 +157,7 @@ const DownloadLinksSection = ({ downloadLinks, movieId }: DownloadLinksSectionPr
                       )}
                     </div>
                     
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-between sm:justify-end gap-4">
                       <div className="text-right">
                         <div className="font-medium text-white">{link.file_size}</div>
                         {link.file_size_gb && (
@@ -152,32 +181,56 @@ const DownloadLinksSection = ({ downloadLinks, movieId }: DownloadLinksSectionPr
           ))}
         </div>
       ) : (
-        // Step 2: Source Selection
+        // Step 2: Source Selection with Timer
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h3 className="text-lg font-semibold text-white">
               🔗 Step 2: Choose Download Source ({selectedQuality})
             </h3>
             <Button
-              onClick={() => setShowSources(false)}
+              onClick={() => {
+                setShowSources(false);
+                setIsTimerActive(false);
+                setButtonsEnabled(false);
+              }}
               variant="outline"
               size="sm"
-              className="border-gray-600 text-gray-300"
+              className="border-gray-600 text-gray-300 w-full sm:w-auto"
             >
               ← Back to Quality Selection
             </Button>
           </div>
 
+          {/* Timer Display */}
+          {isTimerActive && (
+            <Card className="bg-blue-900 border-blue-700">
+              <CardContent className="p-4 text-center">
+                <div className="flex items-center justify-center gap-2 text-blue-200">
+                  <Timer size={20} />
+                  <span className="text-lg font-medium">
+                    Please wait {countdown} seconds to activate download buttons
+                  </span>
+                </div>
+                <div className="w-full bg-blue-800 rounded-full h-2 mt-3">
+                  <div 
+                    className="bg-blue-400 h-2 rounded-full transition-all duration-1000"
+                    style={{ width: `${((5 - countdown) / 5) * 100}%` }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="grid gap-3">
             {downloadSources.map((source, index) => (
               <Card key={source.id} className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <div className={`${source.color} w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold`}>
+                      <div className={`${source.color} w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0`}>
                         {source.icon}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="font-medium text-white">{source.name}</div>
                         <div className="text-sm text-gray-400 capitalize">
                           {source.type === 'free' && '🆓 Free Download (with ads)'}
@@ -190,22 +243,26 @@ const DownloadLinksSection = ({ downloadLinks, movieId }: DownloadLinksSectionPr
                     
                     <Button
                       onClick={() => handleDownloadClick(source, groupedLinks[selectedQuality!]?.[0]?.link_id)}
-                      className={`${source.color} hover:opacity-90 text-white`}
+                      className={`${source.color} hover:opacity-90 text-white ${!buttonsEnabled ? 'opacity-50 cursor-not-allowed' : ''} w-full sm:w-auto`}
+                      disabled={!buttonsEnabled}
                     >
                       {source.type === 'free' ? (
                         <>
                           <Download size={16} className="mr-2" />
-                          Download Free
+                          <span className="hidden sm:inline">Download Free</span>
+                          <span className="sm:hidden">Free</span>
                         </>
                       ) : source.type === 'premium' ? (
                         <>
                           <Zap size={16} className="mr-2" />
-                          Premium Download
+                          <span className="hidden sm:inline">Premium Download</span>
+                          <span className="sm:hidden">Premium</span>
                         </>
                       ) : (
                         <>
                           <ExternalLink size={16} className="mr-2" />
-                          Download
+                          <span className="hidden sm:inline">Download</span>
+                          <span className="sm:hidden">Link</span>
                         </>
                       )}
                     </Button>

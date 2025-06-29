@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import ClickAdModal from './ClickAdModal';
 
 const GlobalAdTracker = () => {
   const location = useLocation();
@@ -17,19 +16,38 @@ const GlobalAdTracker = () => {
     // Track page view
     trackPageView();
     
-    // Set up click tracking
-    const handleClick = () => {
-      const newCount = clickCount + 1;
-      setClickCount(newCount);
+    // Set up click tracking for every click
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const isClickableElement = target.closest('a, button, [role="button"], [onclick]');
       
-      // Check if we should show click-based ad (every 3 clicks)
-      if (newCount % 3 === 0) {
-        showClickBasedAd();
+      if (isClickableElement) {
+        const newCount = clickCount + 1;
+        setClickCount(newCount);
+        
+        // Show ad on every click (reduced frequency for better UX)
+        if (newCount % 2 === 0) { // Every 2nd click instead of every click
+          event.preventDefault();
+          event.stopPropagation();
+          showClickBasedAd();
+          
+          // Store the original action to execute after ad
+          setTimeout(() => {
+            const originalHref = (isClickableElement as HTMLAnchorElement).href;
+            const originalClick = (isClickableElement as HTMLElement).onclick;
+            
+            if (originalHref && originalHref !== '#') {
+              window.location.href = originalHref;
+            } else if (originalClick) {
+              originalClick.call(isClickableElement, event as any);
+            }
+          }, 3000); // Execute after 3 seconds
+        }
       }
     };
 
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
+    document.addEventListener('click', handleClick, true);
+    return () => document.removeEventListener('click', handleClick, true);
   }, [location.pathname, clickCount]);
 
   const trackPageView = async () => {
@@ -76,26 +94,36 @@ const GlobalAdTracker = () => {
     setCurrentClickAd(null);
   };
 
+  const handleAdClick = async () => {
+    if (currentClickAd?.target_url) {
+      // Track ad click
+      await supabase.from('analytics').insert({
+        page_visited: `click_ad_click/${currentClickAd.ad_id}`,
+        browser: navigator.userAgent,
+        device: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop',
+        operating_system: navigator.platform
+      });
+
+      window.open(currentClickAd.target_url, '_blank');
+      closeClickAd();
+    }
+  };
+
   return (
     <>
       {showClickAd && currentClickAd && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-md w-full relative">
+        <div className="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-sm w-full relative animate-in fade-in zoom-in duration-300">
             <button
               onClick={closeClickAd}
-              className="absolute top-2 right-2 p-2 hover:bg-gray-100 rounded-full z-10 text-gray-600"
+              className="absolute top-2 right-2 p-2 hover:bg-gray-100 rounded-full z-10 text-gray-600 text-xl leading-none"
             >
               ✕
             </button>
             
             <div 
               className="cursor-pointer"
-              onClick={() => {
-                if (currentClickAd.target_url) {
-                  window.open(currentClickAd.target_url, '_blank');
-                  closeClickAd();
-                }
-              }}
+              onClick={handleAdClick}
             >
               {currentClickAd.content_url ? (
                 <img 
@@ -105,14 +133,15 @@ const GlobalAdTracker = () => {
                 />
               ) : (
                 <div className="bg-gray-200 p-8 text-center text-gray-600 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-2">{currentClickAd.ad_name}</h3>
+                  <h3 className="text-lg font-semibold mb-2">{currentClickAd.ad_name || "Special Offer"}</h3>
                   <p>Click to learn more</p>
                 </div>
               )}
             </div>
             
-            <div className="p-4 text-center">
-              <p className="text-sm text-gray-500">Advertisement - Click count: {clickCount}</p>
+            <div className="p-4 text-center border-t">
+              <p className="text-sm text-gray-500">Advertisement</p>
+              <p className="text-xs text-gray-400 mt-1">Closes automatically in 3 seconds</p>
             </div>
           </div>
         </div>

@@ -27,6 +27,15 @@ const AdminLogin = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        const token = localStorage.getItem("adminToken");
+        const authFlag = localStorage.getItem("isAuthenticated");
+        const sessionExpiry = localStorage.getItem("sessionExpiry");
+
+        if (token && authFlag === "true" && sessionExpiry && Date.now() < parseInt(sessionExpiry)) {
+          navigate("/admin/dashboard", { replace: true });
+          return;
+        }
+
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           // Check if user is admin
@@ -35,9 +44,11 @@ const AdminLogin = () => {
           });
           
           if (isAdmin) {
+            const newExpiry = Date.now() + (8 * 60 * 60 * 1000);
             localStorage.setItem("adminToken", `admin-${Date.now()}`);
             localStorage.setItem("adminEmail", session.user.email || "");
             localStorage.setItem("isAuthenticated", "true");
+            localStorage.setItem("sessionExpiry", newExpiry.toString());
             navigate("/admin/dashboard", { replace: true });
           }
         }
@@ -63,10 +74,11 @@ const AdminLogin = () => {
       if (error) {
         // Fallback to demo credentials
         if (email.trim() === "dinesh001kaushik@gmail.com" && password.trim() === "dinesh001") {
+          const sessionExpiry = Date.now() + (8 * 60 * 60 * 1000);
           localStorage.setItem("adminToken", `admin-${Date.now()}`);
           localStorage.setItem("adminEmail", email);
           localStorage.setItem("isAuthenticated", "true");
-          localStorage.setItem("sessionExpiry", (Date.now() + (8 * 60 * 60 * 1000)).toString());
+          localStorage.setItem("sessionExpiry", sessionExpiry.toString());
           
           toast({
             title: "Login successful",
@@ -75,7 +87,6 @@ const AdminLogin = () => {
           
           setTimeout(() => {
             navigate("/admin/dashboard", { replace: true });
-            window.location.reload(); // Force page refresh to ensure state is updated
           }, 1000);
           return;
         }
@@ -92,11 +103,12 @@ const AdminLogin = () => {
         throw new Error("You don't have admin privileges");
       }
 
-      // Set admin credentials
+      // Set admin credentials with extended session
+      const sessionExpiry = Date.now() + (8 * 60 * 60 * 1000);
       localStorage.setItem("adminToken", `admin-${Date.now()}`);
       localStorage.setItem("adminEmail", data.user.email || "");
       localStorage.setItem("isAuthenticated", "true");
-      localStorage.setItem("sessionExpiry", (Date.now() + (8 * 60 * 60 * 1000)).toString());
+      localStorage.setItem("sessionExpiry", sessionExpiry.toString());
       
       toast({
         title: "Login successful",
@@ -105,7 +117,6 @@ const AdminLogin = () => {
       
       setTimeout(() => {
         navigate("/admin/dashboard", { replace: true });
-        window.location.reload(); // Force page refresh
       }, 1000);
       
     } catch (error: any) {
@@ -125,7 +136,7 @@ const AdminLogin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md p-8 bg-gray-800 rounded-lg shadow-lg border border-gray-700">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-2">
