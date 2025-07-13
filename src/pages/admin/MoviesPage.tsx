@@ -5,10 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 import AdminHeader from "@/components/admin/AdminHeader";
 import MoviesTab from "@/components/admin/movies/MoviesTab";
 import LoadingScreen from "@/components/LoadingScreen";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 
 const MoviesPage = () => {
-  const navigate = useNavigate();
-  const [adminEmail, setAdminEmail] = useState("");
+  const { adminEmail, loading: authLoading, isAuthenticated, handleLogout, updateActivity } = useAdminAuth();
   const [loading, setLoading] = useState(true);
   const [movies, setMovies] = useState<any[]>([]);
   const [selectedMovie, setSelectedMovie] = useState<any>(null);
@@ -33,7 +33,8 @@ const MoviesPage = () => {
     youtubeTrailer: "",
     downloadLinks: "",
     releaseMonth: "",
-    releaseYear: ""
+    releaseYear: "",
+    screenshots: ""
   });
   
   // Cast member form
@@ -48,55 +49,23 @@ const MoviesPage = () => {
   
   // Downloads form
   const [downloadsCount, setDownloadsCount] = useState(0);
-  
-  // Check if user is logged in and update activity
+
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem("adminToken");
-        const email = localStorage.getItem("adminEmail");
-        const sessionActive = localStorage.getItem("adminSessionActive");
-        
-        if (!token || sessionActive !== "true") {
-          navigate("/admin/login");
-          return;
-        }
-        
-        // Update activity on page load
-        localStorage.setItem("adminLastActivity", Date.now().toString());
-        
-        setAdminEmail(email || "admin@example.com");
-        
-        // Load movies data
-        fetchMovies();
-        
-      } catch (error) {
-        console.error("Auth error:", error);
-        localStorage.removeItem("adminToken");
-        localStorage.removeItem("adminEmail");
-        localStorage.removeItem("adminSessionActive");
-        localStorage.removeItem("adminLastActivity");
-        navigate("/admin/login");
-      }
-    };
-    
-    checkAuth();
-  }, [navigate]);
+    if (isAuthenticated) {
+      fetchMovies();
+    }
+  }, [isAuthenticated]);
 
-  // Update activity on any user interaction
-  const updateActivity = () => {
-    localStorage.setItem("adminLastActivity", Date.now().toString());
-  };
-
-  // Fetch movies data - now fetch all content types
+  // Fetch movies data
   const fetchMovies = async () => {
     try {
       setLoading(true);
-      updateActivity(); // Update activity
+      updateActivity();
       
       const { data: movieData, error: movieError } = await supabase
         .from('movies')
         .select('*')
+        .eq('content_type', 'movie')
         .order('created_at', { ascending: false });
       
       if (movieError) throw movieError;
@@ -113,33 +82,22 @@ const MoviesPage = () => {
     }
   };
   
-  // Handle logout
-  const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminEmail");
-    localStorage.removeItem("adminSessionActive");
-    localStorage.removeItem("adminLastActivity");
-    navigate("/admin/login");
-  };
-  
   // Handle movie upload
   const handleUploadMovie = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateActivity(); // Update activity
+    updateActivity();
     
     try {
       setLoading(true);
       
-      // Validate inputs
       if (!movieForm.title.trim()) {
         throw new Error("Movie title is required");
       }
 
-      // Convert form data for Supabase
       const movieData = {
         title: movieForm.title.trim(),
         year: movieForm.year ? parseInt(movieForm.year) : null,
-        content_type: movieForm.contentType || "movie",
+        content_type: "movie",
         genre: movieForm.genre ? movieForm.genre.split(',').map(g => g.trim()) : [],
         quality: movieForm.quality || "1080p",
         country: movieForm.country || "",
@@ -151,12 +109,10 @@ const MoviesPage = () => {
         poster_url: movieForm.posterUrl || "",
         featured: movieForm.featured || false,
         is_visible: true,
-        downloads: 0
+        downloads: 0,
+        screenshots: movieForm.screenshots ? movieForm.screenshots.split(',').map(s => s.trim()) : []
       };
       
-      console.log("Sending movie data:", movieData);
-      
-      // Insert movie data
       const { data: movie, error: movieError } = await supabase
         .from('movies')
         .insert(movieData)
@@ -168,9 +124,9 @@ const MoviesPage = () => {
         throw new Error(`Failed to upload movie: ${movieError.message}`);
       }
       
-      // If movie created successfully, add download links
+      // Process additional data
       if (movie && movie.movie_id) {
-        // Process download links if any
+        // Process download links
         if (movieForm.downloadLinks?.trim()) {
           const links = movieForm.downloadLinks.split('\n').filter(link => link.trim());
           
@@ -196,7 +152,7 @@ const MoviesPage = () => {
           }
         }
         
-        // Add YouTube trailer if provided
+        // Add YouTube trailer
         if (movieForm.youtubeTrailer?.trim()) {
           const { error: trailerError } = await supabase
             .from('media_clips')
@@ -235,10 +191,10 @@ const MoviesPage = () => {
           youtubeTrailer: "",
           downloadLinks: "",
           releaseMonth: "",
-          releaseYear: ""
+          releaseYear: "",
+          screenshots: ""
         });
         
-        // Reload movie data
         fetchMovies();
       }
     } catch (error: any) {
@@ -257,9 +213,8 @@ const MoviesPage = () => {
   const handleSelectMovieForCast = async (movieId: string) => {
     try {
       setLoading(true);
-      updateActivity(); // Update activity
+      updateActivity();
       
-      // Fetch movie details
       const { data: movie, error: movieError } = await supabase
         .from('movies')
         .select('*')
@@ -268,7 +223,6 @@ const MoviesPage = () => {
       
       if (movieError) throw movieError;
       
-      // Fetch existing cast for this movie
       const { data: cast, error: castError } = await supabase
         .from('movie_cast')
         .select('*')
@@ -295,16 +249,9 @@ const MoviesPage = () => {
   // Handle add cast member
   const handleAddCastMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateActivity(); // Update activity
+    updateActivity();
     
-    if (!selectedMovie) {
-      toast({
-        title: "Error",
-        description: "No movie selected",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (!selectedMovie) return;
     
     try {
       setLoading(true);
@@ -324,21 +271,16 @@ const MoviesPage = () => {
         description: "Cast member added successfully!",
       });
       
-      // Reset form
       setMovieCast([
         ...movieCast,
         {
-          // Temporary ID for UI purposes
           id: Date.now().toString(),
           actor_name: castForm.name,
           actor_role: castForm.role
         }
       ]);
       
-      setCastForm({
-        name: "",
-        role: ""
-      });
+      setCastForm({ name: "", role: "" });
       
     } catch (error: any) {
       console.error("Error adding cast member:", error);
@@ -356,7 +298,7 @@ const MoviesPage = () => {
   const handleDeleteCastMember = async (id: string) => {
     try {
       setLoading(true);
-      updateActivity(); // Update activity
+      updateActivity();
       
       const { error } = await supabase
         .from('movie_cast')
@@ -370,7 +312,6 @@ const MoviesPage = () => {
         description: "Cast member removed successfully!",
       });
       
-      // Update local state - use cast_id for DB entries or id for temporary entries
       setMovieCast(movieCast.filter(member => (member.cast_id !== id && member.id !== id)));
       
     } catch (error: any) {
@@ -388,11 +329,9 @@ const MoviesPage = () => {
   // Handle search for cast members
   const handleCastSearch = (query: string) => {
     setCastSearchQuery(query);
-    updateActivity(); // Update activity
+    updateActivity();
     
-    // Simulate search results based on query
     if (query.trim().length > 2) {
-      // Simulated results based on query
       const simulatedResults = [
         { name: `${query} Johnson`, role: "Actor" },
         { name: `${query} Smith`, role: "Actress" },
@@ -414,7 +353,7 @@ const MoviesPage = () => {
     });
     setCastSearchResults([]);
     setCastSearchQuery("");
-    updateActivity(); // Update activity
+    updateActivity();
   };
   
   // Handle downloads count update
@@ -423,7 +362,7 @@ const MoviesPage = () => {
     
     try {
       setLoading(true);
-      updateActivity(); // Update activity
+      updateActivity();
       
       const { error } = await supabase
         .from('movies')
@@ -437,7 +376,6 @@ const MoviesPage = () => {
         description: "Download count updated successfully!",
       });
       
-      // Update local state
       setSelectedMovie({
         ...selectedMovie,
         downloads: downloadsCount
@@ -455,8 +393,12 @@ const MoviesPage = () => {
     }
   };
   
-  if (loading) {
+  if (authLoading || loading) {
     return <LoadingScreen message="Loading Movies Page" />;
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (

@@ -5,6 +5,9 @@ import AnimeUploadForm from "./AnimeUploadForm";
 import AnimeList from "./AnimeList";
 import MovieDetailsDialog from "../movies/MovieDetailsDialog";
 import DownloadLinksForm from "../movies/DownloadLinksForm";
+import { Button } from "@/components/ui/button";
+import { Home } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface AnimeTabProps {
   animes: any[];
@@ -27,6 +30,7 @@ interface AnimeTabProps {
   castSearchResults: any[];
   selectCastFromSearch: (result: any) => void;
   isEditing: boolean;
+  updateActivity: () => void;
 }
 
 const AnimeTab = ({
@@ -49,18 +53,39 @@ const AnimeTab = ({
   handleCastSearch,
   castSearchResults,
   selectCastFromSearch,
-  isEditing
+  isEditing,
+  updateActivity
 }: AnimeTabProps) => {
   const [refreshList, setRefreshList] = useState(0);
+  const navigate = useNavigate();
 
   const handleRefreshList = () => {
     setRefreshList(prev => prev + 1);
+    updateActivity();
+  };
+
+  const handleTabChange = (value: string) => {
+    updateActivity();
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Anime Management</h1>
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              updateActivity();
+              navigate("/admin");
+            }}
+            className="text-white hover:bg-gray-700"
+          >
+            <Home size={18} className="mr-2" />
+            Admin Dashboard
+          </Button>
+          <h1 className="text-3xl font-bold">Anime Management</h1>
+        </div>
         {selectedAnime && (
           <div className="text-sm text-gray-400">
             Selected: {selectedAnime.title}
@@ -68,7 +93,7 @@ const AnimeTab = ({
         )}
       </div>
       
-      <Tabs defaultValue="upload" className="w-full">
+      <Tabs defaultValue="upload" className="w-full" onValueChange={handleTabChange}>
         <TabsList className="grid w-full grid-cols-4 bg-gray-800">
           <TabsTrigger value="upload">Upload Anime</TabsTrigger>
           <TabsTrigger value="list">Anime Library</TabsTrigger>
@@ -86,6 +111,7 @@ const AnimeTab = ({
             setAnimeForm={setAnimeForm}
             handleUploadAnime={handleUploadAnime}
             isEditing={isEditing}
+            updateActivity={updateActivity}
           />
         </TabsContent>
         
@@ -94,6 +120,7 @@ const AnimeTab = ({
             animes={animes}
             onSelectAnime={handleSelectAnimeForCast}
             refreshTrigger={refreshList}
+            updateActivity={updateActivity}
           />
         </TabsContent>
 
@@ -111,6 +138,7 @@ const AnimeTab = ({
                 movieId={selectedAnime.movie_id || selectedAnime.id}
                 contentType="anime"
                 onLinksAdded={handleRefreshList}
+                updateActivity={updateActivity}
               />
             ) : (
               <div className="bg-gray-800 rounded-lg p-6 text-center">
@@ -145,6 +173,7 @@ const AnimeTab = ({
                 handleCastSearch={handleCastSearch}
                 castSearchResults={castSearchResults}
                 selectCastFromSearch={selectCastFromSearch}
+                updateActivity={updateActivity}
               />
             ) : (
               <div className="bg-gray-800 rounded-lg p-6 text-center">

@@ -3,41 +3,17 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminHeader from "@/components/admin/AdminHeader";
-import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import MoviesTab from "@/components/admin/movies/MoviesTab";
 import LoadingScreen from "@/components/LoadingScreen";
-
-interface Series {
-  id: string;
-  movie_id: string;
-  title: string;
-  year?: number;
-  poster_url?: string;
-  content_type: string;
-  created_at?: string;
-  downloads?: number;
-}
-
-interface Cast {
-  id?: string;
-  cast_id?: string;
-  actor_name: string;
-  actor_role?: string;
-}
-
-interface CastSearchResult {
-  name: string;
-  role: string;
-}
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 
 const WebSeriesPage = () => {
-  const navigate = useNavigate();
-  const [adminEmail, setAdminEmail] = useState("");
+  const { adminEmail, loading: authLoading, isAuthenticated, handleLogout, updateActivity } = useAdminAuth();
   const [loading, setLoading] = useState(true);
-  const [series, setSeries] = useState<Series[]>([]);
-  const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
+  const [series, setSeries] = useState<any[]>([]);
+  const [selectedSeries, setSelectedSeries] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [seriesCast, setSeriesCast] = useState<Cast[]>([]);
+  const [seriesCast, setSeriesCast] = useState<any[]>([]);
   
   // Series form state
   const [seriesForm, setSeriesForm] = useState({
@@ -57,7 +33,8 @@ const WebSeriesPage = () => {
     youtubeTrailer: "",
     downloadLinks: "",
     releaseMonth: "",
-    releaseYear: ""
+    releaseYear: "",
+    screenshots: ""
   });
   
   // Cast member form
@@ -66,60 +43,25 @@ const WebSeriesPage = () => {
     role: ""
   });
   
-  // Google search results for cast members
-  const [castSearchResults, setCastSearchResults] = useState<CastSearchResult[]>([]);
+  // Search results for cast members
+  const [castSearchResults, setCastSearchResults] = useState<any[]>([]);
   const [castSearchQuery, setCastSearchQuery] = useState("");
   
   // Downloads form
   const [downloadsCount, setDownloadsCount] = useState(0);
-  
-  // Check if user is logged in
+
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem("adminToken");
-        const email = localStorage.getItem("adminEmail");
-        
-        if (!token) {
-          navigate("/admin/login");
-          return;
-        }
-        
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          throw new Error("Session expired");
-        }
-        
-        // Check if user is admin
-        const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin', {
-          user_id: user.id
-        });
-        
-        if (adminError || !isAdmin) {
-          throw new Error("Not authorized as admin");
-        }
-        
-        setAdminEmail(email || user.email || "admin@example.com");
-        
-        // Load series data
-        fetchSeries();
-        
-      } catch (error) {
-        console.error("Auth error:", error);
-        localStorage.removeItem("adminToken");
-        localStorage.removeItem("adminEmail");
-        navigate("/admin/login");
-      }
-    };
-    
-    checkAuth();
-  }, [navigate]);
+    if (isAuthenticated) {
+      fetchSeries();
+    }
+  }, [isAuthenticated]);
 
   // Fetch series data
   const fetchSeries = async () => {
     try {
       setLoading(true);
+      updateActivity();
+      
       const { data: seriesData, error: seriesError } = await supabase
         .from('movies')
         .select('*')
@@ -127,20 +69,7 @@ const WebSeriesPage = () => {
         .order('created_at', { ascending: false });
       
       if (seriesError) throw seriesError;
-      
-      // Map the data to match our Series interface
-      const mappedSeries: Series[] = (seriesData || []).map(item => ({
-        id: item.movie_id,
-        movie_id: item.movie_id,
-        title: item.title,
-        year: item.year,
-        poster_url: item.poster_url,
-        content_type: item.content_type,
-        created_at: item.created_at,
-        downloads: item.downloads
-      }));
-      
-      setSeries(mappedSeries);
+      setSeries(seriesData || []);
     } catch (error: any) {
       console.error("Error fetching series:", error);
       toast({
@@ -153,21 +82,18 @@ const WebSeriesPage = () => {
     }
   };
   
-  // Handle logout
-  const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminEmail");
-    navigate("/admin/login");
-  };
-  
   // Handle series upload
   const handleUploadSeries = async (e: React.FormEvent) => {
     e.preventDefault();
+    updateActivity();
     
     try {
       setLoading(true);
       
-      // Convert form data for Supabase
+      if (!seriesForm.title.trim()) {
+        throw new Error("Series title is required");
+      }
+
       const seriesData = {
         title: seriesForm.title,
         year: parseInt(seriesForm.year),
@@ -182,10 +108,11 @@ const WebSeriesPage = () => {
         seo_tags: seriesForm.seoTags.split(',').map(t => t.trim()),
         poster_url: seriesForm.posterUrl,
         featured: seriesForm.featured,
-        downloads: 0
+        downloads: 0,
+        is_visible: true,
+        screenshots: seriesForm.screenshots ? seriesForm.screenshots.split(',').map(s => s.trim()) : []
       };
       
-      // Insert series data
       const { data: series, error: seriesError } = await supabase
         .from('movies')
         .insert(seriesData)
@@ -194,9 +121,8 @@ const WebSeriesPage = () => {
       
       if (seriesError) throw seriesError;
       
-      // If series created successfully, add download links
+      // Process additional data like movies
       if (series && series.movie_id) {
-        // Process download links if any
         if (seriesForm.downloadLinks.trim()) {
           const links = seriesForm.downloadLinks.split('\n').filter(link => link.trim());
           
@@ -218,7 +144,6 @@ const WebSeriesPage = () => {
           }
         }
         
-        // Add YouTube trailer if provided
         if (seriesForm.youtubeTrailer.trim()) {
           await supabase
             .from('media_clips')
@@ -253,10 +178,10 @@ const WebSeriesPage = () => {
           youtubeTrailer: "",
           downloadLinks: "",
           releaseMonth: "",
-          releaseYear: ""
+          releaseYear: "",
+          screenshots: ""
         });
         
-        // Reload series data
         fetchSeries();
       }
     } catch (error: any) {
@@ -271,12 +196,11 @@ const WebSeriesPage = () => {
     }
   };
 
-  // Handle series select for cast management
   const handleSelectSeriesForCast = async (seriesId: string) => {
     try {
       setLoading(true);
+      updateActivity();
       
-      // Fetch series details
       const { data: seriesData, error: seriesError } = await supabase
         .from('movies')
         .select('*')
@@ -285,7 +209,6 @@ const WebSeriesPage = () => {
       
       if (seriesError) throw seriesError;
       
-      // Fetch existing cast for this series
       const { data: cast, error: castError } = await supabase
         .from('movie_cast')
         .select('*')
@@ -293,19 +216,7 @@ const WebSeriesPage = () => {
       
       if (castError) throw castError;
       
-      // Map the series data to match our Series interface
-      const mappedSeries: Series = {
-        id: seriesData.movie_id,
-        movie_id: seriesData.movie_id,
-        title: seriesData.title,
-        year: seriesData.year,
-        poster_url: seriesData.poster_url,
-        content_type: seriesData.content_type,
-        created_at: seriesData.created_at,
-        downloads: seriesData.downloads
-      };
-      
-      setSelectedSeries(mappedSeries);
+      setSelectedSeries(seriesData);
       setSeriesCast(cast || []);
       setDownloadsCount(seriesData.downloads || 0);
       
@@ -320,19 +231,12 @@ const WebSeriesPage = () => {
       setLoading(false);
     }
   };
-  
-  // Handle add cast member
+
   const handleAddCastMember = async (e: React.FormEvent) => {
     e.preventDefault();
+    updateActivity();
     
-    if (!selectedSeries) {
-      toast({
-        title: "Error",
-        description: "No series selected",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (!selectedSeries) return;
     
     try {
       setLoading(true);
@@ -340,7 +244,7 @@ const WebSeriesPage = () => {
       const { error } = await supabase
         .from('movie_cast')
         .insert({
-          movie_id: selectedSeries.id,
+          movie_id: selectedSeries.movie_id,
           actor_name: castForm.name,
           actor_role: castForm.role
         });
@@ -352,20 +256,16 @@ const WebSeriesPage = () => {
         description: "Cast member added successfully!",
       });
       
-      // Reset form
       setSeriesCast([
         ...seriesCast,
         {
-          id: Date.now().toString(), // Temporary ID
+          id: Date.now().toString(),
           actor_name: castForm.name,
           actor_role: castForm.role
         }
       ]);
       
-      setCastForm({
-        name: "",
-        role: ""
-      });
+      setCastForm({ name: "", role: "" });
       
     } catch (error: any) {
       console.error("Error adding cast member:", error);
@@ -378,11 +278,11 @@ const WebSeriesPage = () => {
       setLoading(false);
     }
   };
-  
-  // Simplified delete cast member to avoid type issues
+
   const handleDeleteCastMember = async (id: string) => {
     try {
       setLoading(true);
+      updateActivity();
       
       const { error } = await supabase
         .from('movie_cast')
@@ -409,14 +309,12 @@ const WebSeriesPage = () => {
       setLoading(false);
     }
   };
-  
-  // Handle search for cast members using Google
+
   const handleCastSearch = async (query: string) => {
     setCastSearchQuery(query);
+    updateActivity();
     
-    // Simulate Google search results
     if (query.trim().length > 2) {
-      // Simulated results based on query
       const simulatedResults = [
         { name: `${query} Johnson`, role: "Actor" },
         { name: `${query} Smith`, role: "Actress" },
@@ -424,28 +322,28 @@ const WebSeriesPage = () => {
         { name: `${query} Brown`, role: "Producer" }
       ];
       
-      setCastSearchResults(simulatedResults as any);
+      setCastSearchResults(simulatedResults);
     } else {
       setCastSearchResults([]);
     }
   };
-  
-  // Select cast member from search results
-  const selectCastFromSearch = (result: CastSearchResult) => {
+
+  const selectCastFromSearch = (result: any) => {
     setCastForm({
       name: result.name,
       role: ""
     });
     setCastSearchResults([]);
     setCastSearchQuery("");
+    updateActivity();
   };
-  
-  // Handle downloads count update
+
   const handleUpdateDownloads = async () => {
     if (!selectedSeries) return;
     
     try {
       setLoading(true);
+      updateActivity();
       
       const { error } = await supabase
         .from('movies')
@@ -459,13 +357,10 @@ const WebSeriesPage = () => {
         description: "Download count updated successfully!",
       });
       
-      // Update local state
-      if (selectedSeries) {
-        setSelectedSeries({
-          ...selectedSeries,
-          downloads: downloadsCount
-        });
-      }
+      setSelectedSeries({
+        ...selectedSeries,
+        downloads: downloadsCount
+      });
       
     } catch (error: any) {
       console.error("Error updating downloads:", error);
@@ -479,45 +374,12 @@ const WebSeriesPage = () => {
     }
   };
   
-  // Handle delete series
-  const [deleting, setDeleting] = useState(false);
-  const [seriesIdToDelete, setSeriesIdToDelete] = useState<string | null>(null);
-  
-  const handleDeleteSeries = async (id: string) => {
-    try {
-      setDeleting(true);
-      
-      // Simplify the deletion logic to avoid TypeScript error
-      const { error } = await supabase
-        .from('movies')
-        .delete()
-        .eq('movie_id', id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "Web series deleted successfully",
-      });
-      
-      // Update local state
-      setSeries(series.filter(s => s.movie_id !== id));
-      
-    } catch (error: any) {
-      console.error('Error deleting series:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete web series",
-        variant: "destructive"
-      });
-    } finally {
-      setDeleting(false);
-      setSeriesIdToDelete(null);
-    }
-  };
-  
-  if (loading) {
+  if (authLoading || loading) {
     return <LoadingScreen message="Loading Web Series Page" />;
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (

@@ -59,6 +59,36 @@ export type Database = {
           },
         ]
       }
+      ad_placements: {
+        Row: {
+          ad_type: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          page_type: string
+          position: string
+          updated_at: string | null
+        }
+        Insert: {
+          ad_type?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          page_type: string
+          position: string
+          updated_at?: string | null
+        }
+        Update: {
+          ad_type?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          page_type?: string
+          position?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       ad_settings: {
         Row: {
           created_at: string | null
@@ -522,9 +552,12 @@ export type Database = {
           poster_url: string | null
           production_house: string | null
           quality: string | null
+          release_date: string | null
+          screenshots: string[] | null
           seo_tags: string[] | null
           storyline: string | null
           title: string
+          trailer_url: string | null
           updated_at: string | null
           user_rating: number | null
           year: number | null
@@ -544,9 +577,12 @@ export type Database = {
           poster_url?: string | null
           production_house?: string | null
           quality?: string | null
+          release_date?: string | null
+          screenshots?: string[] | null
           seo_tags?: string[] | null
           storyline?: string | null
           title: string
+          trailer_url?: string | null
           updated_at?: string | null
           user_rating?: number | null
           year?: number | null
@@ -566,9 +602,12 @@ export type Database = {
           poster_url?: string | null
           production_house?: string | null
           quality?: string | null
+          release_date?: string | null
+          screenshots?: string[] | null
           seo_tags?: string[] | null
           storyline?: string | null
           title?: string
+          trailer_url?: string | null
           updated_at?: string | null
           user_rating?: number | null
           year?: number | null
@@ -578,24 +617,66 @@ export type Database = {
       shorts: {
         Row: {
           created_at: string | null
+          duration: number | null
+          is_visible: boolean | null
           short_id: string
           thumbnail_url: string | null
           title: string
+          video_file_url: string | null
           video_url: string
+          youtube_url: string | null
         }
         Insert: {
           created_at?: string | null
+          duration?: number | null
+          is_visible?: boolean | null
           short_id?: string
           thumbnail_url?: string | null
           title: string
+          video_file_url?: string | null
           video_url: string
+          youtube_url?: string | null
         }
         Update: {
           created_at?: string | null
+          duration?: number | null
+          is_visible?: boolean | null
           short_id?: string
           thumbnail_url?: string | null
           title?: string
+          video_file_url?: string | null
           video_url?: string
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
+      uploaded_images: {
+        Row: {
+          content_type: string | null
+          created_at: string | null
+          file_path: string
+          file_size: number | null
+          filename: string
+          id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string | null
+          file_path: string
+          file_size?: number | null
+          filename: string
+          id?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string | null
+          file_path?: string
+          file_size?: number | null
+          filename?: string
+          id?: string
+          uploaded_by?: string | null
         }
         Relationships: []
       }
@@ -617,6 +698,45 @@ export type Database = {
           created_at?: string | null
           role_id?: string
           role_name?: string
+        }
+        Relationships: []
+      }
+      video_ads: {
+        Row: {
+          ad_name: string
+          created_at: string | null
+          duration: number
+          id: string
+          is_active: boolean | null
+          skip_after: number | null
+          target_url: string | null
+          trigger_events: string[] | null
+          updated_at: string | null
+          video_url: string
+        }
+        Insert: {
+          ad_name: string
+          created_at?: string | null
+          duration?: number
+          id?: string
+          is_active?: boolean | null
+          skip_after?: number | null
+          target_url?: string | null
+          trigger_events?: string[] | null
+          updated_at?: string | null
+          video_url: string
+        }
+        Update: {
+          ad_name?: string
+          created_at?: string | null
+          duration?: number
+          id?: string
+          is_active?: boolean | null
+          skip_after?: number | null
+          target_url?: string | null
+          trigger_events?: string[] | null
+          updated_at?: string | null
+          video_url?: string
         }
         Relationships: []
       }

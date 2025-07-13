@@ -1,10 +1,10 @@
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminHeader from "@/components/admin/AdminHeader";
 import LoadingScreen from "@/components/LoadingScreen";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import {
   Table,
   TableBody,
@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Play } from "lucide-react";
+import { Edit, Trash2, Play, Upload, Eye, EyeOff } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,20 +28,23 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 
 interface Short {
   short_id: string;
   title: string;
   video_url: string;
+  youtube_url?: string;
+  video_file_url?: string;
   thumbnail_url: string | null;
+  duration?: number;
+  is_visible: boolean;
   created_at: string;
 }
 
 const ShortsPage = () => {
-  const navigate = useNavigate();
-  const [adminEmail, setAdminEmail] = useState("");
+  const { adminEmail, loading: authLoading, isAuthenticated, handleLogout, updateActivity } = useAdminAuth();
   const [loading, setLoading] = useState(true);
   const [shorts, setShorts] = useState<Short[]>([]);
   const [shortToDelete, setShortToDelete] = useState<string | null>(null);
@@ -50,51 +53,24 @@ const ShortsPage = () => {
   const [newShort, setNewShort] = useState({
     title: "",
     video_url: "",
+    youtube_url: "",
+    video_file_url: "",
     thumbnail_url: "",
+    duration: "",
+    is_visible: true,
   });
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem("adminToken");
-        const email = localStorage.getItem("adminEmail");
-
-        if (!token) {
-          navigate("/admin/login");
-          return;
-        }
-
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
-          throw new Error("Session expired");
-        }
-
-        const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin', {
-          user_id: user.id
-        });
-
-        if (adminError || !isAdmin) {
-          throw new Error("Not authorized as admin");
-        }
-
-        setAdminEmail(email || user.email || "admin@example.com");
-        fetchShorts();
-
-      } catch (error) {
-        console.error("Auth error:", error);
-        localStorage.removeItem("adminToken");
-        localStorage.removeItem("adminEmail");
-        navigate("/admin/login");
-      }
-    };
-
-    checkAuth();
-  }, [navigate]);
+    if (isAuthenticated) {
+      fetchShorts();
+    }
+  }, [isAuthenticated]);
 
   const fetchShorts = async () => {
     try {
       setLoading(true);
+      updateActivity();
+      
       const { data, error } = await supabase
         .from('shorts')
         .select('*')
@@ -114,34 +90,42 @@ const ShortsPage = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminEmail");
-    navigate("/admin/login");
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setNewShort(prev => ({ ...prev, [name]: value }));
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setNewShort(prev => ({ 
+      ...prev, 
+      [name]: type === 'checkbox' ? checked : value 
+    }));
   };
 
   const handleUploadShort = async (e: React.FormEvent) => {
     e.preventDefault();
+    updateActivity();
 
     try {
       setUploading(true);
 
-      if (!newShort.title.trim() || !newShort.video_url.trim()) {
-        throw new Error("Title and video URL are required");
+      if (!newShort.title.trim()) {
+        throw new Error("Title is required");
       }
+
+      if (!newShort.video_url.trim() && !newShort.youtube_url.trim() && !newShort.video_file_url.trim()) {
+        throw new Error("At least one video source is required");
+      }
+
+      const shortData = {
+        title: newShort.title,
+        video_url: newShort.video_url || newShort.youtube_url || newShort.video_file_url,
+        youtube_url: newShort.youtube_url || null,
+        video_file_url: newShort.video_file_url || null,
+        thumbnail_url: newShort.thumbnail_url || null,
+        duration: newShort.duration ? parseInt(newShort.duration) : null,
+        is_visible: newShort.is_visible
+      };
 
       const { error } = await supabase
         .from('shorts')
-        .insert({
-          title: newShort.title,
-          video_url: newShort.video_url,
-          thumbnail_url: newShort.thumbnail_url || null
-        });
+        .insert(shortData);
 
       if (error) throw error;
 
@@ -153,7 +137,11 @@ const ShortsPage = () => {
       setNewShort({
         title: "",
         video_url: "",
+        youtube_url: "",
+        video_file_url: "",
         thumbnail_url: "",
+        duration: "",
+        is_visible: true,
       });
 
       fetchShorts();
@@ -170,9 +158,38 @@ const ShortsPage = () => {
     }
   };
 
+  const handleToggleVisibility = async (shortId: string, currentVisibility: boolean) => {
+    try {
+      updateActivity();
+      
+      const { error } = await supabase
+        .from('shorts')
+        .update({ is_visible: !currentVisibility })
+        .eq('short_id', shortId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Short ${!currentVisibility ? 'made visible' : 'hidden'} successfully`,
+      });
+
+      fetchShorts();
+
+    } catch (error: any) {
+      console.error("Error toggling visibility:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update visibility",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleDeleteShort = async (id: string) => {
     try {
       setDeleting(true);
+      updateActivity();
       
       const { error } = await supabase
         .from('shorts')
@@ -201,8 +218,12 @@ const ShortsPage = () => {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return <LoadingScreen message="Loading Shorts Page" />;
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (
@@ -212,14 +233,17 @@ const ShortsPage = () => {
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-6">Shorts Management</h1>
 
-        <Card className="mb-8">
+        <Card className="mb-8 bg-gray-800 border-gray-700">
           <CardHeader>
-            <CardTitle>Upload New Short</CardTitle>
+            <CardTitle className="text-white flex items-center">
+              <Upload className="mr-2" />
+              Upload New Short
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleUploadShort} className="space-y-4">
               <div>
-                <Label htmlFor="title">Title</Label>
+                <Label htmlFor="title" className="text-white">Title</Label>
                 <Input
                   type="text"
                   id="title"
@@ -227,30 +251,85 @@ const ShortsPage = () => {
                   value={newShort.title}
                   onChange={handleInputChange}
                   required
+                  className="bg-gray-700 border-gray-600 text-white"
                 />
               </div>
-              <div>
-                <Label htmlFor="video_url">Video URL</Label>
-                <Input
-                  type="url"
-                  id="video_url"
-                  name="video_url"
-                  value={newShort.video_url}
-                  onChange={handleInputChange}
-                  required
-                />
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="video_url" className="text-white">Direct Video URL</Label>
+                  <Input
+                    type="url"
+                    id="video_url"
+                    name="video_url"
+                    value={newShort.video_url}
+                    onChange={handleInputChange}
+                    className="bg-gray-700 border-gray-600 text-white"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="youtube_url" className="text-white">YouTube URL</Label>
+                  <Input
+                    type="url"
+                    id="youtube_url"
+                    name="youtube_url"
+                    value={newShort.youtube_url}
+                    onChange={handleInputChange}
+                    className="bg-gray-700 border-gray-600 text-white"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="video_file_url" className="text-white">Uploaded File URL</Label>
+                  <Input
+                    type="url"
+                    id="video_file_url"
+                    name="video_file_url"
+                    value={newShort.video_file_url}
+                    onChange={handleInputChange}
+                    className="bg-gray-700 border-gray-600 text-white"
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="thumbnail_url">Thumbnail URL</Label>
-                <Input
-                  type="url"
-                  id="thumbnail_url"
-                  name="thumbnail_url"
-                  value={newShort.thumbnail_url}
-                  onChange={handleInputChange}
-                />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="thumbnail_url" className="text-white">Thumbnail URL</Label>
+                  <Input
+                    type="url"
+                    id="thumbnail_url"
+                    name="thumbnail_url"
+                    value={newShort.thumbnail_url}
+                    onChange={handleInputChange}
+                    className="bg-gray-700 border-gray-600 text-white"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="duration" className="text-white">Duration (seconds)</Label>
+                  <Input
+                    type="number"
+                    id="duration"
+                    name="duration"
+                    value={newShort.duration}
+                    onChange={handleInputChange}
+                    className="bg-gray-700 border-gray-600 text-white"
+                  />
+                </div>
               </div>
-              <Button type="submit" disabled={uploading} className="w-full">
+              
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is_visible"
+                  name="is_visible"
+                  checked={newShort.is_visible}
+                  onCheckedChange={(checked) => setNewShort(prev => ({ ...prev, is_visible: checked }))}
+                />
+                <Label htmlFor="is_visible" className="text-white">Make visible to public</Label>
+              </div>
+              
+              <Button type="submit" disabled={uploading} className="w-full bg-blue-600 hover:bg-blue-700">
                 {uploading ? "Uploading..." : "Upload Short"}
               </Button>
             </form>
@@ -263,53 +342,79 @@ const ShortsPage = () => {
             <p className="text-gray-400">No shorts found</p>
           </div>
         ) : (
-          <Table className="bg-gray-800 rounded-lg">
-            <TableCaption>List of all shorts</TableCaption>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Video URL</TableHead>
-                <TableHead>Thumbnail URL</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {shorts.map((short) => (
-                <TableRow key={short.short_id}>
-                  <TableCell className="font-medium">{short.title}</TableCell>
-                  <TableCell>
-                    <a href={short.video_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                      View Video
-                    </a>
-                  </TableCell>
-                  <TableCell>
-                    {short.thumbnail_url ? (
-                      <a href={short.thumbnail_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                        View Thumbnail
-                      </a>
-                    ) : (
-                      <span className="text-gray-500">No thumbnail</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon">
-                        <Edit size={16} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-red-500 hover:text-red-600"
-                        onClick={() => setShortToDelete(short.short_id)}
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <Card className="bg-gray-800 border-gray-700">
+            <CardContent className="p-0">
+              <Table>
+                <TableCaption className="text-gray-400">List of all shorts</TableCaption>
+                <TableHeader>
+                  <TableRow className="border-gray-700">
+                    <TableHead className="text-gray-300">Title</TableHead>
+                    <TableHead className="text-gray-300">Video Source</TableHead>
+                    <TableHead className="text-gray-300">Duration</TableHead>
+                    <TableHead className="text-gray-300">Visibility</TableHead>
+                    <TableHead className="text-right text-gray-300">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {shorts.map((short) => (
+                    <TableRow key={short.short_id} className="border-gray-700">
+                      <TableCell className="font-medium text-white">{short.title}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {short.youtube_url && (
+                            <a href={short.youtube_url} target="_blank" rel="noopener noreferrer" className="text-red-500 hover:underline text-sm block">
+                              YouTube
+                            </a>
+                          )}
+                          {short.video_file_url && (
+                            <a href={short.video_file_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-sm block">
+                              Uploaded File
+                            </a>
+                          )}
+                          {short.video_url && !short.youtube_url && !short.video_file_url && (
+                            <a href={short.video_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-sm block">
+                              Direct Link
+                            </a>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-gray-300">
+                        {short.duration ? `${short.duration}s` : 'Not set'}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleVisibility(short.short_id, short.is_visible)}
+                          className={short.is_visible ? "text-green-500 hover:text-green-400" : "text-red-500 hover:text-red-400"}
+                        >
+                          {short.is_visible ? <Eye size={16} /> : <EyeOff size={16} />}
+                          <span className="ml-1 text-xs">
+                            {short.is_visible ? 'Visible' : 'Hidden'}
+                          </span>
+                        </Button>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" className="text-blue-500 hover:text-blue-400">
+                            <Edit size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-500 hover:text-red-600"
+                            onClick={() => setShortToDelete(short.short_id)}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         )}
 
         <AlertDialog open={!!shortToDelete} onOpenChange={(open) => !open && setShortToDelete(null)}>
@@ -321,7 +426,9 @@ const ShortsPage = () => {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={deleting} className="bg-gray-700 text-white border-gray-600">
+                Cancel
+              </AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
                   if (shortToDelete) {
