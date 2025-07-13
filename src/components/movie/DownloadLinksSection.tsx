@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Download } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface DownloadLink {
   link_id: string;
@@ -19,17 +19,11 @@ interface DownloadLinksSectionProps {
 }
 
 const DownloadLinksSection = ({ movieId, downloadLinks }: DownloadLinksSectionProps) => {
+  const navigate = useNavigate();
+
   const handleDownload = (link: DownloadLink) => {
-    // Track download
-    console.log(`Starting download for ${link.quality} - ${link.file_size}`);
-    
-    // Open download link
-    window.open(link.download_url, '_blank');
-    
-    toast({
-      title: "Download started",
-      description: `Downloading ${link.quality} version (${link.file_size})`,
-    });
+    // Navigate to the new download sources page
+    navigate(`/download-sources/${movieId}/${link.link_id}`);
   };
 
   const qualityOrder = ['4K', '1080p', '720p', '480p'];
@@ -52,9 +46,9 @@ const DownloadLinksSection = ({ movieId, downloadLinks }: DownloadLinksSectionPr
           {sortedLinks.map((link) => (
             <div
               key={link.link_id}
-              className="flex items-center justify-between p-4 bg-gray-700 rounded-lg border border-gray-600 hover:border-blue-500 transition-colors"
+              className="flex items-center justify-between p-4 bg-gray-700 rounded-lg border border-gray-600 hover:border-blue-500 transition-colors flex-col sm:flex-row gap-4"
             >
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-4 w-full sm:w-auto">
                 <div className="text-center">
                   <Badge 
                     className={`text-sm font-semibold ${
@@ -69,7 +63,7 @@ const DownloadLinksSection = ({ movieId, downloadLinks }: DownloadLinksSectionPr
                   <p className="text-xs text-gray-400 mt-1">{link.resolution}</p>
                 </div>
                 
-                <div>
+                <div className="text-center sm:text-left">
                   <p className="text-white font-medium">
                     {link.quality} Quality
                   </p>
@@ -81,7 +75,7 @@ const DownloadLinksSection = ({ movieId, downloadLinks }: DownloadLinksSectionPr
               
               <Button
                 onClick={() => handleDownload(link)}
-                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2"
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 w-full sm:w-auto"
               >
                 <Download size={16} className="mr-2" />
                 Download
@@ -94,7 +88,8 @@ const DownloadLinksSection = ({ movieId, downloadLinks }: DownloadLinksSectionPr
           <h4 className="text-blue-400 font-semibold mb-2">Download Instructions:</h4>
           <ul className="text-sm text-gray-400 space-y-1">
             <li>• Choose your preferred quality and file size</li>
-            <li>• Higher quality = larger file size</li>
+            <li>• Select from multiple download sources</li>
+            <li>• Complete simple verification process</li>
             <li>• 1080p recommended for best quality</li>
             <li>• 720p recommended for mobile devices</li>
           </ul>

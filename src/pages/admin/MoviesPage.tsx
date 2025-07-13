@@ -49,34 +49,23 @@ const MoviesPage = () => {
   // Downloads form
   const [downloadsCount, setDownloadsCount] = useState(0);
   
-  // Check if user is logged in
+  // Check if user is logged in and update activity
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const token = localStorage.getItem("adminToken");
         const email = localStorage.getItem("adminEmail");
+        const sessionActive = localStorage.getItem("adminSessionActive");
         
-        if (!token) {
+        if (!token || sessionActive !== "true") {
           navigate("/admin/login");
           return;
         }
         
-        const { data: { user } } = await supabase.auth.getUser();
+        // Update activity on page load
+        localStorage.setItem("adminLastActivity", Date.now().toString());
         
-        if (!user) {
-          throw new Error("Session expired");
-        }
-        
-        // Check if user is admin
-        const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin', {
-          user_id: user.id
-        });
-        
-        if (adminError || !isAdmin) {
-          throw new Error("Not authorized as admin");
-        }
-        
-        setAdminEmail(email || user.email || "admin@example.com");
+        setAdminEmail(email || "admin@example.com");
         
         // Load movies data
         fetchMovies();
@@ -85,6 +74,8 @@ const MoviesPage = () => {
         console.error("Auth error:", error);
         localStorage.removeItem("adminToken");
         localStorage.removeItem("adminEmail");
+        localStorage.removeItem("adminSessionActive");
+        localStorage.removeItem("adminLastActivity");
         navigate("/admin/login");
       }
     };
@@ -92,10 +83,17 @@ const MoviesPage = () => {
     checkAuth();
   }, [navigate]);
 
+  // Update activity on any user interaction
+  const updateActivity = () => {
+    localStorage.setItem("adminLastActivity", Date.now().toString());
+  };
+
   // Fetch movies data - now fetch all content types
   const fetchMovies = async () => {
     try {
       setLoading(true);
+      updateActivity(); // Update activity
+      
       const { data: movieData, error: movieError } = await supabase
         .from('movies')
         .select('*')
@@ -119,12 +117,15 @@ const MoviesPage = () => {
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("adminEmail");
+    localStorage.removeItem("adminSessionActive");
+    localStorage.removeItem("adminLastActivity");
     navigate("/admin/login");
   };
   
   // Handle movie upload
   const handleUploadMovie = async (e: React.FormEvent) => {
     e.preventDefault();
+    updateActivity(); // Update activity
     
     try {
       setLoading(true);
@@ -256,6 +257,7 @@ const MoviesPage = () => {
   const handleSelectMovieForCast = async (movieId: string) => {
     try {
       setLoading(true);
+      updateActivity(); // Update activity
       
       // Fetch movie details
       const { data: movie, error: movieError } = await supabase
@@ -293,6 +295,7 @@ const MoviesPage = () => {
   // Handle add cast member
   const handleAddCastMember = async (e: React.FormEvent) => {
     e.preventDefault();
+    updateActivity(); // Update activity
     
     if (!selectedMovie) {
       toast({
@@ -353,6 +356,7 @@ const MoviesPage = () => {
   const handleDeleteCastMember = async (id: string) => {
     try {
       setLoading(true);
+      updateActivity(); // Update activity
       
       const { error } = await supabase
         .from('movie_cast')
@@ -384,6 +388,7 @@ const MoviesPage = () => {
   // Handle search for cast members
   const handleCastSearch = (query: string) => {
     setCastSearchQuery(query);
+    updateActivity(); // Update activity
     
     // Simulate search results based on query
     if (query.trim().length > 2) {
@@ -409,6 +414,7 @@ const MoviesPage = () => {
     });
     setCastSearchResults([]);
     setCastSearchQuery("");
+    updateActivity(); // Update activity
   };
   
   // Handle downloads count update
@@ -417,6 +423,7 @@ const MoviesPage = () => {
     
     try {
       setLoading(true);
+      updateActivity(); // Update activity
       
       const { error } = await supabase
         .from('movies')

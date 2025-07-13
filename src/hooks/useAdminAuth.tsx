@@ -11,36 +11,7 @@ export const useAdminAuth = () => {
 
   useEffect(() => {
     checkAuthStatus();
-    
-    // Set up periodic session refresh every 5 minutes instead of 30 seconds
-    const intervalId = setInterval(() => {
-      refreshSession();
-    }, 5 * 60 * 1000);
-
-    // Listen for storage changes (for multi-tab support)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'adminSessionActive' && e.newValue === 'false') {
-        setIsAuthenticated(false);
-        setAdminEmail('');
-      }
-    };
-
-    // Listen for page visibility changes to refresh session
-    const handleVisibilityChange = () => {
-      if (!document.hidden && isAuthenticated) {
-        refreshSession();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      clearInterval(intervalId);
-      window.removeEventListener('storage', handleStorageChange);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [isAuthenticated]);
+  }, []);
 
   const checkAuthStatus = async () => {
     try {
@@ -54,7 +25,7 @@ export const useAdminAuth = () => {
       if (token && email && sessionActive === "true" && lastActivity) {
         const lastActivityTime = parseInt(lastActivity);
         const currentTime = Date.now();
-        const maxInactiveTime = 24 * 60 * 60 * 1000; // 24 hours
+        const maxInactiveTime = 7 * 24 * 60 * 60 * 1000; // 7 days instead of 24 hours
         
         console.log("Session check:", { lastActivityTime, currentTime, timeDiff: currentTime - lastActivityTime });
         
@@ -62,7 +33,7 @@ export const useAdminAuth = () => {
           setIsAuthenticated(true);
           setAdminEmail(email);
           
-          // Update last activity
+          // Update last activity on every check
           localStorage.setItem("adminLastActivity", currentTime.toString());
         } else {
           console.log("Session expired due to inactivity, clearing auth");
@@ -74,30 +45,8 @@ export const useAdminAuth = () => {
       }
     } catch (error) {
       console.error("Auth check failed:", error);
-      // Don't clear auth on errors, just log them
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const refreshSession = async () => {
-    try {
-      const sessionActive = localStorage.getItem("adminSessionActive");
-      const lastActivity = localStorage.getItem("adminLastActivity");
-      
-      if (sessionActive === "true" && lastActivity) {
-        const currentTime = Date.now();
-        const lastActivityTime = parseInt(lastActivity);
-        const timeSinceLastActivity = currentTime - lastActivityTime;
-        
-        // Only refresh if there's been recent activity (within 1 hour)
-        if (timeSinceLastActivity < 60 * 60 * 1000) {
-          localStorage.setItem("adminLastActivity", currentTime.toString());
-          console.log("Session refreshed at:", new Date(currentTime));
-        }
-      }
-    } catch (error) {
-      console.error("Session refresh failed:", error);
     }
   };
 
@@ -130,10 +79,12 @@ export const useAdminAuth = () => {
     return true;
   };
 
-  // Update activity on any admin action
+  // Update activity on any admin action - call this from components
   const updateActivity = () => {
     if (isAuthenticated) {
-      localStorage.setItem("adminLastActivity", Date.now().toString());
+      const currentTime = Date.now();
+      localStorage.setItem("adminLastActivity", currentTime.toString());
+      console.log("Activity updated at:", new Date(currentTime));
     }
   };
 

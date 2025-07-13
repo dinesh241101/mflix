@@ -11,6 +11,8 @@ import WebSeries from "./pages/WebSeries";
 import MovieDetail from "./pages/MovieDetail";
 import DownloadPage from "./pages/DownloadPage";
 import DownloadWithAds from "./pages/DownloadWithAds";
+import DownloadSources from "./pages/DownloadSources";
+import DownloadVerify from "./pages/DownloadVerify";
 import MobileShortsPage from "./pages/MobileShortsPage";
 import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
@@ -44,6 +46,8 @@ function App() {
             <Route path="/series/:id" element={<MovieDetail />} />
             <Route path="/download/:id/:linkId" element={<DownloadPage />} />
             <Route path="/download-ads/:id/:linkId" element={<DownloadWithAds />} />
+            <Route path="/download-sources/:id/:linkId" element={<DownloadSources />} />
+            <Route path="/download-verify/:id/:linkId/:sourceId" element={<DownloadVerify />} />
             <Route path="/shorts" element={<MobileShortsPage />} />
             
             {/* Admin Routes */}
