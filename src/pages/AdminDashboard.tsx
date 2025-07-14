@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import AdminHeader from "@/components/admin/AdminHeader";
 import LoadingScreen from "@/components/LoadingScreen";
+import SampleDataInitializer from "@/components/admin/SampleDataInitializer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Film, Tv, Gamepad2, Video, BarChart3, Settings, Users, Menu } from "lucide-react";
@@ -99,6 +100,11 @@ const AdminDashboard = () => {
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
         
+        {/* Sample Data Initializer */}
+        <div className="mb-8">
+          <SampleDataInitializer />
+        </div>
+        
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Card className="bg-gray-800 border-gray-700">
@@ -106,7 +112,6 @@ const AdminDashboard = () => {
               <CardTitle className="text-sm font-medium text-gray-400">Total Movies</CardTitle>
               <Film className="h-4 w-4 text-blue-500" />
             </CardHeader>
-
             <CardContent>
               <div className="text-2xl font-bold text-white">{stats.totalMovies}</div>
             </CardContent>
@@ -117,7 +122,6 @@ const AdminDashboard = () => {
               <CardTitle className="text-sm font-medium text-gray-400">Total Series</CardTitle>
               <Tv className="h-4 w-4 text-green-500" />
             </CardHeader>
-
             <CardContent>
               <div className="text-2xl font-bold text-white">{stats.totalSeries}</div>
             </CardContent>

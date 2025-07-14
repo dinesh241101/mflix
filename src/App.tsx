@@ -55,12 +55,15 @@ function App() {
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/movies" element={<MoviesPage />} />
             <Route path="/admin/web-series" element={<WebSeriesPage />} />
             <Route path="/admin/anime" element={<AnimePage />} />
             <Route path="/admin/shorts" element={<ShortsPage />} />
+            <Route path="/admin/ads" element={<AdsManagementPage />} />
             <Route path="/admin/ads-management" element={<AdsManagementPage />} />
             <Route path="/admin/genres" element={<GenresPage />} />
+            <Route path="/admin/header" element={<HeaderConfigPage />} />
             <Route path="/admin/header-config" element={<HeaderConfigPage />} />
             <Route path="/admin/users" element={<UsersPage />} />
             <Route path="/admin/settings" element={<SettingsPage />} />
