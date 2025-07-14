@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,6 @@ import {
   Users, 
   Upload,
   Tag,
-  Header as HeaderIcon,
   Palette
 } from "lucide-react";
 import AdminHeader from "@/components/admin/AdminHeader";
@@ -106,7 +104,7 @@ const AdminDashboard = () => {
     {
       title: "Header Config",
       description: "Configure website header",
-      icon: HeaderIcon,
+      icon: Palette,
       color: "bg-teal-600 hover:bg-teal-700",
       action: () => {
         updateActivity();

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -11,9 +10,10 @@ interface AnimeListProps {
   animes: any[];
   onSelectAnime: (animeId: string) => void;
   refreshTrigger?: number;
+  updateActivity: () => void;
 }
 
-const AnimeList = ({ animes, onSelectAnime, refreshTrigger = 0 }: AnimeListProps) => {
+const AnimeList = ({ animes, onSelectAnime, refreshTrigger = 0, updateActivity }: AnimeListProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   
   const filteredAnimes = animes.filter(anime => 
@@ -160,7 +160,10 @@ const AnimeList = ({ animes, onSelectAnime, refreshTrigger = 0 }: AnimeListProps
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={() => onSelectAnime(anime.movie_id || anime.id)}
+                        onClick={() => {
+                          onSelectAnime(anime.movie_id || anime.id);
+                          updateActivity();
+                        }}
                         className="bg-blue-600 hover:bg-blue-700 text-white"
                       >
                         <Edit size={16} className="mr-2" />

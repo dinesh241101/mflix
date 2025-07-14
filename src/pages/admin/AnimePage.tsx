@@ -449,7 +449,12 @@ const AnimePage = () => {
       setLoading(false);
     }
   };
-  
+
+  // Add updateActivity function
+  const updateActivity = () => {
+    localStorage.setItem("adminLastActivity", Date.now().toString());
+  };
+
   if (loading) {
     return <LoadingScreen message="Loading Anime Page" />;
   }
@@ -480,6 +485,7 @@ const AnimePage = () => {
           castSearchResults={castSearchResults}
           selectCastFromSearch={selectCastFromSearch}
           isEditing={isEditing}
+          updateActivity={updateActivity}
         />
       </div>
     </div>
