@@ -1,256 +1,350 @@
-
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Play, Star, Calendar, Eye, Download, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from "@/components/ui/use-toast";
 import UniversalHeader from "@/components/universal/UniversalHeader";
 import FeaturedMovieSlider from "@/components/FeaturedMovieSlider";
-import MovieGrid from "@/components/MovieGrid";
-import LoadingScreen from "@/components/LoadingScreen";
-import AdPlacementManager from "@/components/ads/AdPlacementManager";
-import InterstitialAdManager from "@/components/ads/InterstitialAdManager";
-import { Button } from "@/components/ui/button";
-import { Film, Tv, Play, Video } from "lucide-react";
-import { Link } from "react-router-dom";
+import MovieCarousel from "@/components/MovieCarousel";
+import AdPlacement from "@/components/ads/AdPlacement";
+
+interface Movie {
+  movie_id: string;
+  title: string;
+  poster_url?: string;
+  year?: number;
+  imdb_rating?: number;
+  genre?: string[];
+  content_type: string;
+  featured?: boolean;
+  storyline?: string;
+  downloads?: number;
+  created_at: string;
+}
 
 const Index = () => {
-  const [featuredContent, setFeaturedContent] = useState<any[]>([]);
-  const [recentMovies, setRecentMovies] = useState<any[]>([]);
-  const [recentSeries, setRecentSeries] = useState<any[]>([]);
-  const [recentAnime, setRecentAnime] = useState<any[]>([]);
-  const [recentShorts, setRecentShorts] = useState<any[]>([]);
+  const navigate = useNavigate();
+  const [featuredMovies, setFeaturedMovies] = useState<Movie[]>([]);
+  const [latestMovies, setLatestMovies] = useState<Movie[]>([]);
+  const [latestSeries, setLatestSeries] = useState<Movie[]>([]);
+  const [latestAnime, setLatestAnime] = useState<Movie[]>([]);
+  const [latestShorts, setLatestShorts] = useState<any[]>([]);
+  const [allContent, setAllContent] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showInterstitialAd, setShowInterstitialAd] = useState(false);
 
   useEffect(() => {
     fetchAllContent();
-    
-    // Show interstitial ad on page load after a delay
-    const timer = setTimeout(() => {
-      setShowInterstitialAd(true);
-    }, 2000);
-
-    return () => clearTimeout(timer);
   }, []);
 
   const fetchAllContent = async () => {
     try {
       setLoading(true);
 
-      // Fetch featured content
-      const { data: featured, error: featuredError } = await supabase
+      // Fetch all movies, series, and anime
+      const { data: moviesData, error: moviesError } = await supabase
         .from('movies')
         .select('*')
-        .eq('featured', true)
         .eq('is_visible', true)
-        .limit(5);
-
-      if (featuredError) throw featuredError;
-      setFeaturedContent(featured || []);
-
-      // Fetch recent movies
-      const { data: movies, error: moviesError } = await supabase
-        .from('movies')
-        .select('*')
-        .eq('content_type', 'movie')
-        .eq('is_visible', true)
-        .order('created_at', { ascending: false })
-        .limit(8);
+        .order('created_at', { ascending: false });
 
       if (moviesError) throw moviesError;
-      setRecentMovies(movies || []);
 
-      // Fetch recent series
-      const { data: series, error: seriesError } = await supabase
-        .from('movies')
-        .select('*')
-        .eq('content_type', 'series')
-        .eq('is_visible', true)
-        .order('created_at', { ascending: false })
-        .limit(8);
-
-      if (seriesError) throw seriesError;
-      setRecentSeries(series || []);
-
-      // Fetch recent anime
-      const { data: anime, error: animeError } = await supabase
-        .from('movies')
-        .select('*')
-        .eq('content_type', 'anime')
-        .eq('is_visible', true)
-        .order('created_at', { ascending: false })
-        .limit(8);
-
-      if (animeError) throw animeError;
-      setRecentAnime(anime || []);
-
-      // Fetch recent shorts
-      const { data: shorts, error: shortsError } = await supabase
+      // Fetch shorts separately
+      const { data: shortsData, error: shortsError } = await supabase
         .from('shorts')
         .select('*')
         .eq('is_visible', true)
         .order('created_at', { ascending: false })
-        .limit(6);
+        .limit(10);
 
       if (shortsError) throw shortsError;
-      setRecentShorts(shorts || []);
 
-    } catch (error) {
+      const movies = moviesData || [];
+      const shorts = shortsData || [];
+
+      // Set all content
+      setAllContent(movies);
+
+      // Filter featured content
+      setFeaturedMovies(movies.filter(movie => movie.featured).slice(0, 5));
+
+      // Filter by content type
+      setLatestMovies(movies.filter(movie => movie.content_type === 'movie').slice(0, 12));
+      setLatestSeries(movies.filter(movie => movie.content_type === 'series').slice(0, 12));  
+      setLatestAnime(movies.filter(movie => movie.content_type === 'anime').slice(0, 12));
+      setLatestShorts(shorts);
+
+    } catch (error: any) {
       console.error('Error fetching content:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load content. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleMovieClick = (movie: Movie) => {
+    const path = movie.content_type === 'series' ? 'series' : 
+                 movie.content_type === 'anime' ? 'anime' : 'movie';
+    navigate(`/${path}/${movie.movie_id}`);
+  };
+
+  const handleSeeMore = (type: string) => {
+    navigate(`/${type}`);
+  };
+
   if (loading) {
-    return <LoadingScreen message="Loading Homepage" />;
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-white text-xl">Loading amazing content...</div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <UniversalHeader />
       
-      {/* Interstitial Ad */}
-      {showInterstitialAd && (
-        <InterstitialAdManager 
-          triggerEvent="page_load"
-          onAdClosed={() => setShowInterstitialAd(false)}
-        />
+      {/* Top Ad Placement */}
+      <div className="container mx-auto px-4 py-4">
+        <AdPlacement position="header" pageType="home" className="mb-6" />
+      </div>
+
+      {/* Featured Content Slider */}
+      {featuredMovies.length > 0 && (
+        <section className="mb-12">
+          <FeaturedMovieSlider movies={featuredMovies} onMovieClick={handleMovieClick} />
+        </section>
       )}
 
-      <main className="pt-20">
-        {/* Hero Section with Featured Content */}
-        {featuredContent.length > 0 && (
-          <section className="mb-8">
-            <FeaturedMovieSlider movies={featuredContent} />
+      {/* Mid-page Ad */}
+      <div className="container mx-auto px-4 py-4">
+        <AdPlacement position="middle" pageType="home" className="mb-8" />
+      </div>
+
+      <div className="container mx-auto px-4 py-8 space-y-12">
+        {/* All Content Grid */}
+        {allContent.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold">All Content</h2>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6">
+              {allContent.slice(0, 24).map((movie) => (
+                <Card 
+                  key={movie.movie_id} 
+                  className="bg-gray-800 border-gray-700 hover:bg-gray-750 transition-all duration-300 cursor-pointer group"
+                  onClick={() => handleMovieClick(movie)}
+                >
+                  <CardContent className="p-0">
+                    <div className="relative">
+                      <img
+                        src={movie.poster_url || '/placeholder-movie.jpg'}
+                        alt={movie.title}
+                        className="w-full h-48 md:h-64 lg:h-72 object-cover rounded-t-lg"
+                        onError={(e) => {
+                          e.currentTarget.src = '/placeholder-movie.jpg';
+                        }}
+                      />
+                      
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all duration-300 rounded-t-lg flex items-center justify-center">
+                        <Play className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" size={48} />
+                      </div>
+
+                      <div className="absolute top-2 left-2">
+                        <Badge variant="secondary" className="bg-blue-600 text-white text-xs">
+                          {movie.content_type.toUpperCase()}
+                        </Badge>
+                      </div>
+
+                      {movie.imdb_rating && (
+                        <div className="absolute top-2 right-2 bg-yellow-600 text-white px-2 py-1 rounded text-xs flex items-center">
+                          <Star size={12} className="mr-1" />
+                          {movie.imdb_rating}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="p-3">
+                      <h3 className="font-semibold text-sm md:text-base mb-2 line-clamp-2 text-white group-hover:text-blue-400 transition-colors">
+                        {movie.title}
+                      </h3>
+                      
+                      <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
+                        {movie.year && (
+                          <div className="flex items-center">
+                            <Calendar size={12} className="mr-1" />
+                            {movie.year}
+                          </div>
+                        )}
+                        {movie.downloads && (
+                          <div className="flex items-center">
+                            <Download size={12} className="mr-1" />
+                            {movie.downloads}
+                          </div>
+                        )}
+                      </div>
+
+                      {movie.genre && movie.genre.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {movie.genre.slice(0, 2).map((g: string, index: number) => (
+                            <Badge key={index} variant="outline" className="text-xs border-gray-600 text-gray-300">
+                              {g}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      
+                      <Button 
+                        size="sm" 
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMovieClick(movie);
+                        }}
+                      >
+                        <Eye size={14} className="mr-1" />
+                        Watch Now
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </section>
         )}
 
-        {/* Ad Placement - Top Banner */}
-        <section className="container mx-auto px-4 mb-8">
-          <AdPlacementManager 
-            pageType="home" 
-            position="top_banner" 
-            className="w-full"
-          />
-        </section>
-
-        <div className="container mx-auto px-4 space-y-12">
-          {/* Recent Movies Section */}
-          {recentMovies.length > 0 && (
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-3">
-                  <Film className="text-blue-500" size={24} />
-                  <h2 className="text-2xl font-bold">Latest Movies</h2>
-                </div>
-                <Link to="/movies">
-                  <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:text-white">
-                    View All
-                  </Button>
-                </Link>
-              </div>
-              <MovieGrid movies={recentMovies} />
-            </section>
-          )}
-
-          {/* Ad Placement - Middle Banner */}
+        {/* Latest Movies */}
+        {latestMovies.length > 0 && (
           <section>
-            <AdPlacementManager 
-              pageType="home" 
-              position="middle_banner" 
-              className="w-full"
-            />
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold">Latest Movies</h2>
+              <Button 
+                variant="ghost" 
+                onClick={() => handleSeeMore('movies')}
+                className="text-blue-400 hover:text-blue-300"
+              >
+                See More <ChevronRight size={16} className="ml-1" />
+              </Button>
+            </div>
+            <MovieCarousel movies={latestMovies} onMovieClick={handleMovieClick} />
           </section>
+        )}
 
-          {/* Recent Web Series Section */}
-          {recentSeries.length > 0 && (
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-3">
-                  <Tv className="text-green-500" size={24} />
-                  <h2 className="text-2xl font-bold">Latest Web Series</h2>
-                </div>
-                <Link to="/web-series">
-                  <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:text-white">
-                    View All
-                  </Button>
-                </Link>
-              </div>
-              <MovieGrid movies={recentSeries} />
-            </section>
-          )}
+        {/* Ad between sections */}
+        <AdPlacement position="between-sections" pageType="home" className="my-8" />
 
-          {/* Recent Anime Section */}
-          {recentAnime.length > 0 && (
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-3">
-                  <Play className="text-pink-500" size={24} />
-                  <h2 className="text-2xl font-bold">Latest Anime</h2>
-                </div>
-                <Link to="/anime">
-                  <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:text-white">
-                    View All
-                  </Button>
-                </Link>
-              </div>
-              <MovieGrid movies={recentAnime} />
-            </section>
-          )}
+        {/* Latest Web Series */}
+        {latestSeries.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold">Latest Web Series</h2>
+              <Button 
+                variant="ghost" 
+                onClick={() => handleSeeMore('series')}
+                className="text-blue-400 hover:text-blue-300"
+              >
+                See More <ChevronRight size={16} className="ml-1" />
+              </Button>
+            </div>
+            <MovieCarousel movies={latestSeries} onMovieClick={handleMovieClick} />
+          </section>
+        )}
 
-          {/* Recent Shorts Section */}
-          {recentShorts.length > 0 && (
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-3">
-                  <Video className="text-orange-500" size={24} />
-                  <h2 className="text-2xl font-bold">Latest Shorts</h2>
-                </div>
-                <Link to="/shorts">
-                  <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:text-white">
-                    View All
-                  </Button>
-                </Link>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                {recentShorts.map((short: any) => (
-                  <div key={short.short_id} className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-750 transition-colors">
-                    <div className="aspect-[9/16] bg-gray-700 relative">
-                      {short.thumbnail_url ? (
-                        <img
-                          src={short.thumbnail_url}
-                          alt={short.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Video size={32} className="text-gray-500" />
-                        </div>
-                      )}
-                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
-                        {short.duration ? `${short.duration}s` : 'Short'}
+        {/* Latest Anime */}
+        {latestAnime.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold">Latest Anime</h2>
+              <Button 
+                variant="ghost" 
+                onClick={() => handleSeeMore('anime')}
+                className="text-blue-400 hover:text-blue-300"
+              >
+                See More <ChevronRight size={16} className="ml-1" />
+              </Button>
+            </div>
+            <MovieCarousel movies={latestAnime} onMovieClick={handleMovieClick} />
+          </section>
+        )}
+
+        {/* Latest Shorts */}
+        {latestShorts.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold">Latest Shorts</h2>
+              <Button 
+                variant="ghost" 
+                onClick={() => handleSeeMore('shorts')}
+                className="text-blue-400 hover:text-blue-300"
+              >
+                See More <ChevronRight size={16} className="ml-1" />
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6">
+              {latestShorts.map((short) => (
+                <Card 
+                  key={short.short_id} 
+                  className="bg-gray-800 border-gray-700 hover:bg-gray-750 transition-all duration-300 cursor-pointer group"
+                  onClick={() => navigate('/shorts')}
+                >
+                  <CardContent className="p-0">
+                    <div className="relative">
+                      <img
+                        src={short.thumbnail_url || '/placeholder-movie.jpg'}
+                        alt={short.title}
+                        className="w-full h-32 md:h-40 object-cover rounded-t-lg"
+                        onError={(e) => {
+                          e.currentTarget.src = '/placeholder-movie.jpg';
+                        }}
+                      />
+                      
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all duration-300 rounded-t-lg flex items-center justify-center">
+                        <Play className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" size={32} />
+                      </div>
+
+                      <div className="absolute top-2 left-2">
+                        <Badge variant="secondary" className="bg-pink-600 text-white text-xs">
+                          SHORT
+                        </Badge>
                       </div>
                     </div>
+                    
                     <div className="p-3">
-                      <h3 className="text-sm font-medium text-white truncate">
+                      <h3 className="font-semibold text-sm mb-2 line-clamp-2 text-white group-hover:text-pink-400 transition-colors">
                         {short.title}
                       </h3>
+                      
+                      <Button 
+                        size="sm" 
+                        className="w-full bg-pink-600 hover:bg-pink-700 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/shorts');
+                        }}
+                      >
+                        <Play size={14} className="mr-1" />
+                        Watch
+                      </Button>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Ad Placement - Bottom Banner */}
-          <section>
-            <AdPlacementManager 
-              pageType="home" 
-              position="bottom_banner" 
-              className="w-full"
-            />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </section>
-        </div>
-      </main>
+        )}
+
+        {/* Bottom Ad */}
+        <AdPlacement position="footer" pageType="home" className="mt-12" />
+      </div>
     </div>
   );
 };

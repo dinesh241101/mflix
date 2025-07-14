@@ -159,7 +159,16 @@ const MoviesTab = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Upload Form */}
         <div>
-          <h3 className="text-lg font-semibold mb-4">Upload New Movie</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Upload New Movie</h3>
+            <Button
+              onClick={() => navigate("/admin/upload")}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="mr-2" size={16} />
+              Advanced Upload
+            </Button>
+          </div>
           <MovieUploadForm />
         </div>
         

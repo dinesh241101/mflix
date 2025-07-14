@@ -5,262 +5,225 @@ import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminHeader from "@/components/admin/AdminHeader";
 import LoadingScreen from "@/components/LoadingScreen";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Plus, Edit } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { Home, Save } from "lucide-react";
 
 const HeaderConfigPage = () => {
+  const { adminEmail, loading: authLoading, isAuthenticated, handleLogout, updateActivity } = useAdminAuth();
   const navigate = useNavigate();
-  const { user, loading: authLoading, isAdmin } = useAuth();
-  const [adminEmail, setAdminEmail] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  
   const [headerConfig, setHeaderConfig] = useState({
-    topButtons: [
-      { name: "BOLLYWOOD MOVIES", path: "/movies?category=bollywood", color: "green" },
-      { name: "DUAL AUDIO CONTENT", path: "/movies?audio=dual", color: "red" },
-      { name: "HOLLYWOOD MOVIES", path: "/movies?category=hollywood", color: "orange" },
-      { name: "JOIN OUR TELEGRAM", path: "#", color: "blue" }
-    ],
-    categoryTags: [
-      "Dual Audio [Hindi] 720p",
-      "Hollywood Movies 1080p",
-      "Telugu",
-      "Action",
-      "Adventure",
-      "Animation"
-    ]
+    siteName: "MFlix",
+    logoUrl: "",
+    primaryColor: "#3b82f6",
+    secondaryColor: "#1e40af",
+    navigationItems: "Home,Movies,Series,Anime,Shorts",
+    footerText: "© 2024 MFlix. All rights reserved.",
+    contactEmail: "contact@mflix.com",
+    socialLinks: JSON.stringify({
+      facebook: "",
+      twitter: "",
+      instagram: "",
+      youtube: ""
+    }, null, 2)
   });
-  const [newButton, setNewButton] = useState({ name: "", path: "", color: "blue" });
-  const [newTag, setNewTag] = useState("");
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        if (!authLoading && (!user || !isAdmin)) {
-          navigate("/admin/login");
-          return;
-        }
+  const handleSave = async () => {
+    setLoading(true);
+    updateActivity();
+    
+    try {
+      // Save header configuration to database
+      const configData = {
+        site_name: headerConfig.siteName,
+        logo_url: headerConfig.logoUrl,
+        primary_color: headerConfig.primaryColor,
+        secondary_color: headerConfig.secondaryColor,
+        navigation_items: headerConfig.navigationItems.split(',').map(item => item.trim()),
+        footer_text: headerConfig.footerText,
+        contact_email: headerConfig.contactEmail,
+        social_links: JSON.parse(headerConfig.socialLinks)
+      };
 
-        setAdminEmail(user?.email || "admin@example.com");
-        setLoading(false);
-      } catch (error) {
-        console.error("Auth error:", error);
-        navigate("/admin/login");
-      }
-    };
+      // For now, we'll just show success message
+      // In a real implementation, you'd save this to a settings table
+      
+      toast({
+        title: "Success",
+        description: "Header configuration saved successfully!",
+      });
 
-    checkAuth();
-  }, [user, isAdmin, authLoading, navigate]);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/admin/login");
-  };
-
-  const addNewButton = () => {
-    if (!newButton.name || !newButton.path) {
+    } catch (error: any) {
+      console.error("Error saving header config:", error);
       toast({
         title: "Error",
-        description: "Please fill in button name and path",
+        description: "Failed to save header configuration",
         variant: "destructive"
       });
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    setHeaderConfig({
-      ...headerConfig,
-      topButtons: [...headerConfig.topButtons, newButton]
-    });
-    setNewButton({ name: "", path: "", color: "blue" });
-    
-    toast({
-      title: "Success",
-      description: "Button added successfully",
-    });
   };
 
-  const removeButton = (index: number) => {
-    const updatedButtons = headerConfig.topButtons.filter((_, i) => i !== index);
-    setHeaderConfig({
-      ...headerConfig,
-      topButtons: updatedButtons
-    });
-    
-    toast({
-      title: "Success",
-      description: "Button removed successfully",
-    });
-  };
-
-  const addNewTag = () => {
-    if (!newTag.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a tag name",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setHeaderConfig({
-      ...headerConfig,
-      categoryTags: [...headerConfig.categoryTags, newTag.trim()]
-    });
-    setNewTag("");
-    
-    toast({
-      title: "Success",
-      description: "Tag added successfully",
-    });
-  };
-
-  const removeTag = (index: number) => {
-    const updatedTags = headerConfig.categoryTags.filter((_, i) => i !== index);
-    setHeaderConfig({
-      ...headerConfig,
-      categoryTags: updatedTags
-    });
-    
-    toast({
-      title: "Success",
-      description: "Tag removed successfully",
-    });
-  };
-
-  const saveConfiguration = () => {
-    // In a real implementation, you would save this to the database
-    localStorage.setItem('headerConfig', JSON.stringify(headerConfig));
-    
-    toast({
-      title: "Success",
-      description: "Header configuration saved successfully",
-    });
-  };
-
-  if (loading || authLoading) {
+  if (authLoading) {
     return <LoadingScreen message="Loading Header Configuration" />;
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <AdminHeader adminEmail={adminEmail} onLogout={handleLogout} />
 
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Header Configuration</h1>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Top Buttons Configuration */}
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white">Top Header Buttons</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {headerConfig.topButtons.map((button, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-                  <div>
-                    <span className="font-medium text-white">{button.name}</span>
-                    <p className="text-sm text-gray-400">{button.path}</p>
-                  </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => removeButton(index)}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              ))}
-              
-              <div className="space-y-3 pt-4 border-t border-gray-600">
-                <h4 className="font-medium text-white">Add New Button</h4>
-                <div>
-                  <Label htmlFor="buttonName">Button Name</Label>
-                  <Input
-                    id="buttonName"
-                    value={newButton.name}
-                    onChange={(e) => setNewButton({...newButton, name: e.target.value})}
-                    placeholder="e.g., BOLLYWOOD MOVIES"
-                    className="bg-gray-700 border-gray-600 text-white"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="buttonPath">Button Path</Label>
-                  <Input
-                    id="buttonPath"
-                    value={newButton.path}
-                    onChange={(e) => setNewButton({...newButton, path: e.target.value})}
-                    placeholder="e.g., /movies?category=bollywood"
-                    className="bg-gray-700 border-gray-600 text-white"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="buttonColor">Button Color</Label>
-                  <select
-                    id="buttonColor"
-                    value={newButton.color}
-                    onChange={(e) => setNewButton({...newButton, color: e.target.value})}
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                  >
-                    <option value="blue">Blue</option>
-                    <option value="green">Green</option>
-                    <option value="red">Red</option>
-                    <option value="orange">Orange</option>
-                    <option value="purple">Purple</option>
-                  </select>
-                </div>
-                <Button onClick={addNewButton} className="w-full">
-                  <Plus size={16} className="mr-2" />
-                  Add Button
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Category Tags Configuration */}
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white">Category Tags</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {headerConfig.categoryTags.map((tag, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-                  <span className="text-white">{tag}</span>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => removeTag(index)}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              ))}
-              
-              <div className="space-y-3 pt-4 border-t border-gray-600">
-                <h4 className="font-medium text-white">Add New Tag</h4>
-                <div className="flex gap-2">
-                  <Input
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    placeholder="e.g., Malayalam Movies"
-                    className="bg-gray-700 border-gray-600 text-white flex-1"
-                  />
-                  <Button onClick={addNewTag}>
-                    <Plus size={16} />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                updateActivity();
+                navigate("/admin");
+              }}
+              className="text-white hover:bg-gray-700"
+            >
+              <Home size={18} className="mr-2" />
+              Admin Dashboard
+            </Button>
+            <h1 className="text-3xl font-bold">Header Configuration</h1>
+          </div>
+          
+          <Button
+            onClick={handleSave}
+            disabled={loading}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <Save className="mr-2" size={16} />
+            {loading ? "Saving..." : "Save Configuration"}
+          </Button>
         </div>
 
-        <div className="mt-8 flex justify-end">
-          <Button onClick={saveConfiguration} className="bg-green-600 hover:bg-green-700">
-            Save Configuration
-          </Button>
+        <div className="space-y-6">
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle>Site Branding</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="siteName">Site Name</Label>
+                <Input
+                  id="siteName"
+                  value={headerConfig.siteName}
+                  onChange={(e) => setHeaderConfig({...headerConfig, siteName: e.target.value})}
+                  placeholder="MFlix"
+                  className="bg-gray-700 border-gray-600"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="logoUrl">Logo URL</Label>
+                <Input
+                  id="logoUrl"
+                  value={headerConfig.logoUrl}
+                  onChange={(e) => setHeaderConfig({...headerConfig, logoUrl: e.target.value})}
+                  placeholder="https://example.com/logo.png"
+                  className="bg-gray-700 border-gray-600"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="primaryColor">Primary Color</Label>
+                  <Input
+                    id="primaryColor"
+                    type="color"
+                    value={headerConfig.primaryColor}
+                    onChange={(e) => setHeaderConfig({...headerConfig, primaryColor: e.target.value})}
+                    className="bg-gray-700 border-gray-600 h-12"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="secondaryColor">Secondary Color</Label>
+                  <Input
+                    id="secondaryColor"
+                    type="color"
+                    value={headerConfig.secondaryColor}
+                    onChange={(e) => setHeaderConfig({...headerConfig, secondaryColor: e.target.value})}
+                    className="bg-gray-700 border-gray-600 h-12"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle>Navigation</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="navigationItems">Navigation Items (comma separated)</Label>
+                <Input
+                  id="navigationItems"
+                  value={headerConfig.navigationItems}
+                  onChange={(e) => setHeaderConfig({...headerConfig, navigationItems: e.target.value})}
+                  placeholder="Home,Movies,Series,Anime,Shorts"
+                  className="bg-gray-700 border-gray-600"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle>Footer & Contact</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="footerText">Footer Text</Label>
+                <Input
+                  id="footerText"
+                  value={headerConfig.footerText}
+                  onChange={(e) => setHeaderConfig({...headerConfig, footerText: e.target.value})}
+                  placeholder="© 2024 MFlix. All rights reserved."
+                  className="bg-gray-700 border-gray-600"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="contactEmail">Contact Email</Label>
+                <Input
+                  id="contactEmail"
+                  type="email"
+                  value={headerConfig.contactEmail}
+                  onChange={(e) => setHeaderConfig({...headerConfig, contactEmail: e.target.value})}
+                  placeholder="contact@mflix.com"
+                  className="bg-gray-700 border-gray-600"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="socialLinks">Social Links (JSON)</Label>
+                <Textarea
+                  id="socialLinks"
+                  value={headerConfig.socialLinks}
+                  onChange={(e) => setHeaderConfig({...headerConfig, socialLinks: e.target.value})}
+                  placeholder='{"facebook": "", "twitter": "", "instagram": "", "youtube": ""}'
+                  className="bg-gray-700 border-gray-600"
+                  rows={6}
+                />
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

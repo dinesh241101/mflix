@@ -12,6 +12,34 @@ export const useAdminAuth = () => {
 
   useEffect(() => {
     checkAuth();
+    
+    // Set up session monitoring
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT' || !session) {
+          setIsAuthenticated(false);
+          setAdminEmail("");
+          localStorage.removeItem("adminToken");
+          localStorage.removeItem("adminEmail");
+          localStorage.removeItem("adminSessionActive");
+          localStorage.removeItem("adminLastActivity");
+        } else if (session?.user) {
+          // Check if user is admin
+          const { data: isAdmin } = await supabase.rpc('is_admin', {
+            user_id: session.user.id
+          });
+          
+          if (isAdmin) {
+            setAdminEmail(session.user.email || "");
+            setIsAuthenticated(true);
+            updateActivity();
+          }
+        }
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const checkAuth = async () => {
@@ -20,15 +48,8 @@ export const useAdminAuth = () => {
       const email = localStorage.getItem("adminEmail");
       const sessionActive = localStorage.getItem("adminSessionActive");
       
-      if (!token || sessionActive !== "true") {
-        console.log("No valid session found");
-        setIsAuthenticated(false);
-        setLoading(false);
-        return;
-      }
-
       // For demo purposes, accept the demo credentials
-      if (email === "dinesh001kaushik@gmail.com") {
+      if (email === "dinesh001kaushik@gmail.com" && sessionActive === "true") {
         setAdminEmail(email);
         setIsAuthenticated(true);
         updateActivity();
@@ -37,17 +58,17 @@ export const useAdminAuth = () => {
       }
 
       // Check session validity with Supabase
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const { data: { session }, error } = await supabase.auth.getSession();
       
-      if (userError || !user) {
-        console.log("Invalid Supabase session");
+      if (error || !session?.user) {
+        console.log("No valid session found, redirecting to login");
         handleLogout();
         return;
       }
 
       // Verify admin role
       const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin', {
-        user_id: user.id
+        user_id: session.user.id
       });
 
       if (adminError || !isAdmin) {
@@ -56,7 +77,7 @@ export const useAdminAuth = () => {
         return;
       }
 
-      setAdminEmail(email || user.email || "admin@example.com");
+      setAdminEmail(session.user.email || "");
       setIsAuthenticated(true);
       updateActivity();
       
@@ -74,6 +95,8 @@ export const useAdminAuth = () => {
     localStorage.removeItem("adminSessionActive");
     localStorage.removeItem("adminLastActivity");
     setIsAuthenticated(false);
+    setAdminEmail("");
+    supabase.auth.signOut();
     navigate("/admin/login");
   };
 
