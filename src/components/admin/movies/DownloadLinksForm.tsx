@@ -39,9 +39,10 @@ interface DownloadLinksFormProps {
   movieId: string;
   contentType: string;
   onLinksAdded: () => void;
+  updateActivity: () => void;
 }
 
-const DownloadLinksForm = ({ movieId, contentType, onLinksAdded }: DownloadLinksFormProps) => {
+const DownloadLinksForm = ({ movieId, contentType, onLinksAdded, updateActivity }: DownloadLinksFormProps) => {
   const [downloadLinks, setDownloadLinks] = useState<DownloadLink[]>([]);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [existingLinks, setExistingLinks] = useState<ExistingLink[]>([]);
@@ -149,6 +150,7 @@ const DownloadLinksForm = ({ movieId, contentType, onLinksAdded }: DownloadLinks
       });
 
       fetchExistingLinks();
+      updateActivity();
     } catch (error: any) {
       console.error("Error deleting link:", error);
       toast({
@@ -162,6 +164,7 @@ const DownloadLinksForm = ({ movieId, contentType, onLinksAdded }: DownloadLinks
   const saveDownloadLinks = async () => {
     try {
       setIsLoading(true);
+      updateActivity();
 
       if (contentType === 'series') {
         // Save episodes with download links
