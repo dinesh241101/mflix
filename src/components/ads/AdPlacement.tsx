@@ -97,9 +97,9 @@ const AdPlacement = ({ position, pageType, className }: AdPlacementProps) => {
     <div className={cn("ad-placement", className)}>
       {currentAd.ad_type === 'banner' && (
         <AdBanner
-          imageUrl={currentAd.content_url}
-          targetUrl={currentAd.target_url}
-          altText={currentAd.ad_name}
+          src={currentAd.content_url}
+          alt={currentAd.ad_name}
+          href={currentAd.target_url}
           onClick={() => handleAdClick(currentAd)}
         />
       )}
@@ -129,11 +129,10 @@ const AdPlacement = ({ position, pageType, className }: AdPlacementProps) => {
 
       {showInterstitial && (
         <InterstitialAd
-          imageUrl={currentAd.content_url}
-          targetUrl={currentAd.target_url}
-          duration={currentAd.display_duration || 5}
+          isOpen={showInterstitial}
           onClose={() => setShowInterstitial(false)}
-          onSkip={() => setShowInterstitial(false)}
+          onComplete={() => setShowInterstitial(false)}
+          triggerEvent="page_load"
         />
       )}
     </div>

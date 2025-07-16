@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,13 +26,22 @@ interface Movie {
   created_at: string;
 }
 
+interface Short {
+  short_id: string;
+  title: string;
+  thumbnail_url?: string;
+  video_url: string;
+  duration?: number;
+  created_at: string;
+}
+
 const Index = () => {
   const navigate = useNavigate();
   const [featuredMovies, setFeaturedMovies] = useState<Movie[]>([]);
   const [latestMovies, setLatestMovies] = useState<Movie[]>([]);
   const [latestSeries, setLatestSeries] = useState<Movie[]>([]);
   const [latestAnime, setLatestAnime] = useState<Movie[]>([]);
-  const [latestShorts, setLatestShorts] = useState<any[]>([]);
+  const [latestShorts, setLatestShorts] = useState<Short[]>([]);
   const [allContent, setAllContent] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
 
