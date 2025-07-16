@@ -15,11 +15,13 @@ interface Movie {
 interface FeaturedMovieSliderProps {
   movies: Movie[];
   autoSlideInterval?: number;
+  onMovieClick?: (movie: any) => void;
 }
 
 const FeaturedMovieSlider = ({ 
   movies, 
-  autoSlideInterval = 5000 
+  autoSlideInterval = 5000,
+  onMovieClick 
 }: FeaturedMovieSliderProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const navigate = useNavigate();
@@ -50,6 +52,23 @@ const FeaturedMovieSlider = ({
   
   const currentMovie = movies[currentIndex];
   
+  const handleMovieClick = () => {
+    if (onMovieClick) {
+      // Convert back to DatabaseMovie format for the callback
+      const dbMovie = {
+        movie_id: currentMovie.id,
+        title: currentMovie.title,
+        poster_url: currentMovie.poster_url,
+        year: currentMovie.year,
+        genre: currentMovie.genre,
+        content_type: 'movie' // default for featured content
+      };
+      onMovieClick(dbMovie);
+    } else {
+      navigate(`/movie/${currentMovie.id}`);
+    }
+  };
+  
   return (
     <div className="relative h-96 overflow-hidden rounded-lg">
       {/* Background image with gradient overlay */}
@@ -71,7 +90,7 @@ const FeaturedMovieSlider = ({
         </div>
         <div className="flex space-x-4">
           <Button 
-            onClick={() => navigate(`/movie/${currentMovie.id}`)}
+            onClick={handleMovieClick}
             className="flex items-center bg-blue-600 hover:bg-blue-700"
           >
             <Play size={16} className="mr-2" />

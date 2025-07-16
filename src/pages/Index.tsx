@@ -36,6 +36,21 @@ interface DatabaseShort {
   created_at: string;
 }
 
+// Movie interface for carousel component
+interface CarouselMovie {
+  movie_id: string;
+  title: string;
+  poster_url: string;
+  year?: number;
+  imdb_rating?: number;
+  genre?: string[];
+  content_type: string;
+  featured?: boolean;
+  storyline?: string;
+  downloads?: number;
+  created_at: string;
+}
+
 const Index = () => {
   const navigate = useNavigate();
   const [featuredMovies, setFeaturedMovies] = useState<DatabaseMovie[]>([]);
@@ -110,25 +125,19 @@ const Index = () => {
     navigate(`/${type}`);
   };
 
-  // Transform for FeaturedMovieSlider (if it expects different props)
+  // Transform for FeaturedMovieSlider
   const transformMovieForSlider = (movie: DatabaseMovie) => ({
     id: movie.movie_id,
     title: movie.title,
     poster_url: movie.poster_url || '/placeholder-movie.jpg',
     year: movie.year,
-    imdb_rating: movie.imdb_rating,
-    genre: movie.genre,
-    content_type: movie.content_type,
-    featured: movie.featured,
-    storyline: movie.storyline,
-    downloads: movie.downloads,
-    created_at: movie.created_at
+    genre: movie.genre
   });
 
-  // Transform for MovieCarousel (if it expects different props)
-  const transformMovieForCarousel = (movies: DatabaseMovie[]) => 
+  // Transform for MovieCarousel
+  const transformMovieForCarousel = (movies: DatabaseMovie[]): CarouselMovie[] => 
     movies.map(movie => ({
-      id: movie.movie_id,
+      movie_id: movie.movie_id,
       title: movie.title,
       poster_url: movie.poster_url || '/placeholder-movie.jpg',
       year: movie.year,
