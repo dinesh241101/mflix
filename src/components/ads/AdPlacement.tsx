@@ -97,10 +97,8 @@ const AdPlacement = ({ position, pageType, className }: AdPlacementProps) => {
     <div className={cn("ad-placement", className)}>
       {currentAd.ad_type === 'banner' && (
         <AdBanner
-          src={currentAd.content_url}
-          alt={currentAd.ad_name}
-          href={currentAd.target_url}
-          onClick={() => handleAdClick(currentAd)}
+          position={position}
+          className="w-full"
         />
       )}
       

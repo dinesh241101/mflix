@@ -12,7 +12,8 @@ import FeaturedMovieSlider from "@/components/FeaturedMovieSlider";
 import MovieCarousel from "@/components/MovieCarousel";
 import AdPlacement from "@/components/ads/AdPlacement";
 
-interface Movie {
+// Use the database Movie type from Supabase
+interface DatabaseMovie {
   movie_id: string;
   title: string;
   poster_url?: string;
@@ -26,7 +27,7 @@ interface Movie {
   created_at: string;
 }
 
-interface Short {
+interface DatabaseShort {
   short_id: string;
   title: string;
   thumbnail_url?: string;
@@ -37,12 +38,12 @@ interface Short {
 
 const Index = () => {
   const navigate = useNavigate();
-  const [featuredMovies, setFeaturedMovies] = useState<Movie[]>([]);
-  const [latestMovies, setLatestMovies] = useState<Movie[]>([]);
-  const [latestSeries, setLatestSeries] = useState<Movie[]>([]);
-  const [latestAnime, setLatestAnime] = useState<Movie[]>([]);
-  const [latestShorts, setLatestShorts] = useState<Short[]>([]);
-  const [allContent, setAllContent] = useState<Movie[]>([]);
+  const [featuredMovies, setFeaturedMovies] = useState<DatabaseMovie[]>([]);
+  const [latestMovies, setLatestMovies] = useState<DatabaseMovie[]>([]);
+  const [latestSeries, setLatestSeries] = useState<DatabaseMovie[]>([]);
+  const [latestAnime, setLatestAnime] = useState<DatabaseMovie[]>([]);
+  const [latestShorts, setLatestShorts] = useState<DatabaseShort[]>([]);
+  const [allContent, setAllContent] = useState<DatabaseMovie[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -99,7 +100,7 @@ const Index = () => {
     }
   };
 
-  const handleMovieClick = (movie: Movie) => {
+  const handleMovieClick = (movie: DatabaseMovie) => {
     const path = movie.content_type === 'series' ? 'series' : 
                  movie.content_type === 'anime' ? 'anime' : 'movie';
     navigate(`/${path}/${movie.movie_id}`);
@@ -108,6 +109,37 @@ const Index = () => {
   const handleSeeMore = (type: string) => {
     navigate(`/${type}`);
   };
+
+  // Transform for FeaturedMovieSlider (if it expects different props)
+  const transformMovieForSlider = (movie: DatabaseMovie) => ({
+    id: movie.movie_id,
+    title: movie.title,
+    poster_url: movie.poster_url || '/placeholder-movie.jpg',
+    year: movie.year,
+    imdb_rating: movie.imdb_rating,
+    genre: movie.genre,
+    content_type: movie.content_type,
+    featured: movie.featured,
+    storyline: movie.storyline,
+    downloads: movie.downloads,
+    created_at: movie.created_at
+  });
+
+  // Transform for MovieCarousel (if it expects different props)
+  const transformMovieForCarousel = (movies: DatabaseMovie[]) => 
+    movies.map(movie => ({
+      id: movie.movie_id,
+      title: movie.title,
+      poster_url: movie.poster_url || '/placeholder-movie.jpg',
+      year: movie.year,
+      imdb_rating: movie.imdb_rating,
+      genre: movie.genre,
+      content_type: movie.content_type,
+      featured: movie.featured,
+      storyline: movie.storyline,
+      downloads: movie.downloads,
+      created_at: movie.created_at
+    }));
 
   if (loading) {
     return (
@@ -129,7 +161,10 @@ const Index = () => {
       {/* Featured Content Slider */}
       {featuredMovies.length > 0 && (
         <section className="mb-12">
-          <FeaturedMovieSlider movies={featuredMovies} onMovieClick={handleMovieClick} />
+          <FeaturedMovieSlider 
+            movies={featuredMovies.map(transformMovieForSlider)} 
+            onMovieClick={handleMovieClick} 
+          />
         </section>
       )}
 
@@ -244,7 +279,7 @@ const Index = () => {
                 See More <ChevronRight size={16} className="ml-1" />
               </Button>
             </div>
-            <MovieCarousel movies={latestMovies} onMovieClick={handleMovieClick} />
+            <MovieCarousel movies={transformMovieForCarousel(latestMovies)} onMovieClick={handleMovieClick} />
           </section>
         )}
 
@@ -264,7 +299,7 @@ const Index = () => {
                 See More <ChevronRight size={16} className="ml-1" />
               </Button>
             </div>
-            <MovieCarousel movies={latestSeries} onMovieClick={handleMovieClick} />
+            <MovieCarousel movies={transformMovieForCarousel(latestSeries)} onMovieClick={handleMovieClick} />
           </section>
         )}
 
@@ -281,7 +316,7 @@ const Index = () => {
                 See More <ChevronRight size={16} className="ml-1" />
               </Button>
             </div>
-            <MovieCarousel movies={latestAnime} onMovieClick={handleMovieClick} />
+            <MovieCarousel movies={transformMovieForCarousel(latestAnime)} onMovieClick={handleMovieClick} />
           </section>
         )}
 
