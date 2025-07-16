@@ -3,6 +3,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import AdminRouteGuard from "@/components/admin/AdminRouteGuard";
+
+// Public pages
 import Index from "./pages/Index";
 import Movies from "./pages/Movies";
 import WebSeries from "./pages/WebSeries";
@@ -57,23 +60,85 @@ function App() {
             <Route path="/download/:id/with-ads" element={<DownloadWithAds />} />
             <Route path="/search" element={<SearchResults />} />
             
-            {/* Admin routes */}
+            {/* Admin login (no guard needed) */}
             <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/movies" element={<MoviesPage />} />
-            <Route path="/admin/movies/edit/:id" element={<MovieEditPage />} />
-            <Route path="/admin/series" element={<ManageSeriesPage />} />
-            <Route path="/admin/anime" element={<AnimePage />} />
-            <Route path="/admin/shorts" element={<ShortsPage />} />
-            <Route path="/admin/users" element={<UsersPage />} />
-            <Route path="/admin/ads" element={<AdsManagementPage />} />
-            <Route path="/admin/settings" element={<SettingsPage />} />
-            <Route path="/admin/genres" element={<GenresPage />} />
-            <Route path="/admin/download-links" element={<DownloadLinksPage />} />
-            <Route path="/admin/content" element={<ContentManagementPage />} />
-            <Route path="/admin/upload" element={<ContentUploadPage />} />
-            <Route path="/admin/header-config" element={<HeaderConfigPage />} />
+            
+            {/* Protected admin routes */}
+            <Route path="/admin" element={
+              <AdminRouteGuard>
+                <AdminDashboard />
+              </AdminRouteGuard>
+            } />
+            <Route path="/admin/dashboard" element={
+              <AdminRouteGuard>
+                <AdminDashboard />
+              </AdminRouteGuard>
+            } />
+            <Route path="/admin/movies" element={
+              <AdminRouteGuard>
+                <MoviesPage />
+              </AdminRouteGuard>
+            } />
+            <Route path="/admin/movies/edit/:id" element={
+              <AdminRouteGuard>
+                <MovieEditPage />
+              </AdminRouteGuard>
+            } />
+            <Route path="/admin/series" element={
+              <AdminRouteGuard>
+                <ManageSeriesPage />
+              </AdminRouteGuard>
+            } />
+            <Route path="/admin/anime" element={
+              <AdminRouteGuard>
+                <AnimePage />
+              </AdminRouteGuard>
+            } />
+            <Route path="/admin/shorts" element={
+              <AdminRouteGuard>
+                <ShortsPage />
+              </AdminRouteGuard>
+            } />
+            <Route path="/admin/users" element={
+              <AdminRouteGuard>
+                <UsersPage />
+              </AdminRouteGuard>
+            } />
+            <Route path="/admin/ads" element={
+              <AdminRouteGuard>
+                <AdsManagementPage />
+              </AdminRouteGuard>
+            } />
+            <Route path="/admin/settings" element={
+              <AdminRouteGuard>
+                <SettingsPage />
+              </AdminRouteGuard>
+            } />
+            <Route path="/admin/genres" element={
+              <AdminRouteGuard>
+                <GenresPage />
+              </AdminRouteGuard>
+            } />
+            <Route path="/admin/download-links" element={
+              <AdminRouteGuard>
+                <DownloadLinksPage />
+              </AdminRouteGuard>
+            } />
+            <Route path="/admin/content" element={
+              <AdminRouteGuard>
+                <ContentManagementPage />
+              </AdminRouteGuard>
+            } />
+            <Route path="/admin/upload" element={
+              <AdminRouteGuard>
+                <ContentUploadPage />
+              </AdminRouteGuard>
+            } />
+            <Route path="/admin/header-config" element={
+              <AdminRouteGuard>
+                <HeaderConfigPage />
+              </AdminRouteGuard>
+            } />
             
             {/* 404 route */}
             <Route path="*" element={<NotFound />} />

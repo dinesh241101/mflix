@@ -16,23 +16,30 @@ export const useAdminAuth = () => {
     // Set up session monitoring
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("Auth state change:", event, session?.user?.email);
+        
         if (event === 'SIGNED_OUT' || !session) {
           setIsAuthenticated(false);
           setAdminEmail("");
-          localStorage.removeItem("adminToken");
-          localStorage.removeItem("adminEmail");
-          localStorage.removeItem("adminSessionActive");
-          localStorage.removeItem("adminLastActivity");
+          clearAdminSession();
         } else if (session?.user) {
           // Check if user is admin
-          const { data: isAdmin } = await supabase.rpc('is_admin', {
-            user_id: session.user.id
-          });
-          
-          if (isAdmin) {
-            setAdminEmail(session.user.email || "");
-            setIsAuthenticated(true);
-            updateActivity();
+          try {
+            const { data: isAdmin } = await supabase.rpc('is_admin', {
+              user_id: session.user.id
+            });
+            
+            if (isAdmin) {
+              setAdminEmail(session.user.email || "");
+              setIsAuthenticated(true);
+              setAdminSession(session.user.email || "");
+              updateActivity();
+            } else {
+              console.log("User is not admin");
+              handleLogout();
+            }
+          } catch (error) {
+            console.error("Error checking admin status:", error);
           }
         }
         setLoading(false);
@@ -44,24 +51,32 @@ export const useAdminAuth = () => {
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem("adminToken");
-      const email = localStorage.getItem("adminEmail");
+      console.log("Checking authentication...");
+      
+      // Check for demo credentials first
+      const storedEmail = localStorage.getItem("adminEmail");
       const sessionActive = localStorage.getItem("adminSessionActive");
       
-      // For demo purposes, accept the demo credentials
-      if (email === "dinesh001kaushik@gmail.com" && sessionActive === "true") {
-        setAdminEmail(email);
+      if (storedEmail === "dinesh001kaushik@gmail.com" && sessionActive === "true") {
+        console.log("Demo credentials found, authenticating...");
+        setAdminEmail(storedEmail);
         setIsAuthenticated(true);
         updateActivity();
         setLoading(false);
         return;
       }
 
-      // Check session validity with Supabase
+      // Check Supabase session
       const { data: { session }, error } = await supabase.auth.getSession();
       
-      if (error || !session?.user) {
-        console.log("No valid session found, redirecting to login");
+      if (error) {
+        console.error("Session error:", error);
+        handleLogout();
+        return;
+      }
+
+      if (!session?.user) {
+        console.log("No active session found");
         handleLogout();
         return;
       }
@@ -71,29 +86,50 @@ export const useAdminAuth = () => {
         user_id: session.user.id
       });
 
-      if (adminError || !isAdmin) {
-        console.log("Not authorized as admin");
+      if (adminError) {
+        console.error("Admin check error:", adminError);
         handleLogout();
         return;
       }
 
+      if (!isAdmin) {
+        console.log("User is not an admin");
+        handleLogout();
+        return;
+      }
+
+      console.log("Admin authenticated via Supabase");
       setAdminEmail(session.user.email || "");
       setIsAuthenticated(true);
+      setAdminSession(session.user.email || "");
       updateActivity();
       
     } catch (error) {
-      console.error("Auth error:", error);
+      console.error("Auth check error:", error);
       handleLogout();
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogout = () => {
+  const setAdminSession = (email: string) => {
+    const currentTime = Date.now();
+    localStorage.setItem("adminToken", `admin-${currentTime}`);
+    localStorage.setItem("adminEmail", email);
+    localStorage.setItem("adminSessionActive", "true");
+    localStorage.setItem("adminLastActivity", currentTime.toString());
+  };
+
+  const clearAdminSession = () => {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("adminEmail");
     localStorage.removeItem("adminSessionActive");
     localStorage.removeItem("adminLastActivity");
+  };
+
+  const handleLogout = () => {
+    console.log("Logging out admin...");
+    clearAdminSession();
     setIsAuthenticated(false);
     setAdminEmail("");
     supabase.auth.signOut();

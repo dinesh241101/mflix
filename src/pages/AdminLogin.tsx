@@ -27,35 +27,42 @@ const AdminLogin = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem("adminToken");
+        // Check demo credentials
+        const storedEmail = localStorage.getItem("adminEmail");
         const sessionActive = localStorage.getItem("adminSessionActive");
         const lastActivity = localStorage.getItem("adminLastActivity");
 
-        if (token && sessionActive === "true" && lastActivity) {
+        if (storedEmail === "dinesh001kaushik@gmail.com" && sessionActive === "true" && lastActivity) {
           const lastActivityTime = parseInt(lastActivity);
           const currentTime = Date.now();
           const maxInactiveTime = 24 * 60 * 60 * 1000; // 24 hours
           
           if (currentTime - lastActivityTime < maxInactiveTime) {
-            console.log("Already authenticated, redirecting to dashboard");
+            console.log("Demo session active, redirecting to dashboard");
             navigate("/admin/dashboard", { replace: true });
             return;
           }
         }
 
+        // Check Supabase session
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          const { data: isAdmin } = await supabase.rpc('is_admin', {
-            user_id: session.user.id
-          });
-          
-          if (isAdmin) {
-            const currentTime = Date.now();
-            localStorage.setItem("adminToken", `admin-${currentTime}`);
-            localStorage.setItem("adminEmail", session.user.email || "");
-            localStorage.setItem("adminSessionActive", "true");
-            localStorage.setItem("adminLastActivity", currentTime.toString());
-            navigate("/admin/dashboard", { replace: true });
+          try {
+            const { data: isAdmin } = await supabase.rpc('is_admin', {
+              user_id: session.user.id
+            });
+            
+            if (isAdmin) {
+              console.log("Supabase admin session found, redirecting to dashboard");
+              const currentTime = Date.now();
+              localStorage.setItem("adminToken", `admin-${currentTime}`);
+              localStorage.setItem("adminEmail", session.user.email || "");
+              localStorage.setItem("adminSessionActive", "true");
+              localStorage.setItem("adminLastActivity", currentTime.toString());
+              navigate("/admin/dashboard", { replace: true });
+            }
+          } catch (error) {
+            console.error("Error checking admin status:", error);
           }
         }
       } catch (error) {
@@ -73,45 +80,61 @@ const AdminLogin = () => {
     try {
       console.log("Attempting login with:", { email: email.trim() });
       
-      // First try Supabase authentication
+      // Handle demo credentials
+      if (email.trim() === "dinesh001kaushik@gmail.com" && password.trim() === "dinesh001") {
+        console.log("Demo credentials detected, logging in...");
+        
+        const currentTime = Date.now();
+        localStorage.setItem("adminToken", `admin-${currentTime}`);
+        localStorage.setItem("adminEmail", email.trim());
+        localStorage.setItem("adminSessionActive", "true");
+        localStorage.setItem("adminLastActivity", currentTime.toString());
+        
+        console.log("Demo login successful, session started at:", new Date(currentTime));
+        
+        toast({
+          title: "Login successful",
+          description: "Welcome to the admin dashboard!",
+        });
+        
+        setTimeout(() => {
+          navigate("/admin/dashboard", { replace: true });
+        }, 1000);
+        return;
+      }
+
+      // Try Supabase authentication for other credentials
+      console.log("Attempting Supabase authentication...");
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password.trim(),
       });
 
       if (error) {
-        console.log("Supabase auth failed, trying demo credentials");
-        // Fallback to demo credentials
-        if (email.trim() === "dinesh001kaushik@gmail.com" && password.trim() === "dinesh001") {
-          const currentTime = Date.now();
-          localStorage.setItem("adminToken", `admin-${currentTime}`);
-          localStorage.setItem("adminEmail", email);
-          localStorage.setItem("adminSessionActive", "true");
-          localStorage.setItem("adminLastActivity", currentTime.toString());
-          
-          console.log("Demo login successful, session started at:", new Date(currentTime));
-          
-          toast({
-            title: "Login successful",
-            description: "Welcome to the admin dashboard!",
-          });
-          
-          setTimeout(() => {
-            navigate("/admin/dashboard", { replace: true });
-          }, 1000);
-          return;
-        }
-        throw error;
+        console.error("Supabase auth error:", error);
+        throw new Error("Invalid email or password. Please check your credentials.");
+      }
+
+      if (!data.user) {
+        throw new Error("Authentication failed. Please try again.");
       }
 
       // Check if user is admin
-      const { data: isAdmin } = await supabase.rpc('is_admin', {
+      console.log("Checking admin privileges...");
+      const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin', {
         user_id: data.user.id
       });
 
-      if (!isAdmin) {
+      if (adminError) {
+        console.error("Admin check error:", adminError);
         await supabase.auth.signOut();
-        throw new Error("You don't have admin privileges");
+        throw new Error("Failed to verify admin privileges. Please try again.");
+      }
+
+      if (!isAdmin) {
+        console.log("User is not admin");
+        await supabase.auth.signOut();
+        throw new Error("You don't have admin privileges to access this panel.");
       }
 
       // Set admin credentials with persistent session
@@ -121,7 +144,7 @@ const AdminLogin = () => {
       localStorage.setItem("adminSessionActive", "true");
       localStorage.setItem("adminLastActivity", currentTime.toString());
       
-      console.log("Supabase login successful, session started at:", new Date(currentTime));
+      console.log("Supabase admin login successful, session started at:", new Date(currentTime));
       
       toast({
         title: "Login successful",
