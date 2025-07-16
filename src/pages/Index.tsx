@@ -273,7 +273,7 @@ const Index = () => {
                 See More <ChevronRight size={16} className="ml-1" />
               </Button>
             </div>
-            <MovieCarousel movies={transformMovieForCarousel(latestMovies)} onMovieClick={handleMovieClick} />
+            <MovieCarousel title="Latest Movies" movies={transformMovieForCarousel(latestMovies)} />
           </section>
         )}
 
@@ -293,7 +293,7 @@ const Index = () => {
                 See More <ChevronRight size={16} className="ml-1" />
               </Button>
             </div>
-            <MovieCarousel movies={transformMovieForCarousel(latestSeries)} onMovieClick={handleMovieClick} />
+            <MovieCarousel title="Latest Web Series" movies={transformMovieForCarousel(latestSeries)} />
           </section>
         )}
 
@@ -310,7 +310,7 @@ const Index = () => {
                 See More <ChevronRight size={16} className="ml-1" />
               </Button>
             </div>
-            <MovieCarousel movies={transformMovieForCarousel(latestAnime)} onMovieClick={handleMovieClick} />
+            <MovieCarousel title="Latest Anime" movies={transformMovieForCarousel(latestAnime)} />
           </section>
         )}
 
