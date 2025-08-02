@@ -25,6 +25,7 @@ export const validateUrl = (url: string): boolean => {
 };
 
 export const sanitizeHtml = (html: string): string => {
+  // Basic HTML sanitization by escaping
   const div = document.createElement('div');
   div.textContent = html;
   return div.innerHTML;

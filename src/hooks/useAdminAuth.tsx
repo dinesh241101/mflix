@@ -53,18 +53,8 @@ export const useAdminAuth = () => {
     try {
       console.log("Checking authentication...");
       
-      // Check for demo credentials first
-      const storedEmail = localStorage.getItem("adminEmail");
-      const sessionActive = localStorage.getItem("adminSessionActive");
-      
-      if (storedEmail === "dinesh001kaushik@gmail.com" && sessionActive === "true") {
-        console.log("Demo credentials found, authenticating...");
-        setAdminEmail(storedEmail);
-        setIsAuthenticated(true);
-        updateActivity();
-        setLoading(false);
-        return;
-      }
+      // Remove demo credentials bypass - only use Supabase authentication
+      clearAdminSession();
 
       // Check Supabase session
       const { data: { session }, error } = await supabase.auth.getSession();

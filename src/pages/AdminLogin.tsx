@@ -8,11 +8,14 @@ import { LoaderCircle, AtSign, Lock, KeyRound, Eye, EyeOff, Shield } from "lucid
 import LoadingScreen from "@/components/LoadingScreen";
 import MFlixLogo from "@/components/MFlixLogo";
 import { supabase } from "@/integrations/supabase/client";
+import { sanitizeInput, validateEmail, RateLimiter } from "@/utils/security";
+
+const loginRateLimiter = new RateLimiter(5, 15 * 60 * 1000);
 
 const AdminLogin = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("dinesh001kaushik@gmail.com");
-  const [password, setPassword] = useState("dinesh001");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
@@ -78,35 +81,28 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      console.log("Attempting login with:", { email: email.trim() });
+      const sanitizedEmail = sanitizeInput(email);
       
-      // Handle demo credentials
-      if (email.trim() === "dinesh001kaushik@gmail.com" && password.trim() === "dinesh001") {
-        console.log("Demo credentials detected, logging in...");
-        
-        const currentTime = Date.now();
-        localStorage.setItem("adminToken", `admin-${currentTime}`);
-        localStorage.setItem("adminEmail", email.trim());
-        localStorage.setItem("adminSessionActive", "true");
-        localStorage.setItem("adminLastActivity", currentTime.toString());
-        
-        console.log("Demo login successful, session started at:", new Date(currentTime));
-        
-        toast({
-          title: "Login successful",
-          description: "Welcome to the admin dashboard!",
-        });
-        
-        setTimeout(() => {
-          navigate("/admin/dashboard", { replace: true });
-        }, 1000);
-        return;
+      // Input validation
+      if (!validateEmail(sanitizedEmail)) {
+        throw new Error("Please enter a valid email address.");
+      }
+      
+      if (!password || password.length < 6) {
+        throw new Error("Password must be at least 6 characters long.");
       }
 
-      // Try Supabase authentication for other credentials
-      console.log("Attempting Supabase authentication...");
+      // Rate limiting check
+      if (loginRateLimiter.isBlocked(sanitizedEmail)) {
+        throw new Error("Too many login attempts. Please try again in 15 minutes.");
+      }
+
+      // Record login attempt
+      loginRateLimiter.recordAttempt(sanitizedEmail);
+
+      console.log("Attempting secure authentication...");
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: sanitizedEmail,
         password: password.trim(),
       });
 
@@ -236,9 +232,7 @@ const AdminLogin = () => {
             </Button>
             
             <div className="text-center text-sm text-gray-500">
-              <p>Demo credentials:</p>
-              <p className="text-green-400 mt-1">Email: dinesh001kaushik@gmail.com</p>
-              <p className="text-green-400">Password: dinesh001</p>
+              <p>Enter your admin credentials to access the dashboard.</p>
             </div>
           </div>
         </form>
