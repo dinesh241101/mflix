@@ -85,11 +85,11 @@ const WebSeries = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-gray-900 text-white flex flex-col">
       <ScrollableHeader />
       
       <SmartAdManager position="webseries_page">
-        <div className="container mx-auto px-4 py-8">
+        <div className="flex-1 container mx-auto px-4 py-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">{getPageTitle()}</h1>
             <p className="text-gray-400">
@@ -101,7 +101,9 @@ const WebSeries = () => {
             <AdBanner position="series_top" />
           </div>
 
-          <EnhancedMovieGrid movies={series} />
+          <div className="min-h-[60vh]">
+            <EnhancedMovieGrid movies={series} />
+          </div>
 
           <div className="mt-8">
             <AdBanner position="series_bottom" />

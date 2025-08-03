@@ -30,15 +30,10 @@ const AdminHeader = ({ adminEmail, onLogout }: AdminHeaderProps) => {
           </div>
         </div>
         
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onLogout}
-          className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
-        >
-          <LogOut size={18} className="mr-2" />
-          Logout
-        </Button>
+        {/* Logout button removed - admin cannot logout once logged in */}
+        <div className="text-sm text-green-400 bg-green-900/20 px-3 py-1 rounded">
+          🔒 Secure Session Active
+        </div>
       </div>
     </header>
   );

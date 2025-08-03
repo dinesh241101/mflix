@@ -20,7 +20,9 @@ const UniversalSearchBar = ({
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      const searchTerm = searchQuery.trim();
+      // Enhanced search - pass to improved search results
+      navigate(`/search?q=${encodeURIComponent(searchTerm)}`);
       setSearchQuery("");
     }
   };

@@ -17,14 +17,14 @@ import {
   FileText,
   Palette
 } from "lucide-react";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { usePermanentAdminAuth } from "@/hooks/usePermanentAdminAuth";
 import AdminHeader from "@/components/admin/AdminHeader";
 import LoadingScreen from "@/components/LoadingScreen";
 import { supabase } from "@/integrations/supabase/client";
 import SampleDataInitializer from "@/components/admin/SampleDataInitializer";
 
 const AdminDashboard = () => {
-  const { adminEmail, loading: authLoading, isAuthenticated, handleLogout, updateActivity } = useAdminAuth();
+  const { adminEmail, loading: authLoading, isAuthenticated, handleLogout, updateSessionTimestamp } = usePermanentAdminAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalMovies: 0,
@@ -44,7 +44,7 @@ const AdminDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      updateActivity();
+      updateSessionTimestamp();
       
       const [moviesRes, seriesRes, animeRes, shortsRes, adsRes] = await Promise.all([
         supabase.from('movies').select('*', { count: 'exact' }).eq('content_type', 'movie'),
@@ -70,7 +70,7 @@ const AdminDashboard = () => {
   };
 
   const handleNavigation = (path: string) => {
-    updateActivity();
+    updateSessionTimestamp();
     navigate(path);
   };
 

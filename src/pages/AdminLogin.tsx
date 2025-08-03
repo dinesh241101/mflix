@@ -3,22 +3,29 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/use-toast";
-import { LoaderCircle, AtSign, Lock, KeyRound, Eye, EyeOff, Shield } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { LoaderCircle, AtSign, Lock, KeyRound, Eye, EyeOff, Shield, Copy, Check } from "lucide-react";
 import LoadingScreen from "@/components/LoadingScreen";
 import MFlixLogo from "@/components/MFlixLogo";
-import { supabase } from "@/integrations/supabase/client";
-import { sanitizeInput, validateEmail, RateLimiter } from "@/utils/security";
-
-const loginRateLimiter = new RateLimiter(5, 15 * 60 * 1000);
+import { usePermanentAdminAuth } from "@/hooks/usePermanentAdminAuth";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
+  const { 
+    isAuthenticated, 
+    loading, 
+    secureLogin, 
+    PERMANENT_ADMIN_EMAIL, 
+    PERMANENT_ADMIN_PASSWORD 
+  } = usePermanentAdminAuth();
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [showCredentials, setShowCredentials] = useState(true);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   
   // Simulate page load
   useEffect(() => {
@@ -26,130 +33,51 @@ const AdminLogin = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Check if already logged in
+  // Redirect if already authenticated
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        // Check demo credentials
-        const storedEmail = localStorage.getItem("adminEmail");
-        const sessionActive = localStorage.getItem("adminSessionActive");
-        const lastActivity = localStorage.getItem("adminLastActivity");
+    if (isAuthenticated && !loading) {
+      navigate("/admin/dashboard", { replace: true });
+    }
+  }, [isAuthenticated, loading, navigate]);
 
-        if (storedEmail === "dinesh001kaushik@gmail.com" && sessionActive === "true" && lastActivity) {
-          const lastActivityTime = parseInt(lastActivity);
-          const currentTime = Date.now();
-          const maxInactiveTime = 24 * 60 * 60 * 1000; // 24 hours
-          
-          if (currentTime - lastActivityTime < maxInactiveTime) {
-            console.log("Demo session active, redirecting to dashboard");
-            navigate("/admin/dashboard", { replace: true });
-            return;
-          }
-        }
+  const copyToClipboard = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+      toast({
+        title: "Copied!",
+        description: `${field} copied to clipboard`,
+      });
+    } catch (error) {
+      console.error("Failed to copy:", error);
+    }
+  };
 
-        // Check Supabase session
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          try {
-            const { data: isAdmin } = await supabase.rpc('is_admin', {
-              user_id: session.user.id
-            });
-            
-            if (isAdmin) {
-              console.log("Supabase admin session found, redirecting to dashboard");
-              const currentTime = Date.now();
-              localStorage.setItem("adminToken", `admin-${currentTime}`);
-              localStorage.setItem("adminEmail", session.user.email || "");
-              localStorage.setItem("adminSessionActive", "true");
-              localStorage.setItem("adminLastActivity", currentTime.toString());
-              navigate("/admin/dashboard", { replace: true });
-            }
-          } catch (error) {
-            console.error("Error checking admin status:", error);
-          }
-        }
-      } catch (error) {
-        console.error("Auth check error:", error);
-      }
-    };
-
-    checkAuth();
-  }, [navigate]);
+  const fillCredentials = () => {
+    setEmail(PERMANENT_ADMIN_EMAIL);
+    setPassword(PERMANENT_ADMIN_PASSWORD);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const sanitizedEmail = sanitizeInput(email);
+      const result = await secureLogin(email.trim(), password.trim());
       
-      // Input validation
-      if (!validateEmail(sanitizedEmail)) {
-        throw new Error("Please enter a valid email address.");
+      if (result.success) {
+        toast({
+          title: "Login successful",
+          description: "Welcome to the permanent admin session!",
+        });
+        
+        setTimeout(() => {
+          navigate("/admin/dashboard", { replace: true });
+        }, 1000);
+      } else {
+        throw new Error(result.error || "Authentication failed");
       }
-      
-      if (!password || password.length < 6) {
-        throw new Error("Password must be at least 6 characters long.");
-      }
-
-      // Rate limiting check
-      if (loginRateLimiter.isBlocked(sanitizedEmail)) {
-        throw new Error("Too many login attempts. Please try again in 15 minutes.");
-      }
-
-      // Record login attempt
-      loginRateLimiter.recordAttempt(sanitizedEmail);
-
-      console.log("Attempting secure authentication...");
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: sanitizedEmail,
-        password: password.trim(),
-      });
-
-      if (error) {
-        console.error("Supabase auth error:", error);
-        throw new Error("Invalid email or password. Please check your credentials.");
-      }
-
-      if (!data.user) {
-        throw new Error("Authentication failed. Please try again.");
-      }
-
-      // Check if user is admin
-      console.log("Checking admin privileges...");
-      const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin', {
-        user_id: data.user.id
-      });
-
-      if (adminError) {
-        console.error("Admin check error:", adminError);
-        await supabase.auth.signOut();
-        throw new Error("Failed to verify admin privileges. Please try again.");
-      }
-
-      if (!isAdmin) {
-        console.log("User is not admin");
-        await supabase.auth.signOut();
-        throw new Error("You don't have admin privileges to access this panel.");
-      }
-
-      // Set admin credentials with persistent session
-      const currentTime = Date.now();
-      localStorage.setItem("adminToken", `admin-${currentTime}`);
-      localStorage.setItem("adminEmail", data.user.email || "");
-      localStorage.setItem("adminSessionActive", "true");
-      localStorage.setItem("adminLastActivity", currentTime.toString());
-      
-      console.log("Supabase admin login successful, session started at:", new Date(currentTime));
-      
-      toast({
-        title: "Login successful",
-        description: "Welcome to the admin dashboard!",
-      });
-      
-      setTimeout(() => {
-        navigate("/admin/dashboard", { replace: true });
-      }, 1000);
       
     } catch (error: any) {
       console.error("Login error:", error);
@@ -163,7 +91,7 @@ const AdminLogin = () => {
     }
   };
 
-  if (pageLoading) {
+  if (pageLoading || loading) {
     return <LoadingScreen message="Preparing Secure Admin Portal" />;
   }
 
@@ -176,9 +104,71 @@ const AdminLogin = () => {
           </div>
           <div className="flex items-center justify-center gap-2 mt-2">
             <Shield className="text-green-500" size={16} />
-            <p className="text-gray-400">Secure Admin Access</p>
+            <p className="text-gray-400">Permanent Admin Access</p>
           </div>
         </div>
+
+        {/* Admin Credentials Display */}
+        {showCredentials && (
+          <div className="mb-6 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-blue-400">Admin Credentials</h3>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={fillCredentials}
+                className="text-xs"
+              >
+                Auto Fill
+              </Button>
+            </div>
+            
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between bg-gray-800 p-2 rounded">
+                <span className="text-gray-300">Email:</span>
+                <div className="flex items-center gap-2">
+                  <code className="text-blue-400">{PERMANENT_ADMIN_EMAIL}</code>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(PERMANENT_ADMIN_EMAIL, 'Email')}
+                    className="h-6 w-6 p-0"
+                  >
+                    {copiedField === 'Email' ? 
+                      <Check size={12} className="text-green-400" /> : 
+                      <Copy size={12} />
+                    }
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between bg-gray-800 p-2 rounded">
+                <span className="text-gray-300">Password:</span>
+                <div className="flex items-center gap-2">
+                  <code className="text-blue-400">{PERMANENT_ADMIN_PASSWORD}</code>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(PERMANENT_ADMIN_PASSWORD, 'Password')}
+                    className="h-6 w-6 p-0"
+                  >
+                    {copiedField === 'Password' ? 
+                      <Check size={12} className="text-green-400" /> : 
+                      <Copy size={12} />
+                    }
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            <p className="text-xs text-yellow-400 mt-2">
+              ⚠️ Admin cannot logout once logged in (Permanent Session)
+            </p>
+          </div>
+        )}
         
         <form onSubmit={handleLogin}>
           <div className="space-y-4">
@@ -232,7 +222,8 @@ const AdminLogin = () => {
             </Button>
             
             <div className="text-center text-sm text-gray-500">
-              <p>Enter your admin credentials to access the dashboard.</p>
+              <p>Use the credentials above to access the permanent admin session.</p>
+              <p className="text-yellow-400 mt-1">Once logged in, admin cannot logout.</p>
             </div>
           </div>
         </form>
