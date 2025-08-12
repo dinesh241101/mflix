@@ -2,133 +2,122 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import ScrollableHeader from "@/components/universal/ScrollableHeader";
-import EnhancedMovieGrid from "@/components/enhanced/EnhancedMovieGrid";
-import AdBanner from "@/components/ads/AdBanner";
-import SmartAdManager from "@/components/ads/SmartAdManager";
+import UniversalHeader from "@/components/universal/UniversalHeader";
+import MovieGrid from "@/components/MovieGrid";
+import LoadingScreen from "@/components/LoadingScreen";
+import { Badge } from "@/components/ui/badge";
 
 const Movies = () => {
   const [searchParams] = useSearchParams();
   const [movies, setMovies] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [totalMovies, setTotalMovies] = useState(0);
 
-  // Get query parameters
-  const category = searchParams.get('category');
-  const genre = searchParams.get('genre');
-  const quality = searchParams.get('quality');
-  const year = searchParams.get('year');
-  const country = searchParams.get('country');
-  const language = searchParams.get('language');
-  const audio = searchParams.get('audio');
-  const sort = searchParams.get('sort');
+  const category = searchParams.get("category");
+  const pageTitle = category ? `${category} Movies` : "All Movies";
 
   useEffect(() => {
     fetchMovies();
-  }, [searchParams]);
+  }, [category]);
 
   const fetchMovies = async () => {
     try {
-      setLoading(true);
-      
+      setIsLoading(true);
       let query = supabase
         .from('movies')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('content_type', 'movie')
         .eq('is_visible', true);
 
-      // Apply filters based on URL parameters
+      // Apply category filter
       if (category) {
-        query = query.contains('seo_tags', [category]);
+        switch (category.toLowerCase()) {
+          case 'bollywood':
+            query = query.contains('seo_tags', ['bollywood']);
+            break;
+          case 'hollywood':
+            query = query.contains('seo_tags', ['hollywood']);
+            break;
+          case 'dual audio':
+            query = query.contains('seo_tags', ['dual audio']);
+            break;
+          case 'telugu':
+            query = query.or('country.ilike.%telugu%,seo_tags.cs.{telugu}');
+            break;
+          case 'tamil':
+            query = query.or('country.ilike.%tamil%,seo_tags.cs.{tamil}');
+            break;
+          default:
+            // For other categories, search in genre or seo_tags
+            query = query.or(`genre.cs.{${category}},seo_tags.cs.{${category.toLowerCase()}}`);
+        }
       }
 
-      if (genre) {
-        query = query.contains('genre', [genre]);
-      }
-
-      if (quality) {
-        query = query.eq('quality', quality);
-      }
-
-      if (year) {
-        query = query.eq('year', parseInt(year));
-      }
-
-      if (country) {
-        query = query.ilike('country', `%${country}%`);
-      }
-
-      if (language) {
-        query = query.contains('seo_tags', [language]);
-      }
-
-      if (audio === 'dual') {
-        query = query.contains('seo_tags', ['dual audio']);
-      }
-
-      // Apply sorting
-      if (sort === 'latest') {
-        query = query.order('created_at', { ascending: false });
-      } else if (sort === 'popular') {
-        query = query.order('downloads', { ascending: false });
-      } else if (sort === 'rating') {
-        query = query.order('imdb_rating', { ascending: false });
-      } else {
-        query = query.order('created_at', { ascending: false });
-      }
-
-      const { data, error } = await query.limit(50);
+      const { data, error, count } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
-      setMovies(data || []);
 
+      setMovies(data || []);
+      setTotalMovies(count || 0);
     } catch (error) {
       console.error('Error fetching movies:', error);
+      setMovies([]);
+      setTotalMovies(0);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const getPageTitle = () => {
-    if (category) return `${category.charAt(0).toUpperCase() + category.slice(1)} Movies`;
-    if (genre) return `${genre.charAt(0).toUpperCase() + genre.slice(1)} Movies`;
-    if (quality) return `${quality} Movies`;
-    if (year) return `${year} Movies`;
-    if (country) return `${country.charAt(0).toUpperCase() + country.slice(1)} Movies`;
-    if (language) return `${language.charAt(0).toUpperCase() + language.slice(1)} Movies`;
-    if (audio === 'dual') return 'Dual Audio Movies';
-    return 'All Movies';
-  };
+  if (isLoading) {
+    return <LoadingScreen message="Loading movies..." />;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col">
-      <ScrollableHeader />
+    <div className="min-h-screen bg-gray-900">
+      <UniversalHeader />
       
-      <SmartAdManager position="movies_page">
-        <div className="flex-1 container mx-auto px-4 py-8">
-          {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">{getPageTitle()}</h1>
-            <p className="text-gray-400">
-              {loading ? 'Loading...' : `Showing ${movies.length} movies`}
-            </p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <h1 className="text-2xl md:text-3xl font-bold text-white">
+              {pageTitle}
+            </h1>
+            {category && (
+              <Badge className="bg-blue-600 text-white">
+                {category}
+              </Badge>
+            )}
           </div>
-
-          {/* Top Ad Banner */}
-          <div className="mb-8">
-            <AdBanner position="movies_top" />
-          </div>
-
-          {/* Movies Grid */}
-          <div className="min-h-[60vh]">
-            <EnhancedMovieGrid movies={movies} />
-          </div>
-
-          {/* Bottom Ad Banner */}
-          <div className="mt-8">
-            <AdBanner position="movies_bottom" />
+          
+          <div className="flex items-center gap-2 text-gray-400">
+            <span>
+              {totalMovies} movie{totalMovies !== 1 ? 's' : ''} found
+            </span>
           </div>
         </div>
-      </SmartAdManager>
+
+        {movies.length > 0 ? (
+          <div className="pb-8">
+            <MovieGrid movies={movies} />
+          </div>
+        ) : (
+          <div className="text-center py-16">
+            <div className="text-6xl mb-4">🎬</div>
+            <h2 className="text-xl font-semibold text-white mb-2">
+              No movies found
+            </h2>
+            <p className="text-gray-400 mb-6">
+              {category 
+                ? `No movies found in the ${category} category.`
+                : "No movies available at the moment."
+              }
+            </p>
+            <div className="text-sm text-gray-500">
+              <p>Try browsing other categories or check back later for new content.</p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

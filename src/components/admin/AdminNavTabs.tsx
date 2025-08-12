@@ -1,64 +1,63 @@
 
-import { useNavigate } from "react-router-dom";
-import { TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { 
+  Film, 
+  Tv, 
+  Gamepad2, 
+  Settings, 
+  BarChart3, 
+  Users, 
+  DollarSign,
+  Video,
+  Repeat,
+  Upload,
+  List
+} from "lucide-react";
 
 interface AdminNavTabsProps {
   activeTab: string;
+  setActiveTab: (tab: string) => void;
 }
 
-const AdminNavTabs = ({ activeTab }: AdminNavTabsProps) => {
-  const navigate = useNavigate();
-  
-  // Handle tab change with proper navigation
-  const handleTabChange = (value: string) => {
-    navigate(`/admin/dashboard/${value}`);
-  };
+const AdminNavTabs = ({ activeTab, setActiveTab }: AdminNavTabsProps) => {
+  const tabs = [
+    { id: "movies", label: "Movies", icon: Film },
+    { id: "series", label: "Web Series", icon: Tv },
+    { id: "anime", label: "Anime", icon: Gamepad2 },
+    { id: "shorts", label: "Shorts", icon: Video },
+    { id: "episodes", label: "Series Episodes", icon: List },
+    { id: "redirect", label: "Redirect Loop", icon: Repeat },
+    { id: "bulk", label: "Bulk Upload", icon: Upload },
+    { id: "ads", label: "Ads Management", icon: DollarSign },
+    { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "users", label: "Users", icon: Users },
+    { id: "settings", label: "Settings", icon: Settings },
+  ];
 
   return (
-    <TabsList className="grid grid-cols-3 md:grid-cols-6 bg-gray-800 border border-gray-700 rounded-lg p-1 mb-6">
-      <TabsTrigger 
-        value="movies" 
-        onClick={() => handleTabChange("movies")}
-        className={activeTab === 'movies' ? 'data-[state=active]:bg-gray-700' : ''}
-      >
-        Movies
-      </TabsTrigger>
-      <TabsTrigger 
-        value="shorts"
-        onClick={() => handleTabChange("shorts")}
-        className={activeTab === 'shorts' ? 'data-[state=active]:bg-gray-700' : ''}
-      >
-        Shorts
-      </TabsTrigger>
-      <TabsTrigger 
-        value="ads"
-        onClick={() => handleTabChange("ads")}
-        className={activeTab === 'ads' ? 'data-[state=active]:bg-gray-700' : ''}
-      >
-        Ads
-      </TabsTrigger>
-      <TabsTrigger 
-        value="users"
-        onClick={() => handleTabChange("users")}
-        className={activeTab === 'users' ? 'data-[state=active]:bg-gray-700' : ''}
-      >
-        Users
-      </TabsTrigger>
-      <TabsTrigger 
-        value="analytics"
-        onClick={() => handleTabChange("analytics")}
-        className={activeTab === 'analytics' ? 'data-[state=active]:bg-gray-700' : ''}
-      >
-        Analytics
-      </TabsTrigger>
-      <TabsTrigger 
-        value="settings"
-        onClick={() => handleTabChange("settings")}
-        className={activeTab === 'settings' ? 'data-[state=active]:bg-gray-700' : ''}
-      >
-        Settings
-      </TabsTrigger>
-    </TabsList>
+    <div className="border-b border-gray-700 mb-6">
+      <div className="flex flex-wrap gap-2 pb-4">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <Button
+              key={tab.id}
+              variant={activeTab === tab.id ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 ${
+                activeTab === tab.id
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-300 hover:text-white hover:bg-gray-700"
+              }`}
+            >
+              <Icon size={16} />
+              {tab.label}
+            </Button>
+          );
+        })}
+      </div>
+    </div>
   );
 };
 
