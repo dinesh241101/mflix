@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +15,6 @@ const Index = () => {
   const [featuredMovies, setFeaturedMovies] = useState<any[]>([]);
   const [animeMovies, setAnimeMovies] = useState<any[]>([]);
   const [seriesMovies, setSeriesMovies] = useState<any[]>([]);
-  const [latestMovies, setLatestMovies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,12 +40,10 @@ const Index = () => {
       const featured = allMovies?.filter(movie => movie.featured) || [];
       const anime = allMovies?.filter(movie => movie.content_type === 'anime') || [];
       const series = allMovies?.filter(movie => movie.content_type === 'series') || [];
-      const latest = allMovies?.slice(0, 12) || [];
 
       setFeaturedMovies(featured);
       setAnimeMovies(anime);
       setSeriesMovies(series);
-      setLatestMovies(latest);
 
     } catch (error) {
       console.error('Error fetching movies:', error);
@@ -91,7 +89,7 @@ const Index = () => {
         </section>
 
         {/* Latest Uploads */}
-        <LatestUploadsSection movies={latestMovies} />
+        <LatestUploadsSection />
 
         {/* Movie Carousels */}
         {animeMovies.length > 0 && (
