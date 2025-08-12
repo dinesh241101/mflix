@@ -18,6 +18,23 @@ interface AnimeTabProps {
   handleEditAnime?: (anime: any) => void;
   genres?: any[];
   countries?: any[];
+  selectedAnime?: any;
+  setSelectedAnime?: (anime: any) => void;
+  handleSelectAnimeForCast?: (animeId: string) => void;
+  animeCast?: any[];
+  castForm?: any;
+  setCastForm?: (form: any) => void;
+  handleAddCastMember?: (e: React.FormEvent) => void;
+  handleDeleteCastMember?: (id: string) => void;
+  downloadsCount?: number;
+  setDownloadsCount?: (count: number) => void;
+  handleUpdateDownloads?: () => void;
+  castSearchQuery?: string;
+  handleCastSearch?: (query: string) => void;
+  castSearchResults?: any[];
+  selectCastFromSearch?: (result: any) => void;
+  isEditing?: boolean;
+  updateActivity?: () => void;
 }
 
 const AnimeTab = (props: AnimeTabProps = {}) => {

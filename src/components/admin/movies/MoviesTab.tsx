@@ -32,6 +32,22 @@ interface MoviesTabProps {
   handleCancelEdit?: () => void;
   handleToggleVisibility?: (movieId: string, isVisible: boolean) => void;
   handleToggleFeatured?: (movieId: string, isFeatured: boolean) => void;
+  selectedMovie?: any;
+  setSelectedMovie?: (movie: any) => void;
+  handleSelectMovieForCast?: (movieId: string) => void;
+  movieCast?: any[];
+  castForm?: any;
+  setCastForm?: (form: any) => void;
+  handleAddCastMember?: (e: React.FormEvent) => void;
+  handleDeleteCastMember?: (id: string) => void;
+  downloadsCount?: number;
+  setDownloadsCount?: (count: number) => void;
+  handleUpdateDownloads?: () => void;
+  castSearchQuery?: string;
+  handleCastSearch?: (query: string) => void;
+  castSearchResults?: any[];
+  selectCastFromSearch?: (result: any) => void;
+  isEditing?: boolean;
 }
 
 const MoviesTab = (props: MoviesTabProps = {}) => {
