@@ -1,8 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import UniversalHeader from "@/components/universal/UniversalHeader";
 import MovieGrid from "@/components/MovieGrid";
 import LoadingScreen from "@/components/LoadingScreen";
 import { Badge } from "@/components/ui/badge";
@@ -26,40 +24,135 @@ const SearchResults = () => {
   const searchMovies = async () => {
     try {
       setIsLoading(true);
-      let searchQuery;
-
+      
       if (genre) {
         // Genre-based search
-        searchQuery = supabase
+        const { data, error } = await supabase
           .from('movies')
           .select('*')
           .eq('is_visible', true)
           .contains('genre', [genre])
           .order('created_at', { ascending: false });
-      } else {
-        // Text-based search
-        searchQuery = supabase
-          .from('movies')
-          .select('*')
-          .eq('is_visible', true)
-          .or(`title.ilike.%${searchTerm}%,storyline.ilike.%${searchTerm}%,director.ilike.%${searchTerm}%,production_house.ilike.%${searchTerm}%`)
-          .order('created_at', { ascending: false });
-      }
 
-      const { data, error } = await searchQuery;
+        if (error) throw error;
 
-      if (error) throw error;
-
-      // Additional filtering for genre search to ensure exact matches
-      let filteredData = data || [];
-      if (genre) {
-        filteredData = data?.filter(movie => 
+        const filteredData = data?.filter(movie => 
           movie.genre && movie.genre.includes(genre)
         ) || [];
-      }
 
-      setMovies(filteredData);
-      setTotalResults(filteredData.length);
+        setMovies(filteredData);
+        setTotalResults(filteredData.length);
+      } else {
+        // Enhanced text-based search with SEO tags and fuzzy matching
+        const searchTerms = searchTerm.toLowerCase().split(' ').filter(term => term.length > 0);
+        const searchQueries = [];
+
+        // 1. Direct title search
+        searchQueries.push(
+          supabase
+            .from('movies')
+            .select('*')
+            .eq('is_visible', true)
+            .ilike('title', `%${searchTerm}%`)
+            .order('downloads', { ascending: false })
+        );
+
+        // 2. Individual word matches
+        for (const term of searchTerms) {
+          if (term.length > 1) {
+            searchQueries.push(
+              supabase
+                .from('movies')
+                .select('*')
+                .eq('is_visible', true)
+                .ilike('title', `%${term}%`)
+                .order('downloads', { ascending: false })
+            );
+          }
+        }
+
+        // 3. SEO tags search
+        for (const term of searchTerms) {
+          searchQueries.push(
+            supabase
+              .from('movies')
+              .select('*')
+              .eq('is_visible', true)
+              .contains('seo_tags', [term])
+              .order('downloads', { ascending: false })
+          );
+        }
+
+        // 4. Director and other fields
+        searchQueries.push(
+          supabase
+            .from('movies')
+            .select('*')
+            .eq('is_visible', true)
+            .or(`director.ilike.%${searchTerm}%,production_house.ilike.%${searchTerm}%,storyline.ilike.%${searchTerm}%`)
+            .order('downloads', { ascending: false })
+        );
+
+        // Execute all searches
+        const searchResults = await Promise.all(
+          searchQueries.map(search => search.then(({ data, error }) => {
+            if (error) {
+              console.error('Search error:', error);
+              return [];
+            }
+            return data || [];
+          }))
+        );
+
+        // Combine and deduplicate results
+        const allResults = searchResults.flat();
+        const uniqueResults = allResults.filter(
+          (movie, index, self) => self.findIndex(m => m.movie_id === movie.movie_id) === index
+        );
+
+        // Score and sort results for relevance
+        const scoredResults = uniqueResults.map(movie => {
+          let score = 0;
+          const title = movie.title.toLowerCase();
+          const queryLower = searchTerm.toLowerCase();
+
+          // Title matching
+          if (title === queryLower) score += 100;
+          else if (title.startsWith(queryLower)) score += 80;
+          else if (title.includes(queryLower)) score += 60;
+
+          // Word-by-word matching for better "the big bang" -> "The Big Bang Theory" results
+          searchTerms.forEach(term => {
+            if (title.includes(term)) score += 25;
+            const titleWords = title.split(' ');
+            titleWords.forEach(titleWord => {
+              if (titleWord.includes(term)) score += 15;
+              if (term.includes(titleWord) && titleWord.length > 2) score += 10;
+            });
+          });
+
+          // SEO tags matching
+          if (movie.seo_tags) {
+            searchTerms.forEach(term => {
+              movie.seo_tags.forEach((tag: string) => {
+                if (tag.toLowerCase().includes(term)) score += 20;
+              });
+            });
+          }
+
+          // Boost popular content
+          score += Math.log(movie.downloads + 1);
+          if (movie.imdb_rating) score += movie.imdb_rating;
+
+          return { ...movie, score };
+        });
+
+        const sortedResults = scoredResults
+          .sort((a, b) => b.score - a.score);
+
+        setMovies(sortedResults);
+        setTotalResults(sortedResults.length);
+      }
     } catch (error) {
       console.error('Error searching movies:', error);
       setMovies([]);
@@ -75,8 +168,6 @@ const SearchResults = () => {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <UniversalHeader />
-      
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">

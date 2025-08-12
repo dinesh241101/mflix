@@ -1,40 +1,31 @@
 
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import AdminRouteGuard from "@/components/admin/AdminRouteGuard";
+import { lazy, Suspense } from "react";
+import LoadingScreen from "@/components/LoadingScreen";
+import FixedGlobalHeader from "@/components/enhanced/FixedGlobalHeader";
+import NewAdminRouteGuard from "@/components/admin/NewAdminRouteGuard";
 
-// Public pages
-import Index from "./pages/Index";
-import Movies from "./pages/Movies";
-import WebSeries from "./pages/WebSeries";
-import Anime from "./pages/Anime";
-import MovieDetail from "./pages/MovieDetail";
-import DownloadPage from "./pages/DownloadPage";
-import DownloadSources from "./pages/DownloadSources";
-import DownloadVerify from "./pages/DownloadVerify";
-import DownloadWithAds from "./pages/DownloadWithAds";
-import SearchResults from "./pages/SearchResults";
-import MobileShortsPage from "./pages/MobileShortsPage";
-import NotFound from "./pages/NotFound";
+// Lazy load components
+const Index = lazy(() => import("@/pages/Index"));
+const Movies = lazy(() => import("@/pages/Movies"));
+const WebSeries = lazy(() => import("@/pages/WebSeries"));
+const Anime = lazy(() => import("@/pages/Anime"));
+const MovieDetail = lazy(() => import("@/pages/MovieDetail"));
+const SearchResults = lazy(() => import("@/pages/SearchResults"));
+const DownloadPage = lazy(() => import("@/pages/DownloadPage"));
+const DownloadVerify = lazy(() => import("@/pages/DownloadVerify"));
+const DownloadWithAds = lazy(() => import("@/pages/DownloadWithAds"));
+const DownloadSources = lazy(() => import("@/pages/DownloadSources"));
+const MobileShortsPage = lazy(() => import("@/pages/MobileShortsPage"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
 
-// Admin pages
-import AdminLogin from "./pages/AdminLogin";
-import AdminDashboard from "./pages/AdminDashboard";
-import MoviesPage from "./pages/admin/MoviesPage";
-import MovieEditPage from "./pages/admin/MovieEditPage";
-import AnimePage from "./pages/admin/AnimePage";
-import ShortsPage from "./pages/admin/ShortsPage";
-import UsersPage from "./pages/admin/UsersPage";
-import AdsManagementPage from "./pages/admin/AdsManagementPage";
-import SettingsPage from "./pages/admin/SettingsPage";
-import GenresPage from "./pages/admin/GenresPage";
-import DownloadLinksPage from "./pages/admin/DownloadLinksPage";
-import ContentManagementPage from "./pages/admin/ContentManagementPage";
-import ManageSeriesPage from "./pages/admin/ManageSeriesPage";
-import ContentUploadPage from "./pages/admin/ContentUploadPage";
-import HeaderConfigPage from "./pages/admin/HeaderConfigPage";
+// New Admin components
+const NewAdminLogin = lazy(() => import("@/pages/NewAdminLogin"));
+const NewAdminDashboard = lazy(() => import("@/pages/NewAdminDashboard"));
 
 const queryClient = new QueryClient();
 
@@ -43,106 +34,51 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
+        <Sonner />
         <BrowserRouter>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/movies" element={<Movies />} />
-            <Route path="/series" element={<WebSeries />} />
-            <Route path="/anime" element={<Anime />} />
-            <Route path="/shorts" element={<MobileShortsPage />} />
-            <Route path="/movie/:id" element={<MovieDetail />} />
-            <Route path="/series/:id" element={<MovieDetail />} />
-            <Route path="/anime/:id" element={<MovieDetail />} />
-            <Route path="/download/:id" element={<DownloadPage />} />
-            <Route path="/download/:id/sources" element={<DownloadSources />} />
-            <Route path="/download/:id/verify" element={<DownloadVerify />} />
-            <Route path="/download/:id/with-ads" element={<DownloadWithAds />} />
-            <Route path="/search" element={<SearchResults />} />
-            
-            {/* Admin login (no guard needed) */}
-            <Route path="/admin/login" element={<AdminLogin />} />
-            
-            {/* Protected admin routes */}
-            <Route path="/admin" element={
-              <AdminRouteGuard>
-                <AdminDashboard />
-              </AdminRouteGuard>
-            } />
-            <Route path="/admin/dashboard" element={
-              <AdminRouteGuard>
-                <AdminDashboard />
-              </AdminRouteGuard>
-            } />
-            <Route path="/admin/movies" element={
-              <AdminRouteGuard>
-                <MoviesPage />
-              </AdminRouteGuard>
-            } />
-            <Route path="/admin/movies/edit/:id" element={
-              <AdminRouteGuard>
-                <MovieEditPage />
-              </AdminRouteGuard>
-            } />
-            <Route path="/admin/series" element={
-              <AdminRouteGuard>
-                <ManageSeriesPage />
-              </AdminRouteGuard>
-            } />
-            <Route path="/admin/anime" element={
-              <AdminRouteGuard>
-                <AnimePage />
-              </AdminRouteGuard>
-            } />
-            <Route path="/admin/shorts" element={
-              <AdminRouteGuard>
-                <ShortsPage />
-              </AdminRouteGuard>
-            } />
-            <Route path="/admin/users" element={
-              <AdminRouteGuard>
-                <UsersPage />
-              </AdminRouteGuard>
-            } />
-            <Route path="/admin/ads" element={
-              <AdminRouteGuard>
-                <AdsManagementPage />
-              </AdminRouteGuard>
-            } />
-            <Route path="/admin/settings" element={
-              <AdminRouteGuard>
-                <SettingsPage />
-              </AdminRouteGuard>
-            } />
-            <Route path="/admin/genres" element={
-              <AdminRouteGuard>
-                <GenresPage />
-              </AdminRouteGuard>
-            } />
-            <Route path="/admin/download-links" element={
-              <AdminRouteGuard>
-                <DownloadLinksPage />
-              </AdminRouteGuard>
-            } />
-            <Route path="/admin/content" element={
-              <AdminRouteGuard>
-                <ContentManagementPage />
-              </AdminRouteGuard>
-            } />
-            <Route path="/admin/upload" element={
-              <AdminRouteGuard>
-                <ContentUploadPage />
-              </AdminRouteGuard>
-            } />
-            <Route path="/admin/header-config" element={
-              <AdminRouteGuard>
-                <HeaderConfigPage />
-              </AdminRouteGuard>
-            } />
-            
-            {/* 404 route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <div className="min-h-screen bg-gray-900">
+            {/* Fixed Global Header - shown on all pages except admin */}
+            <Routes>
+              <Route path="/crm-admin/*" element={null} />
+              <Route path="*" element={<FixedGlobalHeader />} />
+            </Routes>
+
+            {/* Main content with padding for fixed header */}
+            <div className="pt-16">
+              <Suspense fallback={<LoadingScreen />}>
+                <Routes>
+                  {/* Public Routes */}
+                  <Route path="/" element={<Index />} />
+                  <Route path="/movies" element={<Movies />} />
+                  <Route path="/web-series" element={<WebSeries />} />
+                  <Route path="/anime" element={<Anime />} />
+                  <Route path="/movie/:id" element={<MovieDetail />} />
+                  <Route path="/series/:id" element={<MovieDetail />} />
+                  <Route path="/anime/:id" element={<MovieDetail />} />
+                  <Route path="/search" element={<SearchResults />} />
+                  <Route path="/download/:id" element={<DownloadPage />} />
+                  <Route path="/download-verify/:id" element={<DownloadVerify />} />
+                  <Route path="/download-with-ads/:id" element={<DownloadWithAds />} />
+                  <Route path="/download-sources/:id" element={<DownloadSources />} />
+                  <Route path="/shorts" element={<MobileShortsPage />} />
+
+                  {/* New Admin Routes */}
+                  <Route path="/crm-admin/login" element={<NewAdminLogin />} />
+                  <Route
+                    path="/crm-admin"
+                    element={
+                      <NewAdminRouteGuard>
+                        <NewAdminDashboard />
+                      </NewAdminRouteGuard>
+                    }
+                  />
+
+                  {/* Fallback */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </div>
+          </div>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
