@@ -1,188 +1,242 @@
-
-import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import AnimeUploadForm from "./AnimeUploadForm";
-import AnimeList from "./AnimeList";
-import MovieDetailsDialog from "../movies/MovieDetailsDialog";
-import DownloadLinksForm from "../movies/DownloadLinksForm";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Home } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { PlusCircle, Edit, Trash2 } from "lucide-react";
 
 interface AnimeTabProps {
-  animes: any[];
-  animeForm: any;
-  setAnimeForm: (form: any) => void;
-  handleUploadAnime: (e: React.FormEvent) => void;
-  selectedAnime: any;
-  setSelectedAnime: (anime: any) => void;
-  handleSelectAnimeForCast: (animeId: string) => void;
-  animeCast: any[];
-  castForm: any;
-  setCastForm: (form: any) => void;
-  handleAddCastMember: (e: React.FormEvent) => void;
-  handleDeleteCastMember: (id: string) => void;
-  downloadsCount: number;
-  setDownloadsCount: (count: number) => void;
-  handleUpdateDownloads: () => void;
-  castSearchQuery: string;
-  handleCastSearch: (query: string) => void;
-  castSearchResults: any[];
-  selectCastFromSearch: (result: any) => void;
-  isEditing: boolean;
-  updateActivity: () => void;
+  animes?: any[];
+  animeForm?: any;
+  setAnimeForm?: (form: any) => void;
+  handleUploadAnime?: (e: React.FormEvent) => void;
+  handleDeleteAnime?: (id: string) => void;
+  handleEditAnime?: (anime: any) => void;
+  genres?: any[];
+  countries?: any[];
 }
 
-const AnimeTab = ({
-  animes,
-  animeForm,
-  setAnimeForm,
-  handleUploadAnime,
-  selectedAnime,
-  setSelectedAnime,
-  handleSelectAnimeForCast,
-  animeCast,
-  castForm,
-  setCastForm,
-  handleAddCastMember,
-  handleDeleteCastMember,
-  downloadsCount,
-  setDownloadsCount,
-  handleUpdateDownloads,
-  castSearchQuery,
-  handleCastSearch,
-  castSearchResults,
-  selectCastFromSearch,
-  isEditing,
-  updateActivity
-}: AnimeTabProps) => {
-  const [refreshList, setRefreshList] = useState(0);
-  const navigate = useNavigate();
+const AnimeTab = (props: AnimeTabProps = {}) => {
+  const [animes, setAnimes] = useState(props.animes || []);
+  const [animeForm, setAnimeForm] = useState(props.animeForm || {
+    title: '',
+    year: new Date().getFullYear(),
+    genre: [],
+    country: '',
+    director: '',
+    storyline: '',
+    poster_url: '',
+    trailer_url: '',
+    content_type: 'anime'
+  });
+  const [loading, setLoading] = useState(false);
 
-  const handleRefreshList = () => {
-    setRefreshList(prev => prev + 1);
-    updateActivity();
+  useEffect(() => {
+    fetchAnimes();
+  }, []);
+
+  const fetchAnimes = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('movies')
+        .select('*')
+        .eq('content_type', 'anime')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setAnimes(data || []);
+    } catch (error: any) {
+      console.error('Error fetching animes:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load animes",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleTabChange = (value: string) => {
-    updateActivity();
+  const handleUploadAnime = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (props.handleUploadAnime) {
+      props.handleUploadAnime(e);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('movies')
+        .insert([animeForm]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Anime uploaded successfully"
+      });
+
+      setAnimeForm({
+        title: '',
+        year: new Date().getFullYear(),
+        genre: [],
+        country: '',
+        director: '',
+        storyline: '',
+        poster_url: '',
+        trailer_url: '',
+        content_type: 'anime'
+      });
+
+      fetchAnimes();
+    } catch (error: any) {
+      console.error('Error uploading anime:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload anime",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAnime = async (id: string) => {
+    if (props.handleDeleteAnime) {
+      props.handleDeleteAnime(id);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('movies')
+        .delete()
+        .eq('movie_id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Anime deleted successfully"
+      });
+
+      fetchAnimes();
+    } catch (error: any) {
+      console.error('Error deleting anime:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete anime",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              updateActivity();
-              navigate("/admin");
-            }}
-            className="text-white hover:bg-gray-700"
-          >
-            <Home size={18} className="mr-2" />
-            Admin Dashboard
-          </Button>
-          <h1 className="text-3xl font-bold">Anime Management</h1>
-        </div>
-        {selectedAnime && (
-          <div className="text-sm text-gray-400">
-            Selected: {selectedAnime.title}
-          </div>
-        )}
+        <h2 className="text-2xl font-bold text-white">Anime Management</h2>
+        <Button>
+          <PlusCircle className="mr-2" size={16} />
+          Add Anime
+        </Button>
       </div>
-      
-      <Tabs defaultValue="upload" className="w-full" onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-4 bg-gray-800">
-          <TabsTrigger value="upload">Upload Anime</TabsTrigger>
-          <TabsTrigger value="list">Anime Library</TabsTrigger>
-          <TabsTrigger value="downloads" disabled={!selectedAnime}>
-            Download Links {!selectedAnime && "(Select anime first)"}
-          </TabsTrigger>
-          <TabsTrigger value="manage" disabled={!selectedAnime}>
-            Manage Cast {!selectedAnime && "(Select anime first)"}
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="upload">
-          <AnimeUploadForm 
-            animeForm={animeForm}
-            setAnimeForm={setAnimeForm}
-            handleUploadAnime={handleUploadAnime}
-            isEditing={isEditing}
-            updateActivity={updateActivity}
-          />
-        </TabsContent>
-        
-        <TabsContent value="list">
-          <AnimeList 
-            animes={animes}
-            onSelectAnime={handleSelectAnimeForCast}
-            refreshTrigger={refreshList}
-            updateActivity={updateActivity}
-          />
-        </TabsContent>
 
-        <TabsContent value="downloads">
-          <div className="space-y-6">
-            <div className="bg-blue-900/20 border border-blue-800 rounded-lg p-4">
-              <h2 className="text-xl font-bold mb-2">Download Links Management</h2>
-              <p className="text-gray-300">
-                Configure download links for <strong>{selectedAnime?.title}</strong> with multiple quality options and mirror sources.
-              </p>
-            </div>
-            
-            {selectedAnime ? (
-              <DownloadLinksForm 
-                movieId={selectedAnime.movie_id || selectedAnime.id}
-                contentType="anime"
-                onLinksAdded={handleRefreshList}
-                updateActivity={updateActivity}
-              />
-            ) : (
-              <div className="bg-gray-800 rounded-lg p-6 text-center">
-                <p className="text-gray-400">Please select an anime from the Anime Library tab first.</p>
+      {/* Upload Form */}
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white">Add New Anime</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleUploadAnime} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="title" className="text-white">Title</Label>
+                <Input
+                  id="title"
+                  value={animeForm.title}
+                  onChange={(e) => setAnimeForm({ ...animeForm, title: e.target.value })}
+                  className="bg-gray-700 border-gray-600 text-white"
+                  placeholder="Anime title"
+                  required
+                />
               </div>
-            )}
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="manage">
-          <div className="space-y-6">
-            <div className="bg-green-900/20 border border-green-800 rounded-lg p-4">
-              <h2 className="text-xl font-bold mb-2">Cast & Content Management</h2>
-              <p className="text-gray-300">
-                Manage cast members, download count, and media clips for <strong>{selectedAnime?.title}</strong>.
-              </p>
-            </div>
-            
-            {selectedAnime ? (
-              <MovieDetailsDialog 
-                selectedMovie={selectedAnime}
-                setSelectedMovie={setSelectedAnime}
-                movieCast={animeCast}
-                castForm={castForm}
-                setCastForm={setCastForm}
-                handleAddCastMember={handleAddCastMember}
-                handleDeleteCastMember={handleDeleteCastMember}
-                downloadsCount={downloadsCount}
-                setDownloadsCount={setDownloadsCount}
-                handleUpdateDownloads={handleUpdateDownloads}
-                castSearchQuery={castSearchQuery}
-                handleCastSearch={handleCastSearch}
-                castSearchResults={castSearchResults}
-                selectCastFromSearch={selectCastFromSearch}
-                updateActivity={updateActivity}
-              />
-            ) : (
-              <div className="bg-gray-800 rounded-lg p-6 text-center">
-                <p className="text-gray-400">Please select an anime from the Anime Library tab first.</p>
+              <div>
+                <Label htmlFor="year" className="text-white">Year</Label>
+                <Input
+                  id="year"
+                  type="number"
+                  value={animeForm.year}
+                  onChange={(e) => setAnimeForm({ ...animeForm, year: parseInt(e.target.value) })}
+                  className="bg-gray-700 border-gray-600 text-white"
+                  required
+                />
               </div>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
+            </div>
+
+            <div>
+              <Label htmlFor="storyline" className="text-white">Storyline</Label>
+              <Textarea
+                id="storyline"
+                value={animeForm.storyline}
+                onChange={(e) => setAnimeForm({ ...animeForm, storyline: e.target.value })}
+                className="bg-gray-700 border-gray-600 text-white"
+                placeholder="Anime storyline"
+                rows={4}
+              />
+            </div>
+
+            <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700">
+              {loading ? "Uploading..." : "Upload Anime"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Animes List */}
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white">Animes ({animes.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="text-gray-400">Loading animes...</p>
+          ) : animes.length === 0 ? (
+            <p className="text-gray-400">No animes found</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {animes.map((anime) => (
+                <div key={anime.movie_id} className="bg-gray-700 p-4 rounded-lg">
+                  <h3 className="text-white font-medium">{anime.title}</h3>
+                  <p className="text-gray-400 text-sm">{anime.year} • {anime.content_type}</p>
+                  <div className="mt-2 flex gap-2">
+                    <Button size="sm" variant="ghost" className="text-blue-400 hover:text-blue-300">
+                      <Edit size={14} />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="text-red-400 hover:text-red-300"
+                      onClick={() => handleDeleteAnime(anime.movie_id)}
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

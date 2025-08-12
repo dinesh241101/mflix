@@ -1,28 +1,136 @@
 
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Edit, PlusCircle, Trash2, Video } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ShortsTabProps {
-  shorts: any[];
-  shortForm: {
+  shorts?: any[];
+  shortForm?: {
     title: string;
     videoUrl: string;
     thumbnailUrl: string;
   };
-  setShortForm: (form: any) => void;
-  handleAddShort: (e: React.FormEvent) => void;
-  handleDeleteShort: (id: string) => void;
+  setShortForm?: (form: any) => void;
+  handleAddShort?: (e: React.FormEvent) => void;
+  handleDeleteShort?: (id: string) => void;
 }
 
-const ShortsTab = ({
-  shorts,
-  shortForm,
-  setShortForm,
-  handleAddShort,
-  handleDeleteShort
-}: ShortsTabProps) => {
+const ShortsTab = (props: ShortsTabProps = {}) => {
+  const [shorts, setShorts] = useState(props.shorts || []);
+  const [shortForm, setShortForm] = useState(props.shortForm || {
+    title: '',
+    videoUrl: '',
+    thumbnailUrl: ''
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchShorts();
+  }, []);
+
+  const fetchShorts = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('shorts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setShorts(data || []);
+    } catch (error: any) {
+      console.error('Error fetching shorts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load shorts",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddShort = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (props.handleAddShort) {
+      props.handleAddShort(e);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('shorts')
+        .insert([{
+          title: shortForm.title,
+          video_url: shortForm.videoUrl,
+          thumbnail_url: shortForm.thumbnailUrl
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Short video added successfully"
+      });
+
+      setShortForm({
+        title: '',
+        videoUrl: '',
+        thumbnailUrl: ''
+      });
+
+      fetchShorts();
+    } catch (error: any) {
+      console.error('Error adding short:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add short video",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteShort = async (id: string) => {
+    if (props.handleDeleteShort) {
+      props.handleDeleteShort(id);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('shorts')
+        .delete()
+        .eq('short_id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Short video deleted successfully"
+      });
+
+      fetchShorts();
+    } catch (error: any) {
+      console.error('Error deleting short:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete short video",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="bg-gray-800 p-6 rounded-lg">
       <div className="flex justify-between items-center mb-6">
@@ -71,15 +179,15 @@ const ShortsTab = ({
           />
         </div>
         
-        <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+        <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={loading}>
           <PlusCircle className="mr-2" size={16} />
-          Add Short Video
+          {loading ? "Adding..." : "Add Short Video"}
         </Button>
       </form>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {shorts.map(short => (
-          <Card key={short.id} className="bg-gray-700 border-gray-600 overflow-hidden">
+          <Card key={short.short_id} className="bg-gray-700 border-gray-600 overflow-hidden">
             <div className="relative aspect-video bg-gray-800">
               {short.thumbnail_url ? (
                 <img 
@@ -112,7 +220,7 @@ const ShortsTab = ({
                   size="sm" 
                   variant="ghost" 
                   className="text-red-400 hover:text-red-300 hover:bg-red-900/30 p-1 h-auto"
-                  onClick={() => handleDeleteShort(short.id)}
+                  onClick={() => handleDeleteShort(short.short_id)}
                 >
                   <Trash2 size={16} />
                 </Button>

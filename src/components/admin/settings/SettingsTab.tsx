@@ -5,16 +5,30 @@ import ContentToggleForm from "./ContentToggleForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SettingsTabProps {
-  onPasswordUpdate: () => void;
-  onSiteSettingsUpdate: () => void;
+  onPasswordUpdate?: () => void;
+  onSiteSettingsUpdate?: () => void;
   onContentSettingsUpdate?: () => void;
 }
 
-const SettingsTab = ({ 
-  onPasswordUpdate, 
-  onSiteSettingsUpdate, 
-  onContentSettingsUpdate 
-}: SettingsTabProps) => {
+const SettingsTab = (props: SettingsTabProps = {}) => {
+  const handlePasswordUpdate = () => {
+    if (props.onPasswordUpdate) {
+      props.onPasswordUpdate();
+    }
+  };
+
+  const handleSiteSettingsUpdate = () => {
+    if (props.onSiteSettingsUpdate) {
+      props.onSiteSettingsUpdate();
+    }
+  };
+
+  const handleContentSettingsUpdate = () => {
+    if (props.onContentSettingsUpdate) {
+      props.onContentSettingsUpdate();
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Settings</h1>
@@ -27,15 +41,15 @@ const SettingsTab = ({
         </TabsList>
         
         <TabsContent value="site">
-          <SiteSettingsForm onSettingsUpdate={onSiteSettingsUpdate} />
+          <SiteSettingsForm onSettingsUpdate={handleSiteSettingsUpdate} />
         </TabsContent>
         
         <TabsContent value="content">
-          <ContentToggleForm onSettingsUpdate={onContentSettingsUpdate} />
+          <ContentToggleForm onSettingsUpdate={handleContentSettingsUpdate} />
         </TabsContent>
         
         <TabsContent value="security">
-          <PasswordForm onPasswordUpdate={onPasswordUpdate} />
+          <PasswordForm onPasswordUpdate={handlePasswordUpdate} />
         </TabsContent>
       </Tabs>
     </div>
