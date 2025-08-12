@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,14 +44,26 @@ const RedirectLoopTab = () => {
   const fetchRedirectLinks = async () => {
     try {
       setLoading(true);
+      // For now, we'll use the ads table as a temporary storage for redirect links
+      // until the database schema is updated
       const { data, error } = await supabase
-        .from('redirect_links')
+        .from('ads')
         .select('*')
-        .order('position', { ascending: true })
-        .order('display_order', { ascending: true });
+        .eq('ad_type', 'redirect_link')
+        .order('position', { ascending: true });
 
       if (error) throw error;
-      setLinks(data || []);
+      
+      // Transform ads data to redirect links format
+      const transformedLinks = data?.map(ad => ({
+        id: ad.ad_id,
+        position: ad.position || 'download_cta_1',
+        redirect_url: ad.target_url || '',
+        is_active: ad.is_active,
+        display_order: ad.display_frequency || 1
+      })) || [];
+      
+      setLinks(transformedLinks);
     } catch (error: any) {
       console.error('Error fetching redirect links:', error);
       toast({
@@ -86,9 +99,17 @@ const RedirectLoopTab = () => {
 
     try {
       setLoading(true);
+      // Store as ad with type 'redirect_link'
       const { error } = await supabase
-        .from('redirect_links')
-        .insert([newLink]);
+        .from('ads')
+        .insert([{
+          ad_name: `Redirect Link - ${newLink.position}`,
+          ad_type: 'redirect_link',
+          position: newLink.position,
+          target_url: newLink.redirect_url,
+          is_active: newLink.is_active,
+          display_frequency: newLink.display_order
+        }]);
 
       if (error) throw error;
 
@@ -121,13 +142,13 @@ const RedirectLoopTab = () => {
     try {
       setLoading(true);
       const { error } = await supabase
-        .from('redirect_links')
+        .from('ads')
         .update({
-          redirect_url: link.redirect_url,
+          target_url: link.redirect_url,
           is_active: link.is_active,
-          display_order: link.display_order
+          display_frequency: link.display_order
         })
-        .eq('id', link.id);
+        .eq('ad_id', link.id);
 
       if (error) throw error;
 
@@ -154,9 +175,9 @@ const RedirectLoopTab = () => {
     try {
       setLoading(true);
       const { error } = await supabase
-        .from('redirect_links')
+        .from('ads')
         .delete()
-        .eq('id', id);
+        .eq('ad_id', id);
 
       if (error) throw error;
 

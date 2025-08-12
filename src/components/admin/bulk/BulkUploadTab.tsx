@@ -4,24 +4,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Download, Upload, FileSpreadsheet, CheckCircle, XCircle } from "lucide-react";
+import { Download, Upload, FileText, AlertCircle, CheckCircle } from "lucide-react";
 
-interface UploadResult {
-  row: number;
-  status: 'success' | 'error';
-  message: string;
-  data?: any;
+interface BulkUploadResult {
+  total: number;
+  successful: number;
+  failed: number;
+  errors: string[];
 }
 
 const BulkUploadTab = () => {
-  const [uploading, setUploading] = useState(false);
-  const [results, setResults] = useState<UploadResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<BulkUploadResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const downloadSampleSheet = () => {
     const headers = [
       'title',
-      'year',
+      'year', 
       'content_type',
       'genre',
       'quality',
@@ -30,48 +30,52 @@ const BulkUploadTab = () => {
       'production_house',
       'imdb_rating',
       'storyline',
-      'seo_tags',
       'poster_url',
-      'featured',
       'trailer_url',
-      'download_links',
-      'screenshots'
+      'download_url_480p',
+      'download_url_720p',
+      'download_url_1080p',
+      'file_size_480p',
+      'file_size_720p',
+      'file_size_1080p'
     ];
 
     const sampleData = [
       [
-        'Sample Movie',
+        'Sample Movie Title',
         '2023',
         'movie',
         'Action,Adventure',
         '1080p',
         'USA',
         'John Director',
-        'Studio Productions',
-        '8.5',
-        'An amazing story about...',
-        'action,adventure,sample',
+        'Sample Studios',
+        '7.5',
+        'A sample movie storyline for bulk upload demonstration.',
         'https://example.com/poster.jpg',
-        'false',
         'https://youtube.com/watch?v=sample',
-        'Quality: 720p, Size: 1.2GB, URL: https://drive.google.com/sample1\nQuality: 1080p, Size: 2.5GB, URL: https://drive.google.com/sample2',
-        'https://example.com/screenshot1.jpg,https://example.com/screenshot2.jpg'
+        'https://drive.google.com/sample480p',
+        'https://drive.google.com/sample720p',
+        'https://drive.google.com/sample1080p',
+        '800MB',
+        '1.2GB',
+        '2.5GB'
       ]
     ];
 
     const csvContent = [headers, ...sampleData]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .map(row => row.map(field => `"${field}"`).join(','))
       .join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'mflix_bulk_upload_sample.csv';
+    link.download = 'bulk_upload_sample.csv';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    URL.revokeObjectURL(url);
 
     toast({
       title: "Success",
@@ -79,180 +83,11 @@ const BulkUploadTab = () => {
     });
   };
 
-  const downloadResultSheet = () => {
-    if (results.length === 0) {
-      toast({
-        title: "Error",
-        description: "No results to download",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const headers = ['Row', 'Status', 'Message', 'Title'];
-    const csvContent = [headers, ...results.map(result => [
-      result.row.toString(),
-      result.status,
-      result.message,
-      result.data?.title || 'N/A'
-    ])]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
-      .join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `mflix_upload_results_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-
-    toast({
-      title: "Success",
-      description: "Results sheet downloaded successfully"
-    });
-  };
-
-  const parseCSV = (text: string): string[][] => {
-    const lines = text.split('\n');
-    const result: string[][] = [];
-    
-    for (const line of lines) {
-      if (line.trim()) {
-        const row: string[] = [];
-        let current = '';
-        let inQuotes = false;
-        
-        for (let i = 0; i < line.length; i++) {
-          const char = line[i];
-          
-          if (char === '"') {
-            inQuotes = !inQuotes;
-          } else if (char === ',' && !inQuotes) {
-            row.push(current.trim());
-            current = '';
-          } else {
-            current += char;
-          }
-        }
-        row.push(current.trim());
-        result.push(row);
-      }
-    }
-    
-    return result;
-  };
-
-  const processMovieData = (rowData: string[], headers: string[]) => {
-    const movieData: any = {};
-    
-    headers.forEach((header, index) => {
-      const value = rowData[index]?.replace(/^"|"$/g, '') || '';
-      
-      switch (header.toLowerCase()) {
-        case 'title':
-          movieData.title = value;
-          break;
-        case 'year':
-          movieData.year = value ? parseInt(value) : null;
-          break;
-        case 'content_type':
-          movieData.content_type = value || 'movie';
-          break;
-        case 'genre':
-          movieData.genre = value ? value.split(',').map(g => g.trim()) : [];
-          break;
-        case 'quality':
-          movieData.quality = value || '1080p';
-          break;
-        case 'country':
-          movieData.country = value;
-          break;
-        case 'director':
-          movieData.director = value;
-          break;
-        case 'production_house':
-          movieData.production_house = value;
-          break;
-        case 'imdb_rating':
-          movieData.imdb_rating = value ? parseFloat(value) : null;
-          break;
-        case 'storyline':
-          movieData.storyline = value;
-          break;
-        case 'seo_tags':
-          movieData.seo_tags = value ? value.split(',').map(t => t.trim()) : [];
-          break;
-        case 'poster_url':
-          movieData.poster_url = value;
-          break;
-        case 'featured':
-          movieData.featured = value.toLowerCase() === 'true';
-          break;
-        case 'trailer_url':
-          movieData.trailer_url = value;
-          break;
-        case 'screenshots':
-          movieData.screenshots = value ? value.split(',').map(s => s.trim()) : [];
-          break;
-        case 'download_links':
-          movieData.download_links = value;
-          break;
-      }
-    });
-
-    movieData.is_visible = true;
-    movieData.downloads = 0;
-    
-    return movieData;
-  };
-
-  const uploadMovieWithLinks = async (movieData: any, downloadLinksText: string) => {
-    // Insert movie
-    const { data: movie, error: movieError } = await supabase
-      .from('movies')
-      .insert(movieData)
-      .select('movie_id')
-      .single();
-
-    if (movieError) throw movieError;
-
-    // Process download links
-    if (downloadLinksText && movie) {
-      const links = downloadLinksText.split('\n').filter(link => link.trim());
-      
-      for (const link of links) {
-        const match = link.match(/Quality:\s*(.*),\s*Size:\s*(.*),\s*URL:\s*(.*)/i);
-        
-        if (match && match.length >= 4) {
-          const [_, quality, size, url] = match;
-          
-          const { error: linkError } = await supabase
-            .from('download_links')
-            .insert({
-              movie_id: movie.movie_id,
-              quality: quality.trim(),
-              file_size: size.trim(),
-              download_url: url.trim()
-            });
-          
-          if (linkError) {
-            console.warn('Failed to add download link:', linkError);
-          }
-        }
-      }
-    }
-
-    return movie;
-  };
-
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.endsWith('.csv')) {
+    if (!file.name.toLowerCase().endsWith('.csv')) {
       toast({
         title: "Error",
         description: "Please upload a CSV file",
@@ -261,96 +96,180 @@ const BulkUploadTab = () => {
       return;
     }
 
-    setUploading(true);
-    setResults([]);
+    setLoading(true);
+    setUploadResult(null);
 
     try {
       const text = await file.text();
-      const rows = parseCSV(text);
+      const lines = text.split('\n').filter(line => line.trim());
       
-      if (rows.length < 2) {
-        throw new Error('CSV file must contain at least a header row and one data row');
+      if (lines.length < 2) {
+        throw new Error('CSV file must contain headers and at least one data row');
       }
 
-      const headers = rows[0].map(h => h.replace(/^"|"$/g, '').toLowerCase());
-      const dataRows = rows.slice(1);
-      
-      const uploadResults: UploadResult[] = [];
-      let successCount = 0;
-      let errorCount = 0;
+      const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+      const dataLines = lines.slice(1);
 
-      for (let i = 0; i < dataRows.length; i++) {
-        const rowIndex = i + 2; // +2 because of header and 0-based index
-        
+      let successful = 0;
+      let failed = 0;
+      const errors: string[] = [];
+
+      for (let i = 0; i < dataLines.length; i++) {
+        const values = dataLines[i].split(',').map(v => v.replace(/"/g, '').trim());
+        const rowData: any = {};
+
+        headers.forEach((header, index) => {
+          rowData[header] = values[index] || '';
+        });
+
         try {
-          const movieData = processMovieData(dataRows[i], headers);
-          
-          if (!movieData.title) {
-            throw new Error('Title is required');
+          // Validate required fields
+          if (!rowData.title || !rowData.content_type) {
+            throw new Error('Title and content_type are required');
           }
 
-          const downloadLinksText = movieData.download_links;
-          delete movieData.download_links;
+          // Insert movie data
+          const movieData = {
+            title: rowData.title,
+            year: parseInt(rowData.year) || null,
+            content_type: rowData.content_type,
+            genre: rowData.genre ? rowData.genre.split(',').map((g: string) => g.trim()) : [],
+            quality: rowData.quality || null,
+            country: rowData.country || null,
+            director: rowData.director || null,
+            production_house: rowData.production_house || null,
+            imdb_rating: parseFloat(rowData.imdb_rating) || null,
+            storyline: rowData.storyline || null,
+            poster_url: rowData.poster_url || null,
+            trailer_url: rowData.trailer_url || null,
+            is_visible: true,
+            featured: false
+          };
 
-          const movie = await uploadMovieWithLinks(movieData, downloadLinksText);
-          
-          uploadResults.push({
-            row: rowIndex,
-            status: 'success',
-            message: 'Successfully uploaded',
-            data: { title: movieData.title }
-          });
-          
-          successCount++;
+          const { data: movieResult, error: movieError } = await supabase
+            .from('movies')
+            .insert([movieData])
+            .select('movie_id')
+            .single();
+
+          if (movieError) throw movieError;
+
+          // Insert download links if provided
+          const downloadLinks = [];
+          if (rowData.download_url_480p) {
+            downloadLinks.push({
+              movie_id: movieResult.movie_id,
+              quality: '480p',
+              file_size: rowData.file_size_480p || 'Unknown',
+              download_url: rowData.download_url_480p
+            });
+          }
+          if (rowData.download_url_720p) {
+            downloadLinks.push({
+              movie_id: movieResult.movie_id,
+              quality: '720p',
+              file_size: rowData.file_size_720p || 'Unknown',
+              download_url: rowData.download_url_720p
+            });
+          }
+          if (rowData.download_url_1080p) {
+            downloadLinks.push({
+              movie_id: movieResult.movie_id,
+              quality: '1080p',
+              file_size: rowData.file_size_1080p || 'Unknown',
+              download_url: rowData.download_url_1080p
+            });
+          }
+
+          if (downloadLinks.length > 0) {
+            const { error: linksError } = await supabase
+              .from('download_links')
+              .insert(downloadLinks);
+
+            if (linksError) throw linksError;
+          }
+
+          successful++;
         } catch (error: any) {
-          uploadResults.push({
-            row: rowIndex,
-            status: 'error',
-            message: error.message || 'Unknown error',
-            data: { title: dataRows[i][0]?.replace(/^"|"$/g, '') || 'Unknown' }
-          });
-          
-          errorCount++;
+          failed++;
+          errors.push(`Row ${i + 2}: ${error.message}`);
         }
       }
 
-      setResults(uploadResults);
-
-      // Save bulk upload record
+      // Store upload result temporarily in ads table for tracking
       await supabase
-        .from('bulk_uploads')
-        .insert({
-          filename: file.name,
-          total_rows: dataRows.length,
-          successful_rows: successCount,
-          failed_rows: errorCount,
-          status: 'completed',
-          completed_at: new Date().toISOString()
-        });
+        .from('ads')
+        .insert([{
+          ad_name: `Bulk Upload - ${file.name}`,
+          ad_type: 'bulk_upload_log',
+          description: JSON.stringify({
+            filename: file.name,
+            total_rows: dataLines.length,
+            successful_rows: successful,
+            failed_rows: failed,
+            error_details: errors
+          }),
+          is_active: false
+        }]);
+
+      setUploadResult({
+        total: dataLines.length,
+        successful,
+        failed,
+        errors
+      });
 
       toast({
         title: "Upload Complete",
-        description: `Processed ${dataRows.length} rows. ${successCount} successful, ${errorCount} failed.`,
-        variant: successCount > 0 ? "default" : "destructive"
+        description: `${successful} movies uploaded successfully, ${failed} failed`
       });
 
     } catch (error: any) {
-      console.error('Upload error:', error);
+      console.error('Error processing file:', error);
       toast({
-        title: "Upload Failed",
-        description: error.message || "Failed to process CSV file",
+        title: "Error",
+        description: `Failed to process file: ${error.message}`,
         variant: "destructive"
       });
     } finally {
-      setUploading(false);
+      setLoading(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     }
   };
 
-  const successfulUploads = results.filter(r => r.status === 'success').length;
-  const failedUploads = results.filter(r => r.status === 'error').length;
+  const downloadResultSheet = () => {
+    if (!uploadResult) return;
+
+    const headers = ['Row', 'Status', 'Error'];
+    const resultData = [];
+
+    for (let i = 0; i < uploadResult.total; i++) {
+      const rowNum = i + 2; // Start from row 2 (accounting for header)
+      const error = uploadResult.errors.find(e => e.startsWith(`Row ${rowNum}:`));
+      
+      resultData.push([
+        rowNum.toString(),
+        error ? 'FAILED' : 'SUCCESS',
+        error ? error.replace(`Row ${rowNum}: `, '') : ''
+      ]);
+    }
+
+    const csvContent = [headers, ...resultData]
+      .map(row => row.map(field => `"${field}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'bulk_upload_results.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6">
@@ -358,120 +277,112 @@ const BulkUploadTab = () => {
         <h2 className="text-2xl font-bold text-white">Bulk Upload</h2>
       </div>
 
-      {/* Instructions and Sample Download */}
+      {/* Instructions */}
       <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
-          <CardTitle className="text-white">Upload Instructions</CardTitle>
+          <CardTitle className="text-white flex items-center gap-2">
+            <FileText size={20} />
+            Instructions
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-gray-300 space-y-2">
-            <p>1. Download the sample CSV file to see the required format</p>
-            <p>2. Fill in your movie data following the sample format</p>
-            <p>3. Upload your completed CSV file</p>
-            <p>4. Review the results and download the status report</p>
-          </div>
-          
+        <CardContent className="text-gray-300 space-y-2">
+          <p>1. Download the sample CSV template below</p>
+          <p>2. Fill in your movie data following the template format</p>
+          <p>3. Upload the completed CSV file</p>
+          <p>4. Review the results and download the verdict sheet</p>
+          <p className="text-yellow-400 text-sm">
+            ⚠️ Required fields: title, content_type. Genre should be comma-separated.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Download Sample Sheet */}
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white">Step 1: Download Sample Sheet</CardTitle>
+        </CardHeader>
+        <CardContent>
           <Button
             onClick={downloadSampleSheet}
-            className="bg-green-600 hover:bg-green-700"
+            className="bg-blue-600 hover:bg-blue-700"
           >
             <Download size={16} className="mr-2" />
-            Download Sample Sheet
+            Download Sample CSV
           </Button>
         </CardContent>
       </Card>
 
-      {/* File Upload */}
+      {/* Upload CSV File */}
       <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
-          <CardTitle className="text-white">Upload CSV File</CardTitle>
+          <CardTitle className="text-white">Step 2: Upload CSV File</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
-            <FileSpreadsheet size={48} className="mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-300 mb-4">
-              Choose a CSV file to upload movie data
-            </p>
-            
+        <CardContent>
+          <div className="space-y-4">
             <input
               ref={fileInputRef}
               type="file"
               accept=".csv"
               onChange={handleFileUpload}
-              disabled={uploading}
               className="hidden"
             />
-            
             <Button
               onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="bg-blue-600 hover:bg-blue-700"
+              disabled={loading}
+              className="bg-green-600 hover:bg-green-700"
             >
               <Upload size={16} className="mr-2" />
-              {uploading ? 'Uploading...' : 'Choose CSV File'}
+              {loading ? 'Processing...' : 'Upload CSV File'}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Upload Results */}
-      {results.length > 0 && (
+      {/* Results */}
+      {uploadResult && (
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader>
-            <CardTitle className="text-white flex justify-between items-center">
-              Upload Results
-              <Button
-                onClick={downloadResultSheet}
-                variant="outline"
-                size="sm"
-              >
-                <Download size={14} className="mr-2" />
-                Download Results
-              </Button>
-            </CardTitle>
+            <CardTitle className="text-white">Upload Results</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-green-900/20 border border-green-600 rounded-lg p-4">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="text-green-400" size={20} />
-                  <span className="text-green-400 font-medium">Successful</span>
-                </div>
-                <p className="text-2xl font-bold text-green-400 mt-2">{successfulUploads}</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-gray-700 p-4 rounded-lg text-center">
+                <p className="text-gray-400 text-sm">Total Rows</p>
+                <p className="text-white text-2xl font-bold">{uploadResult.total}</p>
               </div>
-              
-              <div className="bg-red-900/20 border border-red-600 rounded-lg p-4">
-                <div className="flex items-center gap-2">
-                  <XCircle className="text-red-400" size={20} />
-                  <span className="text-red-400 font-medium">Failed</span>
-                </div>
-                <p className="text-2xl font-bold text-red-400 mt-2">{failedUploads}</p>
+              <div className="bg-green-900 p-4 rounded-lg text-center">
+                <CheckCircle className="mx-auto mb-2 text-green-400" size={24} />
+                <p className="text-green-400 text-sm">Successful</p>
+                <p className="text-white text-2xl font-bold">{uploadResult.successful}</p>
+              </div>
+              <div className="bg-red-900 p-4 rounded-lg text-center">
+                <AlertCircle className="mx-auto mb-2 text-red-400" size={24} />
+                <p className="text-red-400 text-sm">Failed</p>
+                <p className="text-white text-2xl font-bold">{uploadResult.failed}</p>
               </div>
             </div>
 
-            <div className="max-h-60 overflow-y-auto space-y-2">
-              {results.map((result, index) => (
-                <div key={index} className={`p-3 rounded-lg border ${
-                  result.status === 'success' 
-                    ? 'bg-green-900/10 border-green-600' 
-                    : 'bg-red-900/10 border-red-600'
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-white font-medium">
-                      Row {result.row}: {result.data?.title}
-                    </span>
-                    <span className={`text-sm ${
-                      result.status === 'success' ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {result.status.toUpperCase()}
-                    </span>
-                  </div>
-                  {result.status === 'error' && (
-                    <p className="text-red-300 text-sm mt-1">{result.message}</p>
+            {uploadResult.failed > 0 && (
+              <div className="bg-red-900/20 p-4 rounded-lg">
+                <h4 className="text-red-400 font-medium mb-2">Errors ({uploadResult.errors.length})</h4>
+                <div className="max-h-40 overflow-y-auto space-y-1">
+                  {uploadResult.errors.slice(0, 10).map((error, index) => (
+                    <p key={index} className="text-red-300 text-sm">{error}</p>
+                  ))}
+                  {uploadResult.errors.length > 10 && (
+                    <p className="text-red-400 text-sm">... and {uploadResult.errors.length - 10} more errors</p>
                   )}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+
+            <Button
+              onClick={downloadResultSheet}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Download size={16} className="mr-2" />
+              Download Result Sheet
+            </Button>
           </CardContent>
         </Card>
       )}

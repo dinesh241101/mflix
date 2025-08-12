@@ -13,13 +13,13 @@ interface Movie {
 }
 
 interface FeaturedMovieSliderProps {
-  movies: Movie[];
+  movies?: Movie[];
   autoSlideInterval?: number;
   onMovieClick?: (movie: any) => void;
 }
 
 const FeaturedMovieSlider = ({ 
-  movies, 
+  movies = [], 
   autoSlideInterval = 5000,
   onMovieClick 
 }: FeaturedMovieSliderProps) => {
@@ -27,11 +27,15 @@ const FeaturedMovieSlider = ({
   const navigate = useNavigate();
   
   const nextSlide = () => {
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % movies.length);
+    if (movies && movies.length > 0) {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % movies.length);
+    }
   };
   
   const prevSlide = () => {
-    setCurrentIndex((prevIndex) => (prevIndex - 1 + movies.length) % movies.length);
+    if (movies && movies.length > 0) {
+      setCurrentIndex((prevIndex) => (prevIndex - 1 + movies.length) % movies.length);
+    }
   };
   
   const goToSlide = (index: number) => {
@@ -40,13 +44,13 @@ const FeaturedMovieSlider = ({
   
   // Auto slide functionality
   useEffect(() => {
-    if (movies.length <= 1) return;
+    if (!movies || movies.length <= 1) return;
     
     const interval = setInterval(nextSlide, autoSlideInterval);
     return () => clearInterval(interval);
-  }, [currentIndex, movies.length, autoSlideInterval]);
+  }, [currentIndex, movies?.length, autoSlideInterval]);
   
-  if (!movies.length) {
+  if (!movies || !movies.length) {
     return <div className="h-96 bg-gray-800 flex items-center justify-center">No featured movies</div>;
   }
   
