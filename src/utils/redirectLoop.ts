@@ -14,15 +14,25 @@ class RedirectLoopManager {
 
   async getRedirectLinks(position: string): Promise<RedirectLink[]> {
     try {
+      // Use ads table with ad_type 'redirect_link' as temporary storage
       const { data, error } = await supabase
-        .from('redirect_links')
+        .from('ads')
         .select('*')
+        .eq('ad_type', 'redirect_link')
         .eq('position', position)
         .eq('is_active', true)
-        .order('display_order');
+        .order('display_frequency');
 
       if (error) throw error;
-      return data || [];
+      
+      // Transform ads data to redirect links format
+      return data?.map(ad => ({
+        id: ad.ad_id,
+        position: ad.position || position,
+        redirect_url: ad.target_url || '',
+        is_active: ad.is_active,
+        display_order: ad.display_frequency || 1
+      })) || [];
     } catch (error) {
       console.error('Error fetching redirect links:', error);
       return [];

@@ -7,7 +7,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Download, ExternalLink, Play } from "lucide-react";
+import { Download, Play } from "lucide-react";
 import { handleDownloadClick, checkReturnFromRedirect } from "@/utils/redirectLoop";
 
 interface DownloadLink {
@@ -19,7 +19,6 @@ interface DownloadLink {
 
 interface EpisodeLink {
   link_id: string;
-  episode_id: string;
   episode_number: number;
   episode_title: string;
   quality: string;
@@ -79,47 +78,51 @@ const DownloadPage = () => {
       setMovie(movieData);
 
       if (movieData.content_type === 'series') {
-        // Fetch episodes and their download links
+        // For series, fetch episodes stored in download_episodes table
         const { data: episodesData, error: episodesError } = await supabase
-          .from('series_episodes')
+          .from('download_episodes')
           .select(`
             episode_id,
             episode_number,
             episode_title,
-            episode_download_links (
-              link_id,
-              quality,
-              file_size,
-              download_url,
+            download_mirrors (
+              mirror_id,
               source_name,
-              is_active
+              mirror_url
             )
           `)
-          .eq('series_id', movieId)
+          .eq('link_id', movieId)
           .order('episode_number');
 
-        if (episodesError) throw episodesError;
+        if (episodesError) {
+          console.error('Episodes error:', episodesError);
+          // Fallback to regular download links for series
+          const { data: linksData, error: linksError } = await supabase
+            .from('download_links')
+            .select('*')
+            .eq('movie_id', movieId)
+            .eq('quality', quality);
 
-        // Flatten episode links data
-        const allEpisodeLinks: EpisodeLink[] = [];
-        episodesData?.forEach(episode => {
-          episode.episode_download_links?.forEach((link: any) => {
-            if (link.is_active && link.quality === quality) {
-              allEpisodeLinks.push({
-                link_id: link.link_id,
-                episode_id: episode.episode_id,
-                episode_number: episode.episode_number,
-                episode_title: episode.episode_title,
-                quality: link.quality,
-                file_size: link.file_size,
-                download_url: link.download_url,
-                source_name: link.source_name
+          if (linksError) throw linksError;
+          setDownloadLinks(linksData || []);
+        } else {
+          // Transform episodes data into episode links
+          const transformedEpisodes: EpisodeLink[] = [];
+          episodesData?.forEach(episode => {
+            episode.download_mirrors?.forEach((mirror: any) => {
+              transformedEpisodes.push({
+                link_id: mirror.mirror_id,
+                episode_number: parseInt(episode.episode_number),
+                episode_title: episode.episode_title || `Episode ${episode.episode_number}`,
+                quality: quality,
+                file_size: '1.2GB', // Default size for now
+                download_url: mirror.mirror_url,
+                source_name: mirror.source_name
               });
-            }
+            });
           });
-        });
-
-        setEpisodeLinks(allEpisodeLinks);
+          setEpisodeLinks(transformedEpisodes);
+        }
       } else {
         // Fetch regular download links
         const { data: linksData, error: linksError } = await supabase

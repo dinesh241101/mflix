@@ -32,9 +32,9 @@ const AdminDashboard = () => {
     
     switch (activeTab) {
       case "movies":
-        return <MoviesTab contentType="movie" />;
+        return <MoviesTab />;
       case "series":
-        return <MoviesTab contentType="series" />;
+        return <MoviesTab />;
       case "anime":
         return <AnimeTab />;
       case "shorts":
@@ -54,7 +54,7 @@ const AdminDashboard = () => {
       case "settings":
         return <SettingsTab />;
       default:
-        return <MoviesTab contentType="movie" />;
+        return <MoviesTab />;
     }
   };
 

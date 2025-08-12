@@ -12,7 +12,9 @@ export type AdPosition =
   | 'mobile-sticky' 
   | 'interstitial'
   | 'floating'
-  | 'in-content';
+  | 'in-content'
+  | 'top-banner'
+  | 'bottom-banner';
 
 interface ResponsiveAdPlaceholderProps {
   position: AdPosition;
@@ -32,6 +34,7 @@ const ResponsiveAdPlaceholder = ({
   // Responsive dimensions based on position and device
   switch (position) {
     case 'header-banner':
+    case 'top-banner':
       placeholderClass += isMobile ? " h-16 w-full" : " h-20 w-full";
       break;
     case 'content-top':
@@ -46,6 +49,7 @@ const ResponsiveAdPlaceholder = ({
       placeholderClass += isMobile ? " h-40 w-full" : " h-80 w-64";
       break;
     case 'footer':
+    case 'bottom-banner':
       placeholderClass += isMobile ? " h-20 w-full" : " h-24 w-full";
       break;
     case 'mobile-sticky':
