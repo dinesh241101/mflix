@@ -29,18 +29,18 @@ const UniversalHeader = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2 flex-shrink-0">
             <Film className="h-8 w-8 text-blue-500" />
             <span className="text-xl font-bold text-white">MFlix</span>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-6 flex-1 justify-center">
             {navItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
-                className="text-gray-300 hover:text-white transition-colors"
+                className="text-gray-300 hover:text-white transition-colors px-3 py-2 rounded-md hover:bg-gray-800"
               >
                 {item.label}
               </Link>
@@ -48,7 +48,7 @@ const UniversalHeader = () => {
           </nav>
 
           {/* Search Bar */}
-          <form onSubmit={handleSearch} className="hidden md:flex items-center">
+          <form onSubmit={handleSearch} className="hidden md:flex items-center flex-shrink-0">
             <div className="relative">
               <input
                 type="text"

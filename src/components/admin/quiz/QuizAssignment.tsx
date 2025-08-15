@@ -7,6 +7,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 
+interface Quiz {
+  id: string;
+  title: string;
+  description: string;
+  questions: any[];
+  total_points: number;
+}
+
 interface QuizAssignment {
   id: string;
   movie_id: string;
@@ -20,10 +28,7 @@ interface QuizAssignment {
 const QuizAssignment = () => {
   const [assignments, setAssignments] = useState<QuizAssignment[]>([]);
   const [movies, setMovies] = useState<any[]>([]);
-  const [quizzes] = useState([
-    { id: '1', title: 'The Big Bang Theory Quiz', questions_count: 2 },
-    { id: '2', title: 'General Movie Quiz', questions_count: 3 }
-  ]);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [selectedMovie, setSelectedMovie] = useState("");
   const [selectedQuiz, setSelectedQuiz] = useState("");
   const [selectedResolution, setSelectedResolution] = useState("1080p");
@@ -32,6 +37,7 @@ const QuizAssignment = () => {
 
   useEffect(() => {
     loadMovies();
+    loadQuizzes();
     loadAssignments();
   }, []);
 
@@ -50,20 +56,36 @@ const QuizAssignment = () => {
     }
   };
 
-  const loadAssignments = () => {
-    // Sample assignments for demo
-    const sampleAssignments: QuizAssignment[] = [
-      {
-        id: '1',
-        movie_id: '1',
-        movie_title: 'The Big Bang Theory S01E01',
-        quiz_id: '1',
-        quiz_title: 'The Big Bang Theory Quiz',
-        resolution: '1080p',
-        questions_count: 2
+  const loadQuizzes = () => {
+    try {
+      const savedQuizzes = localStorage.getItem('mflix_quizzes');
+      if (savedQuizzes) {
+        const parsedQuizzes = JSON.parse(savedQuizzes);
+        setQuizzes(parsedQuizzes);
       }
-    ];
-    setAssignments(sampleAssignments);
+    } catch (error) {
+      console.error('Error loading quizzes:', error);
+    }
+  };
+
+  const loadAssignments = () => {
+    try {
+      const savedAssignments = localStorage.getItem('mflix_quiz_assignments');
+      if (savedAssignments) {
+        setAssignments(JSON.parse(savedAssignments));
+      }
+    } catch (error) {
+      console.error('Error loading assignments:', error);
+    }
+  };
+
+  const saveAssignments = (updatedAssignments: QuizAssignment[]) => {
+    try {
+      localStorage.setItem('mflix_quiz_assignments', JSON.stringify(updatedAssignments));
+      setAssignments(updatedAssignments);
+    } catch (error) {
+      console.error('Error saving assignments:', error);
+    }
   };
 
   const handleAssignQuiz = () => {
@@ -79,7 +101,30 @@ const QuizAssignment = () => {
     const movie = movies.find(m => m.movie_id === selectedMovie);
     const quiz = quizzes.find(q => q.id === selectedQuiz);
 
-    if (!movie || !quiz) return;
+    if (!movie || !quiz) {
+      toast({
+        title: "Error",
+        description: "Selected movie or quiz not found",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if assignment already exists
+    const existingAssignment = assignments.find(a => 
+      a.movie_id === selectedMovie && 
+      a.quiz_id === selectedQuiz && 
+      a.resolution === selectedResolution
+    );
+
+    if (existingAssignment) {
+      toast({
+        title: "Error",
+        description: "This quiz is already assigned to this movie and resolution",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const assignment: QuizAssignment = {
       id: Date.now().toString(),
@@ -88,10 +133,11 @@ const QuizAssignment = () => {
       quiz_id: selectedQuiz,
       quiz_title: quiz.title,
       resolution: selectedResolution,
-      questions_count: quiz.questions_count
+      questions_count: quiz.questions.length
     };
 
-    setAssignments([...assignments, assignment]);
+    const updatedAssignments = [...assignments, assignment];
+    saveAssignments(updatedAssignments);
     setSelectedMovie("");
     setSelectedQuiz("");
 
@@ -102,7 +148,12 @@ const QuizAssignment = () => {
   };
 
   const handleRemoveAssignment = (id: string) => {
-    setAssignments(assignments.filter(a => a.id !== id));
+    const confirmed = window.confirm('Are you sure you want to remove this quiz assignment?');
+    if (!confirmed) return;
+
+    const updatedAssignments = assignments.filter(a => a.id !== id);
+    saveAssignments(updatedAssignments);
+    
     toast({
       title: "Success",
       description: "Quiz assignment removed successfully!",
@@ -145,7 +196,7 @@ const QuizAssignment = () => {
                 <option value="">Choose Quiz...</option>
                 {quizzes.map((quiz) => (
                   <option key={quiz.id} value={quiz.id}>
-                    {quiz.title} ({quiz.questions_count} questions)
+                    {quiz.title} ({quiz.questions.length} questions)
                   </option>
                 ))}
               </select>
@@ -163,7 +214,11 @@ const QuizAssignment = () => {
               </select>
             </div>
           </div>
-          <Button onClick={handleAssignQuiz} className="bg-blue-600 hover:bg-blue-700">
+          <Button 
+            onClick={handleAssignQuiz} 
+            className="bg-blue-600 hover:bg-blue-700"
+            disabled={!selectedMovie || !selectedQuiz}
+          >
             Assign Quiz
           </Button>
         </CardContent>
@@ -207,6 +262,14 @@ const QuizAssignment = () => {
           <div className="text-center py-8 text-gray-400">
             <p>No quiz assignments found.</p>
             <p className="text-sm">Assign quizzes to movie download buttons above.</p>
+          </div>
+        )}
+
+        {quizzes.length === 0 && (
+          <div className="bg-yellow-900/20 border border-yellow-600 rounded-lg p-4 mt-4">
+            <p className="text-yellow-400 text-sm">
+              <strong>Note:</strong> No quizzes available. Create quizzes in the Quiz Management tab first.
+            </p>
           </div>
         )}
       </div>
