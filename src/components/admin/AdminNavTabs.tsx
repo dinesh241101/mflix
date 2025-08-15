@@ -11,7 +11,9 @@ import {
   Video,
   Repeat,
   Upload,
-  List
+  List,
+  Brain,
+  Target
 } from "lucide-react";
 
 interface AdminNavTabsProps {
@@ -26,6 +28,8 @@ const AdminNavTabs = ({ activeTab, setActiveTab }: AdminNavTabsProps) => {
     { id: "anime", label: "Anime", icon: Gamepad2 },
     { id: "shorts", label: "Shorts", icon: Video },
     { id: "episodes", label: "Series Episodes", icon: List },
+    { id: "quiz", label: "Quiz Management", icon: Brain },
+    { id: "quiz-assignment", label: "Quiz Assignment", icon: Target },
     { id: "redirect", label: "Redirect Loop", icon: Repeat },
     { id: "bulk", label: "Bulk Upload", icon: Upload },
     { id: "ads", label: "Ads Management", icon: DollarSign },
