@@ -47,7 +47,7 @@ class RedirectLoopManager {
     }
 
     // Get current redirect count for this position
-    const currentCount = this.redirectCounts.get(position) || 0;
+    const currentCount = this.getRedirectCount(position);
     
     // If this is the first click, redirect to a random link
     if (currentCount === 0) {
@@ -60,6 +60,7 @@ class RedirectLoopManager {
       // Store the redirect info in sessionStorage for persistence
       sessionStorage.setItem(`redirect_count_${position}`, '1');
       sessionStorage.setItem(`last_redirect_${position}`, selectedLink.redirect_url);
+      sessionStorage.setItem(`original_page_${position}`, window.location.href);
       
       return selectedLink.redirect_url;
     }
@@ -72,6 +73,7 @@ class RedirectLoopManager {
     this.redirectCounts.delete(position);
     sessionStorage.removeItem(`redirect_count_${position}`);
     sessionStorage.removeItem(`last_redirect_${position}`);
+    sessionStorage.removeItem(`original_page_${position}`);
   }
 
   getRedirectCount(position: string): number {
@@ -90,6 +92,24 @@ class RedirectLoopManager {
     const count = this.getRedirectCount(position);
     return count === 0;
   }
+
+  // Handle back navigation from redirect page
+  handleBackNavigation(): void {
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromRedirect = urlParams.get('from_redirect');
+    
+    if (fromRedirect) {
+      // User came back from redirect, reset count and redirect to original page
+      this.resetRedirectCount(fromRedirect);
+      
+      const originalPage = sessionStorage.getItem(`original_page_${fromRedirect}`);
+      if (originalPage) {
+        // Clean up URL and redirect to original page
+        const cleanUrl = originalPage.split('?')[0];
+        window.location.href = cleanUrl;
+      }
+    }
+  }
 }
 
 export const redirectLoopManager = new RedirectLoopManager();
@@ -104,7 +124,10 @@ export const handleDownloadClick = async (
   if (redirectUrl) {
     // Store the original URL for later use
     sessionStorage.setItem(`original_url_${position}`, originalUrl);
-    window.location.href = redirectUrl;
+    
+    // Add a parameter to identify this as a redirect
+    const redirectWithReturn = `${redirectUrl}${redirectUrl.includes('?') ? '&' : '?'}from_redirect=${position}`;
+    window.location.href = redirectWithReturn;
   } else {
     // Normal flow - redirect to original URL
     window.location.href = originalUrl;
@@ -119,7 +142,8 @@ export const handlePageNavigation = async (
   const redirectUrl = await redirectLoopManager.handleRedirect(position);
   
   if (redirectUrl) {
-    window.location.href = redirectUrl;
+    const redirectWithReturn = `${redirectUrl}${redirectUrl.includes('?') ? '&' : '?'}from_redirect=${position}`;
+    window.location.href = redirectWithReturn;
   } else {
     // Normal flow
     originalAction();
@@ -128,6 +152,10 @@ export const handlePageNavigation = async (
 
 // Function to check if user is returning from a redirect
 export const checkReturnFromRedirect = (): void => {
+  // Handle back navigation
+  redirectLoopManager.handleBackNavigation();
+  
+  // Handle direct return from redirect page
   const urlParams = new URLSearchParams(window.location.search);
   const returnFrom = urlParams.get('return_from_redirect');
   
@@ -141,3 +169,8 @@ export const checkReturnFromRedirect = (): void => {
     window.history.replaceState({}, '', newUrl.toString());
   }
 };
+
+// Initialize redirect loop manager on page load
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', checkReturnFromRedirect);
+}
