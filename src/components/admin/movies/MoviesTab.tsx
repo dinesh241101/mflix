@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -158,19 +159,7 @@ const MoviesTab = ({ contentType = 'all' }: MoviesTabProps) => {
             Back to List
           </Button>
         </div>
-        <MovieUploadForm
-          movie={editingMovie}
-          defaultContentType={contentType !== 'all' ? contentType : undefined}
-          onSuccess={() => {
-            setShowUploadForm(false);
-            setEditingMovie(null);
-            fetchMovies();
-          }}
-          onCancel={() => {
-            setShowUploadForm(false);
-            setEditingMovie(null);
-          }}
-        />
+        <MovieUploadForm />
       </div>
     );
   }
@@ -189,13 +178,12 @@ const MoviesTab = ({ contentType = 'all' }: MoviesTabProps) => {
         </div>
         <DownloadLinksForm
           movieId={showDownloadLinks}
-          onSuccess={() => {
+          contentType={contentType !== 'all' ? contentType : 'movie'}
+          onLinksAdded={() => {
             setShowDownloadLinks(null);
             fetchMovies();
           }}
-          onCancel={() => {
-            setShowDownloadLinks(null);
-          }}
+          updateActivity={() => {}}
         />
       </div>
     );
@@ -356,8 +344,20 @@ const MoviesTab = ({ contentType = 'all' }: MoviesTabProps) => {
       {selectedMovie && (
         <MovieDetailsDialog
           selectedMovie={selectedMovie}
-          open={!!selectedMovie}
-          onOpenChange={(open) => !open && setSelectedMovie(null)}
+          setSelectedMovie={setSelectedMovie}
+          movieCast={[]}
+          castForm={{ name: '', role: '' }}
+          setCastForm={() => {}}
+          handleAddCastMember={() => {}}
+          handleDeleteCastMember={() => {}}
+          downloadsCount={0}
+          setDownloadsCount={() => {}}
+          handleUpdateDownloads={() => {}}
+          castSearchQuery=""
+          handleCastSearch={() => {}}
+          castSearchResults={[]}
+          selectCastFromSearch={() => {}}
+          updateActivity={() => {}}
         />
       )}
     </div>
