@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -160,7 +159,7 @@ const MoviesTab = ({ contentType = 'all' }: MoviesTabProps) => {
           </Button>
         </div>
         <MovieUploadForm
-          editingMovie={editingMovie}
+          movie={editingMovie}
           defaultContentType={contentType !== 'all' ? contentType : undefined}
           onSuccess={() => {
             setShowUploadForm(false);
@@ -190,12 +189,13 @@ const MoviesTab = ({ contentType = 'all' }: MoviesTabProps) => {
         </div>
         <DownloadLinksForm
           movieId={showDownloadLinks}
-          contentType={contentType}
-          onLinksAdded={() => {
+          onSuccess={() => {
             setShowDownloadLinks(null);
             fetchMovies();
           }}
-          updateActivity={() => {}}
+          onCancel={() => {
+            setShowDownloadLinks(null);
+          }}
         />
       </div>
     );
@@ -226,7 +226,7 @@ const MoviesTab = ({ contentType = 'all' }: MoviesTabProps) => {
           className="max-w-sm bg-gray-700 border-gray-600 text-white"
         />
         {contentType === 'all' && (
-          <Select value={selectedType} onValueChange={(value: 'movie' | 'series' | 'anime' | 'all') => setSelectedType(value)}>
+          <Select value={selectedType} onValueChange={(value) => setSelectedType(value as 'movie' | 'series' | 'anime' | 'all')}>
             <SelectTrigger className="w-48 bg-gray-700 border-gray-600 text-white">
               <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
@@ -356,7 +356,8 @@ const MoviesTab = ({ contentType = 'all' }: MoviesTabProps) => {
       {selectedMovie && (
         <MovieDetailsDialog
           selectedMovie={selectedMovie}
-          onClose={() => setSelectedMovie(null)}
+          open={!!selectedMovie}
+          onOpenChange={(open) => !open && setSelectedMovie(null)}
         />
       )}
     </div>
