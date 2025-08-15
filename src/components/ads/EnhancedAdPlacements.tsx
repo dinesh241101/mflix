@@ -45,7 +45,6 @@ const EnhancedAdPlacements = ({ pageType, position, className = "" }: EnhancedAd
       {ads.map((ad) => (
         <AdPlacement
           key={ad.ad_id}
-          adId={ad.ad_id}
           position={position}
           pageType={pageType}
         />

@@ -7,7 +7,6 @@ import MovieCarousel from "@/components/MovieCarousel";
 import LatestUploadsSection from "@/components/LatestUploadsSection";
 import LoadingScreen from "@/components/LoadingScreen";
 import EnhancedAdPlacements from "@/components/ads/EnhancedAdPlacements";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -110,7 +109,7 @@ const Index = () => {
             <MovieCarousel
               title="Latest Anime"
               movies={animeMovies}
-              onMovieClick={(id) => navigate(`/anime/${id}`)}
+              viewAllLink="/anime"
             />
           </div>
         )}
@@ -127,7 +126,7 @@ const Index = () => {
             <MovieCarousel
               title="Popular Web Series"
               movies={seriesMovies}
-              onMovieClick={(id) => navigate(`/series/${id}`)}
+              viewAllLink="/series"
             />
           </div>
         )}

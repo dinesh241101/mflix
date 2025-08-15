@@ -14,6 +14,16 @@ export const useCRMAdminAuth = () => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setAdminEmail("");
+    toast({
+      title: "Logged Out",
+      description: "CRM Admin logged out successfully.",
+    });
+    navigate('/crm-admin/login', { replace: true });
+  };
+
   useEffect(() => {
     checkAuthStatus();
     
@@ -128,13 +138,7 @@ export const useCRMAdminAuth = () => {
   const logout = async () => {
     try {
       await supabase.auth.signOut();
-      setIsAuthenticated(false);
-      setAdminEmail("");
-      toast({
-        title: "Logged Out",
-        description: "CRM Admin logged out successfully.",
-      });
-      navigate('/crm-admin/login', { replace: true });
+      handleLogout();
     } catch (error) {
       console.error("CRM Admin logout error:", error);
       toast({

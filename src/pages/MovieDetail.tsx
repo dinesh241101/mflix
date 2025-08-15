@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,13 +18,11 @@ const MovieDetail = () => {
   const navigate = useNavigate();
   const [movie, setMovie] = useState<any>(null);
   const [downloadLinks, setDownloadLinks] = useState<any[]>([]);
-  const [relatedMovies, setRelatedMovies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchMovie();
     fetchDownloadLinks();
-    fetchRelatedMovies();
   }, [id]);
 
   const fetchMovie = async () => {
@@ -75,33 +74,8 @@ const MovieDetail = () => {
     }
   };
 
-  const fetchRelatedMovies = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('movies')
-        .select('*')
-        .neq('movie_id', id)
-        .limit(10);
-
-      if (error) {
-        console.error('Error fetching related movies:', error);
-        return;
-      }
-
-      setRelatedMovies(data || []);
-    } catch (error) {
-      console.error('Error fetching related movies:', error);
-    }
-  };
-
   const handleDownloadClick = (linkId: string) => {
     navigate(`/download/${linkId}`);
-  };
-
-  const getYouTubeVideoId = (url: string) => {
-    if (!url) return null;
-    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
-    return match ? match[1] : null;
   };
 
   if (loading) {
@@ -118,8 +92,6 @@ const MovieDetail = () => {
       </div>
     );
   }
-
-  const videoId = getYouTubeVideoId(movie.trailer_url);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -199,7 +171,7 @@ const MovieDetail = () => {
 
                 {/* Action Buttons */}
                 <div className="flex flex-wrap gap-3 pt-4">
-                  {videoId && (
+                  {movie.trailer_url && (
                     <Button className="bg-red-600 hover:bg-red-700">
                       <Play className="w-4 h-4 mr-2" />
                       Watch Trailer
@@ -226,12 +198,12 @@ const MovieDetail = () => {
             />
 
             {/* Trailer */}
-            {videoId && (
+            {movie.trailer_url && (
               <Card className="bg-gray-800 border-gray-700">
                 <CardContent className="p-6">
                   <h3 className="text-xl font-semibold mb-4">Trailer</h3>
                   <ImprovedYouTubePlayer 
-                    videoId={videoId} 
+                    videoUrl={movie.trailer_url} 
                     title={`${movie.title} Trailer`}
                   />
                 </CardContent>
@@ -282,10 +254,7 @@ const MovieDetail = () => {
             )}
 
             {/* Share Section */}
-            <ShareLinks 
-              title={movie.title} 
-              url={window.location.href}
-            />
+            <ShareLinks title={movie.title} />
           </div>
 
           {/* Sidebar */}
@@ -333,14 +302,13 @@ const MovieDetail = () => {
         />
 
         {/* Related Movies */}
-        {relatedMovies.length > 0 && (
-          <div className="mt-12">
-            <RelatedMoviesSection 
-              movies={relatedMovies} 
-              currentMovieId={movie.movie_id}
-            />
-          </div>
-        )}
+        <div className="mt-12">
+          <RelatedMoviesSection 
+            currentMovie={movie.movie_id}
+            genres={movie.genre}
+            contentType={movie.content_type}
+          />
+        </div>
 
         {/* Final bottom ad */}
         <EnhancedAdPlacements 
