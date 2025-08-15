@@ -1,9 +1,11 @@
 
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DownloadLink {
   link_id: string;
@@ -15,11 +17,33 @@ interface DownloadLink {
 
 interface DownloadLinksSectionProps {
   movieId: string;
-  downloadLinks: DownloadLink[];
 }
 
-const DownloadLinksSection = ({ movieId, downloadLinks }: DownloadLinksSectionProps) => {
+const DownloadLinksSection = ({ movieId }: DownloadLinksSectionProps) => {
   const navigate = useNavigate();
+  const [downloadLinks, setDownloadLinks] = useState<DownloadLink[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDownloadLinks();
+  }, [movieId]);
+
+  const fetchDownloadLinks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('download_links')
+        .select('*')
+        .eq('movie_id', movieId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setDownloadLinks(data || []);
+    } catch (error) {
+      console.error('Error fetching download links:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDownload = (link: DownloadLink) => {
     // Navigate to the new download sources page
@@ -32,6 +56,32 @@ const DownloadLinksSection = ({ movieId, downloadLinks }: DownloadLinksSectionPr
     const bIndex = qualityOrder.indexOf(b.quality);
     return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
   });
+
+  if (loading) {
+    return (
+      <Card className="bg-gray-800 border-gray-700">
+        <CardContent className="p-6">
+          <div className="text-center text-gray-400">Loading download links...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (sortedLinks.length === 0) {
+    return (
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Download size={20} />
+            Download Links
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center text-gray-400 py-8">
+          <p>No download links available for this content.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-gray-800 border-gray-700">

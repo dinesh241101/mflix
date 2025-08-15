@@ -37,7 +37,7 @@ const MoviesTab = ({ contentType = 'all' }: MoviesTabProps) => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedType, setSelectedType] = useState(contentType);
+  const [selectedType, setSelectedType] = useState<'movie' | 'series' | 'anime' | 'all'>(contentType);
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [editingMovie, setEditingMovie] = useState<Movie | null>(null);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
@@ -160,7 +160,7 @@ const MoviesTab = ({ contentType = 'all' }: MoviesTabProps) => {
           </Button>
         </div>
         <MovieUploadForm
-          movie={editingMovie}
+          editingMovie={editingMovie}
           defaultContentType={contentType !== 'all' ? contentType : undefined}
           onSuccess={() => {
             setShowUploadForm(false);
@@ -190,11 +190,12 @@ const MoviesTab = ({ contentType = 'all' }: MoviesTabProps) => {
         </div>
         <DownloadLinksForm
           movieId={showDownloadLinks}
-          onSuccess={() => {
+          contentType={contentType}
+          onLinksAdded={() => {
             setShowDownloadLinks(null);
             fetchMovies();
           }}
-          onCancel={() => setShowDownloadLinks(null)}
+          updateActivity={() => {}}
         />
       </div>
     );
@@ -225,7 +226,7 @@ const MoviesTab = ({ contentType = 'all' }: MoviesTabProps) => {
           className="max-w-sm bg-gray-700 border-gray-600 text-white"
         />
         {contentType === 'all' && (
-          <Select value={selectedType} onValueChange={setSelectedType}>
+          <Select value={selectedType} onValueChange={(value: 'movie' | 'series' | 'anime' | 'all') => setSelectedType(value)}>
             <SelectTrigger className="w-48 bg-gray-700 border-gray-600 text-white">
               <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
@@ -354,7 +355,7 @@ const MoviesTab = ({ contentType = 'all' }: MoviesTabProps) => {
       {/* Movie Details Dialog */}
       {selectedMovie && (
         <MovieDetailsDialog
-          movie={selectedMovie}
+          selectedMovie={selectedMovie}
           onClose={() => setSelectedMovie(null)}
         />
       )}

@@ -179,7 +179,7 @@ const MovieDetail = () => {
               {showTrailer && movie.trailer_url && (
                 <div className="mb-6">
                   <ImprovedYouTubePlayer
-                    url={movie.trailer_url}
+                    videoUrl={movie.trailer_url}
                     title={`${movie.title} - Trailer`}
                   />
                 </div>
@@ -234,11 +234,11 @@ const MovieDetail = () => {
         </div>
 
         {/* Download Links */}
-        <DownloadLinksSection movieId={movie.movie_id} movieTitle={movie.title} />
+        <DownloadLinksSection movieId={movie.movie_id} />
 
         {/* Related Movies */}
         <RelatedMoviesSection
-          currentMovieId={movie.movie_id}
+          currentMovie={movie.movie_id}
           genres={movie.genre || []}
           contentType={movie.content_type}
         />
