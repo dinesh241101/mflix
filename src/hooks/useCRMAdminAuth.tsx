@@ -4,11 +4,11 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 
-// Admin credentials
-const ADMIN_EMAIL = "admin@mflix.com";
-const ADMIN_PASSWORD = "MFlix2025@Admin!";
+// CRM Admin credentials
+const CRM_ADMIN_EMAIL = "admin@mflix.com";
+const CRM_ADMIN_PASSWORD = "MFlix2025@Admin!";
 
-export const useNewAdminAuth = () => {
+export const useCRMAdminAuth = () => {
   const navigate = useNavigate();
   const [adminEmail, setAdminEmail] = useState("");
   const [loading, setLoading] = useState(true);
@@ -19,7 +19,7 @@ export const useNewAdminAuth = () => {
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("Auth state change:", event);
+        console.log("CRM Admin Auth state change:", event);
         
         if (event === 'SIGNED_OUT' || !session) {
           handleLogout();
@@ -38,7 +38,7 @@ export const useNewAdminAuth = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.user) {
-        console.log("No active session found");
+        console.log("No active CRM admin session found");
         setIsAuthenticated(false);
         setAdminEmail("");
         setLoading(false);
@@ -48,7 +48,7 @@ export const useNewAdminAuth = () => {
       await verifyAdminAccess(session.user.id, session.user.email || '');
       
     } catch (error) {
-      console.error("Auth check error:", error);
+      console.error("CRM Admin auth check error:", error);
       setIsAuthenticated(false);
       setAdminEmail("");
     } finally {
@@ -63,18 +63,18 @@ export const useNewAdminAuth = () => {
       });
 
       if (error || !isAdmin) {
-        console.log("User is not an admin");
+        console.log("User is not a CRM admin");
         setIsAuthenticated(false);
         setAdminEmail("");
         return;
       }
 
-      console.log("Admin access verified");
+      console.log("CRM Admin access verified");
       setIsAuthenticated(true);
       setAdminEmail(email);
       
     } catch (error) {
-      console.error("Error verifying admin access:", error);
+      console.error("Error verifying CRM admin access:", error);
       setIsAuthenticated(false);
       setAdminEmail("");
     }
@@ -83,10 +83,10 @@ export const useNewAdminAuth = () => {
   const login = async (email: string, password: string) => {
     try {
       // Validate credentials
-      if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
+      if (email !== CRM_ADMIN_EMAIL || password !== CRM_ADMIN_PASSWORD) {
         return { 
           success: false, 
-          error: 'Invalid admin credentials' 
+          error: 'Invalid CRM admin credentials' 
         };
       }
 
@@ -96,7 +96,7 @@ export const useNewAdminAuth = () => {
       });
 
       if (error) {
-        console.error("Login error:", error);
+        console.error("CRM Admin login error:", error);
         return { success: false, error: 'Authentication failed' };
       }
 
@@ -113,14 +113,14 @@ export const useNewAdminAuth = () => {
         await supabase.auth.signOut();
         return { 
           success: false, 
-          error: 'Admin privileges required' 
+          error: 'CRM Admin privileges required' 
         };
       }
 
       return { success: true, error: null };
 
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("CRM Admin login error:", error);
       return { success: false, error: 'Login failed. Please try again.' };
     }
   };
@@ -132,11 +132,11 @@ export const useNewAdminAuth = () => {
       setAdminEmail("");
       toast({
         title: "Logged Out",
-        description: "You have been successfully logged out.",
+        description: "CRM Admin logged out successfully.",
       });
       navigate('/crm-admin/login', { replace: true });
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error("CRM Admin logout error:", error);
       toast({
         title: "Error",
         description: "Failed to logout properly.",
@@ -145,17 +145,13 @@ export const useNewAdminAuth = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-  };
-
   return {
     isAuthenticated,
     adminEmail,
     loading,
     login,
-    logout: handleLogout,
-    ADMIN_EMAIL,
-    ADMIN_PASSWORD
+    logout,
+    CRM_ADMIN_EMAIL,
+    CRM_ADMIN_PASSWORD
   };
 };

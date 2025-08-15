@@ -7,17 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import LoadingScreen from "@/components/LoadingScreen";
-import { useNewAdminAuth } from "@/hooks/useNewAdminAuth";
+import { useCRMAdminAuth } from "@/hooks/useCRMAdminAuth";
 
-const NewAdminLogin = () => {
+const CRMAdminLogin = () => {
   const navigate = useNavigate();
   const { 
     isAuthenticated, 
     loading, 
     login, 
-    ADMIN_EMAIL, 
-    ADMIN_PASSWORD 
-  } = useNewAdminAuth();
+    CRM_ADMIN_EMAIL, 
+    CRM_ADMIN_PASSWORD 
+  } = useCRMAdminAuth();
   
   const [credentials, setCredentials] = useState({
     email: "",
@@ -32,7 +32,7 @@ const NewAdminLogin = () => {
   }
 
   if (loading) {
-    return <LoadingScreen message="Checking authentication..." />;
+    return <LoadingScreen message="Checking CRM Admin authentication..." />;
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -45,7 +45,7 @@ const NewAdminLogin = () => {
       if (result.success) {
         toast({
           title: "Login Successful",
-          description: "Welcome to the CRM Admin Dashboard!",
+          description: "Welcome to MFlix CRM Admin Dashboard!",
         });
         navigate("/crm-admin");
       } else {
@@ -68,8 +68,8 @@ const NewAdminLogin = () => {
 
   const fillDemoCredentials = () => {
     setCredentials({
-      email: ADMIN_EMAIL,
-      password: ADMIN_PASSWORD
+      email: CRM_ADMIN_EMAIL,
+      password: CRM_ADMIN_PASSWORD
     });
   };
 
@@ -78,10 +78,10 @@ const NewAdminLogin = () => {
       <Card className="w-full max-w-md bg-gray-800 border-gray-700">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-white">
-            CRM Admin Login
+            MFlix CRM Admin
           </CardTitle>
           <p className="text-gray-400">
-            Secure access to MFlix CRM administration
+            Secure access to content management system
           </p>
         </CardHeader>
         
@@ -118,20 +118,20 @@ const NewAdminLogin = () => {
               disabled={isLogging}
               className="w-full bg-blue-600 hover:bg-blue-700"
             >
-              {isLogging ? "Logging in..." : "Login"}
+              {isLogging ? "Logging in..." : "Access CRM Admin"}
             </Button>
           </form>
 
           <div className="mt-6 p-4 bg-gray-700 rounded-lg">
             <p className="text-sm text-gray-300 mb-3">
-              Demo Credentials (for testing):
+              Demo Credentials:
             </p>
             <div className="space-y-2 text-xs">
               <p className="text-gray-400">
-                <strong>Email:</strong> {ADMIN_EMAIL}
+                <strong>Email:</strong> {CRM_ADMIN_EMAIL}
               </p>
               <p className="text-gray-400">
-                <strong>Password:</strong> {ADMIN_PASSWORD}
+                <strong>Password:</strong> {CRM_ADMIN_PASSWORD}
               </p>
             </div>
             <Button
@@ -149,4 +149,4 @@ const NewAdminLogin = () => {
   );
 };
 
-export default NewAdminLogin;
+export default CRMAdminLogin;

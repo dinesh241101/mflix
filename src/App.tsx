@@ -3,11 +3,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import LoadingScreen from "@/components/LoadingScreen";
 import FixedGlobalHeader from "@/components/enhanced/FixedGlobalHeader";
-import NewAdminRouteGuard from "@/components/admin/NewAdminRouteGuard";
+import CRMAdminRouteGuard from "@/components/admin/CRMAdminRouteGuard";
 
 // Lazy load components
 const Index = lazy(() => import("@/pages/Index"));
@@ -23,11 +23,31 @@ const DownloadSources = lazy(() => import("@/pages/DownloadSources"));
 const MobileShortsPage = lazy(() => import("@/pages/MobileShortsPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
-// New Admin components
-const NewAdminLogin = lazy(() => import("@/pages/NewAdminLogin"));
-const NewAdminDashboard = lazy(() => import("@/pages/NewAdminDashboard"));
+// CRM Admin components
+const CRMAdminLogin = lazy(() => import("@/pages/CRMAdminLogin"));
+const CRMAdminDashboard = lazy(() => import("@/pages/CRMAdminDashboard"));
 
 const queryClient = new QueryClient();
+
+// Component to determine if header should be shown
+const HeaderWrapper = () => {
+  const location = useLocation();
+  const hideHeaderPaths = [
+    '/crm-admin',
+    '/download-verify',
+    '/download-with-ads'
+  ];
+  
+  const shouldHideHeader = hideHeaderPaths.some(path => 
+    location.pathname.startsWith(path)
+  );
+
+  if (shouldHideHeader) {
+    return null;
+  }
+
+  return <FixedGlobalHeader />;
+};
 
 function App() {
   return (
@@ -37,13 +57,10 @@ function App() {
         <Sonner />
         <BrowserRouter>
           <div className="min-h-screen bg-gray-900">
-            {/* Fixed Global Header - shown on all pages except admin */}
-            <Routes>
-              <Route path="/crm-admin/*" element={null} />
-              <Route path="*" element={<FixedGlobalHeader />} />
-            </Routes>
+            {/* Fixed Global Header - shown on all pages except specified ones */}
+            <HeaderWrapper />
 
-            {/* Main content with padding for fixed header */}
+            {/* Main content with conditional padding for fixed header */}
             <div className="pt-16">
               <Suspense fallback={<LoadingScreen />}>
                 <Routes>
@@ -62,14 +79,14 @@ function App() {
                   <Route path="/download-sources/:id" element={<DownloadSources />} />
                   <Route path="/shorts" element={<MobileShortsPage />} />
 
-                  {/* New Admin Routes */}
-                  <Route path="/crm-admin/login" element={<NewAdminLogin />} />
+                  {/* CRM Admin Routes */}
+                  <Route path="/crm-admin/login" element={<CRMAdminLogin />} />
                   <Route
                     path="/crm-admin"
                     element={
-                      <NewAdminRouteGuard>
-                        <NewAdminDashboard />
-                      </NewAdminRouteGuard>
+                      <CRMAdminRouteGuard>
+                        <CRMAdminDashboard />
+                      </CRMAdminRouteGuard>
                     }
                   />
 

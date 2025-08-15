@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useNewAdminAuth } from "@/hooks/useNewAdminAuth";
+import { useCRMAdminAuth } from "@/hooks/useCRMAdminAuth";
 import LoadingScreen from "@/components/LoadingScreen";
 import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import MoviesTab from "@/components/admin/movies/MoviesTab";
@@ -13,15 +13,16 @@ import AnimeTab from "@/components/admin/anime/AnimeTab";
 import RedirectLoopTab from "@/components/admin/redirect/RedirectLoopTab";
 import SeriesEpisodesTab from "@/components/admin/series/SeriesEpisodesTab";
 import BulkUploadTab from "@/components/admin/bulk/BulkUploadTab";
+import SampleDataInitializer from "@/components/admin/SampleDataInitializer";
 import { Button } from "@/components/ui/button";
-import { LogOut, Home } from "lucide-react";
+import { LogOut, Home, Database } from "lucide-react";
 
-const NewAdminDashboard = () => {
-  const { adminEmail, loading: authLoading, isAuthenticated, logout } = useNewAdminAuth();
+const CRMAdminDashboard = () => {
+  const { adminEmail, loading: authLoading, isAuthenticated, logout } = useCRMAdminAuth();
   const [activeTab, setActiveTab] = useState("movies");
 
   if (authLoading) {
-    return <LoadingScreen message="Loading CRM Admin Dashboard" />;
+    return <LoadingScreen message="Loading MFlix CRM Admin Dashboard" />;
   }
 
   if (!isAuthenticated) {
@@ -52,6 +53,8 @@ const NewAdminDashboard = () => {
         return <UsersTab />;
       case "settings":
         return <SettingsTab />;
+      case "sample-data":
+        return <SampleDataInitializer />;
       default:
         return <MoviesTab />;
     }
@@ -70,7 +73,7 @@ const NewAdminDashboard = () => {
               className="text-white hover:bg-gray-700"
             >
               <Home size={18} className="mr-2" />
-              CRM Admin Dashboard
+              MFlix CRM Admin
             </Button>
             <div className="text-white">
               <span className="text-sm text-gray-300">Welcome, </span>
@@ -78,15 +81,26 @@ const NewAdminDashboard = () => {
             </div>
           </div>
           
-          <Button
-            onClick={logout}
-            variant="ghost"
-            size="sm"
-            className="text-white hover:bg-gray-700 hover:text-red-400"
-          >
-            <LogOut size={18} className="mr-2" />
-            Logout
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button
+              onClick={() => setActiveTab("sample-data")}
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-gray-700"
+            >
+              <Database size={18} className="mr-2" />
+              Sample Data
+            </Button>
+            <Button
+              onClick={logout}
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-gray-700 hover:text-red-400"
+            >
+              <LogOut size={18} className="mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
       
@@ -104,4 +118,4 @@ const NewAdminDashboard = () => {
   );
 };
 
-export default NewAdminDashboard;
+export default CRMAdminDashboard;
