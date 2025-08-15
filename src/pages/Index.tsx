@@ -84,11 +84,9 @@ const Index = () => {
         )}
 
         {/* Latest Uploads */}
-        {latestMovies.length > 0 && (
-          <section>
-            <LatestUploadsSection movies={latestMovies} />
-          </section>
-        )}
+        <section>
+          <LatestUploadsSection />
+        </section>
 
         {/* Trending Movies */}
         {trendingMovies.length > 0 && (
