@@ -52,7 +52,7 @@ const MoviesTab = ({ contentType = 'all' }: MoviesTabProps) => {
       setLoading(true);
       let query = supabase
         .from('movies')
-        .select('*')
+        .select('movie_id, title, year, genre, country, imdb_rating, content_type, is_visible, poster_url, director, production_house ')
         .order('created_at', { ascending: false });
 
       if (contentType !== 'all') {

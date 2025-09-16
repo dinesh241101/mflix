@@ -6,7 +6,7 @@ import { toast } from "@/hooks/use-toast";
 // Admin credentials and security code
 const ADMIN_EMAIL = "admin@mflix.com";
 const ADMIN_PASSWORD = "MFlix2025@Admin!";
-const SECURITY_CODE = "1234567"; // 7-digit predefined code
+const SECURITY_CODE = "2411200"; // 7-digit predefined code
 
 interface AdminAuthState {
   isAuthenticated: boolean;
