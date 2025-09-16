@@ -16,6 +16,7 @@ const Anime = lazy(() => import("./pages/Anime"));
 const MovieDetail = lazy(() => import("./pages/MovieDetail"));
 const SearchResults = lazy(() => import("./pages/SearchResults"));
 const DownloadPage = lazy(() => import("./pages/DownloadPage"));
+const EpisodeDownloadPage = lazy(() => import("./pages/EpisodeDownloadPage"));
 const DownloadSources = lazy(() => import("./pages/DownloadSources"));
 const DownloadVerify = lazy(() => import("./pages/DownloadVerify"));
 const DownloadWithAds = lazy(() => import("./pages/DownloadWithAds"));
@@ -25,6 +26,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 // Admin pages
 const NewAdminLogin = lazy(() => import("./pages/NewAdminLogin"));
 const NewAdminDashboard = lazy(() => import("./pages/NewAdminDashboard"));
+const UpdateContentPage = lazy(() => import("./pages/admin/UpdateContentPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,6 +58,7 @@ function App() {
                 
                 {/* Download Pages */}
                 <Route path="/download/:movieId" element={<DownloadPage />} />
+                <Route path="/download-episodes/:movieId/:quality" element={<EpisodeDownloadPage />} />
                 <Route path="/download-sources/:movieId" element={<DownloadSources />} />
                 <Route path="/download-verify/:movieId" element={<DownloadVerify />} />
                 <Route path="/download-with-ads/:movieId" element={<DownloadWithAds />} />
@@ -67,6 +70,14 @@ function App() {
                   element={
                     <NewAdminRouteGuard>
                       <NewAdminDashboard />
+                    </NewAdminRouteGuard>
+                  } 
+                />
+                <Route 
+                  path="/admin/update-content" 
+                  element={
+                    <NewAdminRouteGuard>
+                      <UpdateContentPage />
                     </NewAdminRouteGuard>
                   } 
                 />

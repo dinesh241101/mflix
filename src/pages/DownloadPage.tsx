@@ -77,14 +77,25 @@ const DownloadPage = () => {
     if (hasQuiz && resolution === '1080p') {
       setShowQuiz(true);
     } else {
-      // Direct download or redirect to download source
-      toast({
-        title: "Download Started",
-        description: `Starting ${resolution} download...`,
-      });
-      
-      // In a real app, this would redirect to the actual download
-      window.open('/download-sources/' + movieId, '_blank');
+      // Check if this is a series and redirect to episode page
+      if (movie?.content_type === 'series') {
+        toast({
+          title: "Preparing Episodes",
+          description: `Loading ${resolution} episodes...`,
+        });
+        
+        // Redirect to episode download page
+        window.open(`/download-episodes/${movieId}/${resolution}`, '_blank');
+      } else {
+        // Direct download or redirect to download source for movies/anime
+        toast({
+          title: "Download Started",
+          description: `Starting ${resolution} download...`,
+        });
+        
+        // In a real app, this would redirect to the actual download
+        window.open('/download-sources/' + movieId, '_blank');
+      }
     }
   };
 
@@ -97,11 +108,17 @@ const DownloadPage = () => {
       title: "Quiz Completed!",
       description: `You earned ${earnedPoints} points! Starting download...`,
     });
-    
-    // Start download after quiz completion
-    setTimeout(() => {
-      window.open('/download-sources/' + movieId, '_blank');
-    }, 1000);
+    // Check if this is a series and redirect to episode page
+    if (movie?.content_type === 'series') {
+      setTimeout(() => {
+        window.open(`/download-episodes/${movieId}/${selectedResolution}`, '_blank');
+      }, 1000);
+    } else {
+      // Start download after quiz completion for movies/anime
+      setTimeout(() => {
+        window.open('/download-sources/' + movieId, '_blank');
+      }, 1000);
+    }
   };
 
   if (loading) {

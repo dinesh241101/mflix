@@ -13,7 +13,8 @@ import {
   Upload,
   List,
   Brain,
-  Target
+  Target,
+  Edit
 } from "lucide-react";
 
 interface AdminNavTabsProps {
@@ -28,6 +29,7 @@ const AdminNavTabs = ({ activeTab, setActiveTab }: AdminNavTabsProps) => {
     { id: "anime", label: "Anime", icon: Gamepad2 },
     { id: "shorts", label: "Shorts", icon: Video },
     { id: "episodes", label: "Series Episodes", icon: List },
+    { id: "content-links", label: "Update Content", icon: Edit, href: "/admin/update-content" },
     { id: "quiz", label: "Quiz Management", icon: Brain },
     { id: "quiz-assignment", label: "Quiz Assignment", icon: Target },
     { id: "redirect", label: "Redirect Loop", icon: Repeat },
@@ -43,6 +45,22 @@ const AdminNavTabs = ({ activeTab, setActiveTab }: AdminNavTabsProps) => {
       <div className="flex flex-wrap gap-2 pb-4">
         {tabs.map((tab) => {
           const Icon = tab.icon;
+          
+          if ((tab as any).href) {
+            return (
+              <Button
+                key={tab.id}
+                variant="ghost"
+                size="sm"
+                onClick={() => window.open((tab as any).href, '_blank')}
+                className="flex items-center gap-2 text-gray-300 hover:text-white hover:bg-gray-700"
+              >
+                <Icon size={16} />
+                {tab.label}
+              </Button>
+            );
+          }
+
           return (
             <Button
               key={tab.id}
