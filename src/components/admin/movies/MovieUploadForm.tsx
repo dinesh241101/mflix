@@ -23,7 +23,7 @@ const MovieUploadForm = () => {
     genre: [] as string[],
     quality: "",
     country: "",
-    content_type: "movie",
+    content_type: "movie, series, anime",
     poster_url: "",
     screenshots: [] as string[],
     featured: false,
