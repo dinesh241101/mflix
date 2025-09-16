@@ -8,6 +8,7 @@ import MovieCarousel from "@/components/MovieCarousel";
 import LatestUploadsSection from "@/components/LatestUploadsSection";
 import LoadingScreen from "@/components/LoadingScreen";
 import { checkReturnFromRedirect } from "@/utils/redirectLoop";
+import SampleDataForm from "@/components/SampleDataForm";
 
 const Index = () => {
   const [featuredMovies, setFeaturedMovies] = useState([]);
@@ -98,6 +99,9 @@ const Index = () => {
           </section>
         )}
       </div>
+      
+      {/* Sample Data Form - Fixed position button */}
+      <SampleDataForm />
     </div>
   );
 };
