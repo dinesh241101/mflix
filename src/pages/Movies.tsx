@@ -47,7 +47,7 @@ const Movies = () => {
       let query = supabase
         .from('movies')
         .select('*', { count: 'exact' })
-        .eq('content_type', 'movie')
+        .eq('content_type', 'movie_id' )
         .eq('is_visible', true);
 
       // Apply filters
@@ -107,7 +107,7 @@ const Movies = () => {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <UniversalHeader />
+      {/* <UniversalHeader /> */}
       
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">

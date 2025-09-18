@@ -54,9 +54,8 @@ const MovieDetail = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('movies')
-        .select('*')
-        .eq('movie_id', movieId)
-        .eq('is_visible', true)
+        .select('movie_id, title, poster_url, year, imdb_rating, genre, country, quality, director, production_house, trailer_url, storyline, screenshots, content_type')
+        .eq('movie_id', id)
         .single();
 
       if (error) throw error;
