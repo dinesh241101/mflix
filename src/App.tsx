@@ -15,7 +15,7 @@ const WebSeries = lazy(() => import("./pages/WebSeries"));
 const Anime = lazy(() => import("./pages/Anime"));
 const MovieDetail = lazy(() => import("./pages/MovieDetail"));
 const SearchResults = lazy(() => import("./pages/SearchResults"));
-const DownloadPage = lazy(() => import("./pages/DownloadPage"));
+// const DownloadPage = lazy(() => import("./pages/DownloadPage"));
 const EpisodeDownloadPage = lazy(() => import("./pages/EpisodeDownloadPage"));
 const DownloadSources = lazy(() => import("./pages/DownloadSources"));
 const DownloadVerify = lazy(() => import("./pages/DownloadVerify"));
@@ -45,7 +45,7 @@ function App() {
         <Sonner />
         <BrowserRouter>
           <div className="min-h-screen bg-gray-900">
-            <Suspense fallback={<LoadingScreen />}>
+            <Suspense fallback={<LoadingScreen />}> 
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<Index />} />
@@ -55,33 +55,33 @@ function App() {
                 <Route path="/movie/:id" element={<MovieDetail />} />
                 <Route path="/search" element={<SearchResults />} />
                 <Route path="/shorts" element={<MobileShortsPage />} />
-                
+
                 {/* Download Pages */}
-                <Route path="/download/:movieId" element={<DownloadPage />} />
+                {/* <Route path="/download/:movieId" element={<DownloadPage />} /> */}
                 <Route path="/download-episodes/:movieId/:quality" element={<EpisodeDownloadPage />} />
                 <Route path="/download-sources/:movieId" element={<DownloadSources />} />
                 <Route path="/download-verify/:movieId" element={<DownloadVerify />} />
                 <Route path="/download-with-ads/:movieId" element={<DownloadWithAds />} />
-                
+
                 {/* Admin Routes */}
                 <Route path="/admin/login" element={<NewAdminLogin />} />
-                <Route 
-                  path="/admin" 
+                <Route
+                  path="/admin"
                   element={
                     <NewAdminRouteGuard>
                       <NewAdminDashboard />
                     </NewAdminRouteGuard>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/admin/update-content" 
+                <Route
+                  path="/admin/update-content"
                   element={
                     <NewAdminRouteGuard>
                       <UpdateContentPage />
                     </NewAdminRouteGuard>
-                  } 
+                  }
                 />
-                
+
                 {/* 404 Route */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
