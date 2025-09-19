@@ -92,7 +92,7 @@ const DownloadPage = () => {
           title: "Download Started",
           description: `Starting ${resolution} download...`,
         });
-        
+      
         // In a real app, this would redirect to the actual download
         window.open('/download-sources/' + movieId, '_blank');
       }

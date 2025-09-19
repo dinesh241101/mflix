@@ -100,7 +100,7 @@ const Index = () => {
             viewAllLink="/trending"
           />
         </section>
-      )}
+        )}
     </div>
   );
 };
