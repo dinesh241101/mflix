@@ -7,6 +7,8 @@ import LatestUploadsSection from "@/components/LatestUploadsSection";
 import LoadingScreen from "@/components/LoadingScreen";
 import { Button } from "@/components/ui/button";
 import { Upload, Shield } from "lucide-react";
+import Header from "@/components/Header";
+import ScrollableHeader from "@/components/universal/ScrollableHeader";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -62,6 +64,9 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+      <ScrollableHeader />
+
+    <div className="min-h-screen bg-gray-900 text-white">
       {/* Hero Section with Featured Movies */}
       {featuredMovies.length > 0 && (
         <section className="mb-8">
@@ -101,6 +106,7 @@ const Index = () => {
           />
         </section>
         )}
+    </div>
     </div>
   );
 };
