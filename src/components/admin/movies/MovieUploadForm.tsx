@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import ImageUploader from "./ImageUploader";
 import MultipleImageUploader from "./MultipleImageUploader";
 import CountrySelector from "./CountrySelector";
-import GenreSelector from "./GenreSelector";
+import GenreSelectorWithSearch from "../genres/GenreSelectorWithSearch";
 
 const MovieUploadForm = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -205,7 +205,7 @@ const MovieUploadForm = () => {
         />
       </div>
 
-      <GenreSelector 
+      <GenreSelectorWithSearch 
         selectedGenres={formData.genre}
         onGenresChange={handleGenresChange}
       />

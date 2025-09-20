@@ -55,12 +55,16 @@ const MovieDetail = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('movies')
-        .select('movie_id, title, poster_url, year, imdb_rating, genre, country, quality, director, production_house, trailer_url, storyline, screenshots, content_type')
-        .eq('movie_id', id)
-        .single();
+        .select('movie_id, title, poster_url, year, imdb_rating, genre, country, quality, director, production_house, trailer_url, storyline, screenshots, content_type, downloads')
+        .eq('movie_id', movieId)
+        .maybeSingle();
 
       if (error) throw error;
-      setMovie(movie);
+      if (!data) {
+        setError('Movie not found or has been removed.');
+        return;
+      }
+      setMovie(data);
     } catch (err) {
       console.error('Error fetching movie:', err);
       setError('Movie not found or has been removed.');

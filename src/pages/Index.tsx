@@ -171,11 +171,12 @@ const Index = () => {
                         </span>
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-opacity flex items-center justify-center opacity-0 hover:opacity-100">
-                      <span className="text-white text-xs font-medium text-center p-2">
-                        {movie.title}
-                      </span>
-                    </div>
+                  </div>
+                  {/* Permanent title display */}
+                  <div className="p-2 bg-gray-800">
+                    <h3 className="text-white text-xs font-medium text-center truncate">
+                      {movie.title}
+                    </h3>
                   </div>
                 </div>
               ))}
@@ -261,11 +262,11 @@ const Index = () => {
                         </span>
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-opacity flex items-center justify-center opacity-0 hover:opacity-100">
-                      <span className="text-white text-xs font-medium text-center p-2">
-                        {movie.title}
-                      </span>
-                    </div>
+                  </div>
+                  <div className="p-2 bg-gray-800">
+                    <h3 className="text-white text-xs font-medium text-center truncate">
+                      {movie.title}
+                    </h3>
                   </div>
                 </div>
               ))}
@@ -299,11 +300,11 @@ const Index = () => {
                         </span>
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-opacity flex items-center justify-center opacity-0 hover:opacity-100">
-                      <span className="text-white text-xs font-medium text-center p-2">
-                        {movie.title}
-                      </span>
-                    </div>
+                  </div>
+                  <div className="p-2 bg-gray-800">
+                    <h3 className="text-white text-xs font-medium text-center truncate">
+                      {movie.title}
+                    </h3>
                   </div>
                 </div>
               ))}
@@ -337,11 +338,11 @@ const Index = () => {
                         </span>
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-opacity flex items-center justify-center opacity-0 hover:opacity-100">
-                      <span className="text-white text-xs font-medium text-center p-2">
-                        {movie.title}
-                      </span>
-                    </div>
+                  </div>
+                  <div className="p-2 bg-gray-800">
+                    <h3 className="text-white text-xs font-medium text-center truncate">
+                      {movie.title}
+                    </h3>
                   </div>
                 </div>
               ))}

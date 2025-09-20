@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 
@@ -12,7 +11,7 @@ interface GenreSelectorProps {
   onGenresChange: (genres: string[]) => void;
 }
 
-const GenreSelector = ({ selectedGenres, onGenresChange }: GenreSelectorProps) => {
+const GenreSelectorWithSearch = ({ selectedGenres, onGenresChange }: GenreSelectorProps) => {
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
   const [newGenre, setNewGenre] = useState("");
   const [showAddGenre, setShowAddGenre] = useState(false);
@@ -104,6 +103,12 @@ const GenreSelector = ({ selectedGenres, onGenresChange }: GenreSelectorProps) =
     onGenresChange(selectedGenres.filter(g => g !== genre));
   };
 
+  // Filter genres based on search term
+  const filteredGenres = availableGenres.filter(genre =>
+    genre.toLowerCase().includes(searchTerm.toLowerCase()) && 
+    !selectedGenres.includes(genre)
+  );
+
   return (
     <div className="space-y-4">
       <div>
@@ -130,25 +135,38 @@ const GenreSelector = ({ selectedGenres, onGenresChange }: GenreSelectorProps) =
 
       <div>
         <label className="block text-sm font-medium text-gray-300 mb-2">
-          Available Genres (Click to select)
+          Available Genres
         </label>
+        
+        {/* Search Input */}
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+          <Input
+            type="text"
+            placeholder="Search genres..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 bg-gray-800 border-gray-700 text-white"
+          />
+        </div>
+        
+        {/* Available Genres */}
         <div className="max-h-48 overflow-y-auto bg-gray-700 p-3 rounded border border-gray-600">
-          <div className="flex flex-wrap gap-2">
-            {availableGenres.map((genre) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {filteredGenres.map((genre) => (
               <Badge
                 key={genre}
-                variant={selectedGenres.includes(genre) ? "default" : "secondary"}
-                className={`cursor-pointer transition-colors ${
-                  selectedGenres.includes(genre)
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-600 text-gray-300 hover:bg-gray-500"
-                }`}
+                variant="secondary"
+                className="cursor-pointer transition-colors bg-gray-600 text-gray-300 hover:bg-gray-500 justify-center"
                 onClick={() => handleGenreClick(genre)}
               >
                 {genre}
               </Badge>
             ))}
           </div>
+          {filteredGenres.length === 0 && searchTerm && (
+            <p className="text-gray-400 text-center py-4">No genres found matching "{searchTerm}"</p>
+          )}
         </div>
       </div>
 
@@ -192,4 +210,4 @@ const GenreSelector = ({ selectedGenres, onGenresChange }: GenreSelectorProps) =
   );
 };
 
-export default GenreSelector;
+export default GenreSelectorWithSearch;

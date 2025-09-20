@@ -27,7 +27,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const NewAdminLogin = lazy(() => import("./pages/NewAdminLogin"));
 const NewAdminDashboard = lazy(() => import("./pages/NewAdminDashboard"));
 const UpdateContentPage = lazy(() => import("./pages/admin/UpdateContentPage"));
-const ContentLinksManager = lazy(() => import("./pages/admin/ContentLinksManager"));
+const ContentLinksManagerImproved = lazy(() => import("./pages/admin/ContentLinksManagerImproved"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -86,7 +86,7 @@ function App() {
                   path="/admin/content-links"
                   element={
                     <NewAdminRouteGuard>
-                      <ContentLinksManager />
+                      <ContentLinksManagerImproved />
                     </NewAdminRouteGuard>
                   }
                 />
