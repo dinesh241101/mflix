@@ -23,7 +23,7 @@ const LatestPage = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("movies")
-        .select("movie_id, title, poster_url, year, genre, content_type, imdb_rating")
+        .select("id")
         .eq("is_visible", true)
         .order("created_at", { ascending: false })
         .range((pageNum - 1) * ITEMS_PER_PAGE, pageNum * ITEMS_PER_PAGE - 1);

@@ -13,6 +13,7 @@ import RelatedMoviesSection from "@/components/RelatedMoviesSection";
 import ShareLinks from "@/components/ShareLinks";
 import ImprovedYouTubePlayer from "@/components/ImprovedYouTubePlayer";
 import { checkReturnFromRedirect } from "@/utils/redirectLoop";
+import Movies from "./Movies";
 
 interface Movie {
   movie_id: string;
@@ -54,12 +55,12 @@ const MovieDetail = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('movies')
-        .select('movie_id, title, poster_url, year, imdb_rating, genre, country, quality, director, production_house, trailer_url, storyline, screenshots, content_type, downloads')
+        .select('movie_id, title, poster_url, year, imdb_rating, genre, country, quality, director, production_house, trailer_url, storyline, screenshots, content_type')
         .eq('movie_id', id)
         .single();
 
       if (error) throw error;
-      setMovie(data);
+      setMovie(movie);
     } catch (err) {
       console.error('Error fetching movie:', err);
       setError('Movie not found or has been removed.');
@@ -242,6 +243,8 @@ const MovieDetail = () => {
           contentType={movie.content_type}
         />
       </div>
+
+      
     </div>
   );
 };

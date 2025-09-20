@@ -96,7 +96,7 @@ const Index = () => {
       const { data, error } = await supabase
         .from('movies')
         .select('movie_id, title, poster_url, year, genre, content_type, imdb_rating')
-        .eq('trending', true)
+        .eq('is_latest', true)
         .eq('is_visible', true)
         .order('created_at', { ascending: false })
         .limit(12);
@@ -356,7 +356,7 @@ const Index = () => {
       </div>
 
       {/* Sample Data Form */}
-      <SampleDataForm />
+        
     </div>
   );
 };
