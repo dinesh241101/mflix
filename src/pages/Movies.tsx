@@ -107,7 +107,7 @@ const Movies = () => {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      {/* <UniversalHeader /> */}
+      <UniversalHeader />
       
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
