@@ -15,7 +15,7 @@ const WebSeries = lazy(() => import("./pages/WebSeries"));
 const Anime = lazy(() => import("./pages/Anime"));
 const MovieDetail = lazy(() => import("./pages/MovieDetail"));
 const SearchResults = lazy(() => import("./pages/SearchResults"));
-const DownloadPage = lazy(() => import("./pages/DownloadPage"));
+const NewDownloadPage = lazy(() => import("./pages/NewDownloadPage"));
 const EpisodeDownloadPage = lazy(() => import("./pages/EpisodeDownloadPage"));
 const DownloadSources = lazy(() => import("./pages/DownloadSources"));
 const DownloadVerify = lazy(() => import("./pages/DownloadVerify"));
@@ -58,10 +58,10 @@ function App() {
                 <Route path="/shorts" element={<MobileShortsPage />} />
 
                 {/* Download Pages */}
-                <Route path="/download/:movieId" element={<DownloadPage />} />
+                <Route path="/download/:movieId" element={<NewDownloadPage />} />
                 <Route path="/download-episodes/:movieId/:quality" element={<EpisodeDownloadPage />} />
-                <Route path="/download-sources/:movieId" element={<DownloadSources />} />
-                <Route path="/download-verify/:movieId" element={<DownloadVerify />} />
+                <Route path="/download-sources/:id/:linkId" element={<DownloadSources />} />
+                <Route path="/download-verify/:id/:linkId/:sourceId" element={<DownloadVerify />} />
                 <Route path="/download-with-ads/:movieId" element={<DownloadWithAds />} />
 
                 {/* Admin Routes */}
