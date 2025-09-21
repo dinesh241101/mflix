@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,10 +36,7 @@ const MovieCarousel = ({ title, movies, viewAllLink }: MovieCarouselProps) => {
   };
 
   const handleMovieClick = (movie: Movie) => {
-    const route = movie.content_type === 'anime' ? `/anime/${movie.movie_id}` : 
-                  movie.content_type === 'series' ? `/series/${movie.movie_id}` : 
-                  `/movie/${movie.movie_id}`;
-    navigate(route);
+    navigate(`/movie/${movie.movie_id}`);
   };
 
   const getCurrentMovies = () => {

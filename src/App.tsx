@@ -1,53 +1,42 @@
 
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster as Sonner } from "sonner";
 import LoadingScreen from "@/components/LoadingScreen";
-import FixedGlobalHeader from "@/components/enhanced/FixedGlobalHeader";
-import CRMAdminRouteGuard from "@/components/admin/CRMAdminRouteGuard";
+import NewAdminRouteGuard from "@/components/admin/NewAdminRouteGuard";
 
-// Lazy load components
-const Index = lazy(() => import("@/pages/Index"));
-const Movies = lazy(() => import("@/pages/Movies"));
-const WebSeries = lazy(() => import("@/pages/WebSeries"));
-const Anime = lazy(() => import("@/pages/Anime"));
-const MovieDetail = lazy(() => import("@/pages/MovieDetail"));
-const SearchResults = lazy(() => import("@/pages/SearchResults"));
-const DownloadPage = lazy(() => import("@/pages/DownloadPage"));
-const DownloadVerify = lazy(() => import("@/pages/DownloadVerify"));
-const DownloadWithAds = lazy(() => import("@/pages/DownloadWithAds"));
-const DownloadSources = lazy(() => import("@/pages/DownloadSources"));
-const MobileShortsPage = lazy(() => import("@/pages/MobileShortsPage"));
-const NotFound = lazy(() => import("@/pages/NotFound"));
+// Lazy load pages for better performance
+const Index = lazy(() => import("./pages/Index"));
+const Movies = lazy(() => import("./pages/Movies"));
+const WebSeries = lazy(() => import("./pages/WebSeries"));
+const Anime = lazy(() => import("./pages/Anime"));
+const MovieDetail = lazy(() => import("./pages/MovieDetail"));
+const SearchResults = lazy(() => import("./pages/SearchResults"));
+const NewDownloadPage = lazy(() => import("./pages/NewDownloadPage"));
+const EpisodeDownloadPage = lazy(() => import("./pages/EpisodeDownloadPage"));
+const DownloadSources = lazy(() => import("./pages/DownloadSources"));
+const DownloadVerify = lazy(() => import("./pages/DownloadVerify"));
+const DownloadWithAds = lazy(() => import("./pages/DownloadWithAds"));
+const MobileShortsPage = lazy(() => import("./pages/MobileShortsPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
-// CRM Admin components
-const CRMAdminLogin = lazy(() => import("@/pages/CRMAdminLogin"));
-const CRMAdminDashboard = lazy(() => import("@/pages/CRMAdminDashboard"));
+// Admin pages
+const NewAdminLogin = lazy(() => import("./pages/NewAdminLogin"));
+const NewAdminDashboard = lazy(() => import("./pages/NewAdminDashboard"));
+const UpdateContentPage = lazy(() => import("./pages/admin/UpdateContentPage"));
+const ContentLinksManagerImproved = lazy(() => import("./pages/admin/ContentLinksManagerImproved"));
 
-const queryClient = new QueryClient();
-
-// Component to determine if header should be shown
-const HeaderWrapper = () => {
-  const location = useLocation();
-  const hideHeaderPaths = [
-    '/crm-admin',
-    '/download-verify',
-    '/download-with-ads'
-  ];
-  
-  const shouldHideHeader = hideHeaderPaths.some(path => 
-    location.pathname.startsWith(path)
-  );
-
-  if (shouldHideHeader) {
-    return null;
-  }
-
-  return <FixedGlobalHeader />;
-};
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 1,
+    },
+  },
+});
 
 function App() {
   return (
@@ -57,44 +46,55 @@ function App() {
         <Sonner />
         <BrowserRouter>
           <div className="min-h-screen bg-gray-900">
-            {/* Fixed Global Header - shown on all pages except specified ones */}
-            <HeaderWrapper />
+            <Suspense fallback={<LoadingScreen />}> 
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<Index />} />
+                <Route path="/movies" element={<Movies />} />
+                <Route path="/web-series" element={<WebSeries />} />
+                <Route path="/anime" element={<Anime />} />
+                <Route path="/movie/:id" element={<MovieDetail />} />
+                <Route path="/search" element={<SearchResults />} />
+                <Route path="/shorts" element={<MobileShortsPage />} />
 
-            {/* Main content with conditional padding for fixed header */}
-            <div className="pt-16">
-              <Suspense fallback={<LoadingScreen />}>
-                <Routes>
-                  {/* Public Routes */}
-                  <Route path="/" element={<Index />} />
-                  <Route path="/movies" element={<Movies />} />
-                  <Route path="/web-series" element={<WebSeries />} />
-                  <Route path="/anime" element={<Anime />} />
-                  <Route path="/movie/:id" element={<MovieDetail />} />
-                  <Route path="/series/:id" element={<MovieDetail />} />
-                  <Route path="/anime/:id" element={<MovieDetail />} />
-                  <Route path="/search" element={<SearchResults />} />
-                  <Route path="/download/:id" element={<DownloadPage />} />
-                  <Route path="/download-verify/:id" element={<DownloadVerify />} />
-                  <Route path="/download-with-ads/:id" element={<DownloadWithAds />} />
-                  <Route path="/download-sources/:id" element={<DownloadSources />} />
-                  <Route path="/shorts" element={<MobileShortsPage />} />
+                {/* Download Pages */}
+                <Route path="/download/:movieId" element={<NewDownloadPage />} />
+                <Route path="/download-episodes/:movieId/:quality" element={<EpisodeDownloadPage />} />
+                <Route path="/download-sources/:id/:linkId" element={<DownloadSources />} />
+                <Route path="/download-verify/:id/:linkId/:sourceId" element={<DownloadVerify />} />
+                <Route path="/download-with-ads/:movieId" element={<DownloadWithAds />} />
 
-                  {/* CRM Admin Routes */}
-                  <Route path="/crm-admin/login" element={<CRMAdminLogin />} />
-                  <Route
-                    path="/crm-admin"
-                    element={
-                      <CRMAdminRouteGuard>
-                        <CRMAdminDashboard />
-                      </CRMAdminRouteGuard>
-                    }
-                  />
+                {/* Admin Routes */}
+                <Route path="/admin/login" element={<NewAdminLogin />} />
+                <Route
+                  path="/admin"
+                  element={
+                    <NewAdminRouteGuard>
+                      <NewAdminDashboard />
+                    </NewAdminRouteGuard>
+                  }
+                />
+                <Route
+                  path="/admin/update-content"
+                  element={
+                    <NewAdminRouteGuard>
+                      <UpdateContentPage />
+                    </NewAdminRouteGuard>
+                  }
+                />
+                <Route
+                  path="/admin/content-links"
+                  element={
+                    <NewAdminRouteGuard>
+                      <ContentLinksManagerImproved />
+                    </NewAdminRouteGuard>
+                  }
+                />
 
-                  {/* Fallback */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </div>
+                {/* 404 Route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
           </div>
         </BrowserRouter>
       </TooltipProvider>

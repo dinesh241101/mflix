@@ -5,9 +5,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Trash2, Plus, Edit3 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Series {
   movie_id: string;
@@ -24,10 +35,15 @@ interface Episode {
   source_name: string;
 }
 
+interface GroupedEpisodes {
+  [quality: string]: Episode[];
+}
+
 const SeriesEpisodesTab = () => {
   const [seriesList, setSeriesList] = useState<Series[]>([]);
   const [selectedSeries, setSelectedSeries] = useState<string>("");
   const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [groupedEpisodes, setGroupedEpisodes] = useState<GroupedEpisodes>({});
   const [loading, setLoading] = useState(false);
   const [newEpisode, setNewEpisode] = useState({
     episode_number: 1,
@@ -50,6 +66,24 @@ const SeriesEpisodesTab = () => {
       fetchEpisodes();
     }
   }, [selectedSeries]);
+
+  useEffect(() => {
+    // Group episodes by quality and sort by episode number
+    const grouped: GroupedEpisodes = {};
+    episodes.forEach((episode) => {
+      if (!grouped[episode.quality]) {
+        grouped[episode.quality] = [];
+      }
+      grouped[episode.quality].push(episode);
+    });
+
+    // Sort episodes within each quality group by episode number
+    Object.keys(grouped).forEach((quality) => {
+      grouped[quality].sort((a, b) => a.episode_number - b.episode_number);
+    });
+
+    setGroupedEpisodes(grouped);
+  }, [episodes]);
 
   const fetchSeriesList = async () => {
     try {
@@ -77,8 +111,6 @@ const SeriesEpisodesTab = () => {
 
     try {
       setLoading(true);
-      // For now, we'll use the download_links table to store episode data
-      // with a naming convention to identify episodes
       const { data, error } = await supabase
         .from('download_links')
         .select('*')
@@ -123,7 +155,6 @@ const SeriesEpisodesTab = () => {
 
     try {
       setLoading(true);
-      // Store as download link with episode number in resolution field
       const { error } = await supabase
         .from('download_links')
         .insert([{
@@ -305,42 +336,82 @@ const SeriesEpisodesTab = () => {
             </CardContent>
           </Card>
 
-          {/* Episodes List */}
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white">Episodes ({episodes.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {episodes.length === 0 ? (
-                <p className="text-gray-400">No episodes found for this series</p>
-              ) : (
-                <div className="space-y-3">
-                  {episodes.map((episode) => (
-                    <div key={episode.id} className="flex items-center gap-4 p-3 bg-gray-700 rounded-lg">
-                      <div className="flex-1">
-                        <p className="text-white text-sm font-medium">
-                          Episode {episode.episode_number}: {episode.episode_title}
-                        </p>
-                        <p className="text-gray-400 text-xs">
-                          {episode.quality} - {episode.file_size} - {episode.source_name}
-                        </p>
-                        <p className="text-gray-500 text-xs truncate max-w-md">
-                          {episode.download_url}
-                        </p>
+          {/* Grouped Episodes List */}
+          <div className="space-y-4">
+            {Object.keys(groupedEpisodes).length === 0 ? (
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-8 text-center">
+                  <p className="text-gray-400">No episodes found for this series</p>
+                </CardContent>
+              </Card>
+            ) : (
+              Object.keys(groupedEpisodes)
+                .sort((a, b) => {
+                  const qualityOrder = { '480p': 1, '720p': 2, '1080p': 3, '4K': 4 };
+                  return (qualityOrder[a as keyof typeof qualityOrder] || 0) - (qualityOrder[b as keyof typeof qualityOrder] || 0);
+                })
+                .map((quality) => (
+                  <Card key={quality} className="bg-gray-800 border-gray-700">
+                    <CardHeader>
+                      <CardTitle className="text-white flex justify-between items-center">
+                        <span>{quality} Quality</span>
+                        <span className="text-sm text-gray-400">
+                          {groupedEpisodes[quality].length} episodes
+                        </span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {groupedEpisodes[quality].map((episode) => (
+                          <div key={episode.id} className="flex items-center gap-4 p-3 bg-gray-700 rounded-lg">
+                            <div className="flex-1">
+                              <p className="text-white text-sm font-medium">
+                                Episode {episode.episode_number}: {episode.episode_title}
+                              </p>
+                              <p className="text-gray-400 text-xs">
+                                {episode.file_size} - {episode.source_name}
+                              </p>
+                              <p className="text-gray-500 text-xs truncate max-w-md">
+                                {episode.download_url}
+                              </p>
+                            </div>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                >
+                                  <Trash2 size={14} />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="bg-gray-800 border-gray-700">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle className="text-white">Delete Episode</AlertDialogTitle>
+                                  <AlertDialogDescription className="text-gray-300">
+                                    Are you sure you want to delete Episode {episode.episode_number}? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel className="bg-gray-700 border-gray-600 text-white">
+                                    Cancel
+                                  </AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteEpisode(episode.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        ))}
                       </div>
-                      <Button
-                        onClick={() => handleDeleteEpisode(episode.id)}
-                        size="sm"
-                        variant="destructive"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    </CardContent>
+                  </Card>
+                ))
+            )}
+          </div>
         </>
       )}
     </div>

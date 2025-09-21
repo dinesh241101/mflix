@@ -1,33 +1,33 @@
 
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { useNewAdminAuth } from '@/hooks/useNewAdminAuth';
 import LoadingScreen from '@/components/LoadingScreen';
 
-interface AdminRouteGuardProps {
+interface NewAdminRouteGuardProps {
   children: React.ReactNode;
 }
 
-const AdminRouteGuard = ({ children }: AdminRouteGuardProps) => {
-  const { isAuthenticated, loading } = useAdminAuth();
+const NewAdminRouteGuard = ({ children }: NewAdminRouteGuardProps) => {
+  const { isAuthenticated, loading, currentStep } = useNewAdminAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
+    if (!loading && (!isAuthenticated || currentStep !== 'authenticated')) {
       console.log("Admin not authenticated, redirecting to login");
       navigate('/admin/login', { replace: true });
     }
-  }, [loading, isAuthenticated, navigate]);
+  }, [loading, isAuthenticated, currentStep, navigate]);
 
   if (loading) {
     return <LoadingScreen message="Verifying Admin Access..." />;
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || currentStep !== 'authenticated') {
     return <LoadingScreen message="Redirecting to Login..." />;
   }
 
   return <>{children}</>;
 };
 
-export default AdminRouteGuard;
+export default NewAdminRouteGuard;

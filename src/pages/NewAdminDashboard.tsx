@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import AdminHeader from "@/components/admin/AdminHeader";
+import NewAdminHeader from "@/components/admin/NewAdminHeader";
 import AdminNavTabs from "@/components/admin/AdminNavTabs";
 import MoviesTab from "@/components/admin/movies/MoviesTab";
 import AdsTab from "@/components/admin/ads/AdsTab";
@@ -12,11 +12,13 @@ import AnimeTab from "@/components/admin/anime/AnimeTab";
 import RedirectLoopTab from "@/components/admin/redirect/RedirectLoopTab";
 import SeriesEpisodesTab from "@/components/admin/series/SeriesEpisodesTab";
 import BulkUploadTab from "@/components/admin/bulk/BulkUploadTab";
+import QuizManagement from "@/components/admin/quiz/QuizManagement";
+import QuizAssignment from "@/components/admin/quiz/QuizAssignment";
 import LoadingScreen from "@/components/LoadingScreen";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useNewAdminAuth } from "@/hooks/useNewAdminAuth";
 
-const AdminDashboard = () => {
-  const { adminEmail, loading: authLoading, isAuthenticated, handleLogout, updateActivity } = useAdminAuth();
+const NewAdminDashboard = () => {
+  const { adminEmail, loading: authLoading, isAuthenticated, logout } = useNewAdminAuth();
   const [activeTab, setActiveTab] = useState("movies");
 
   if (authLoading) {
@@ -28,8 +30,6 @@ const AdminDashboard = () => {
   }
 
   const renderActiveTab = () => {
-    updateActivity();
-    
     switch (activeTab) {
       case "movies":
         return <MoviesTab />;
@@ -53,6 +53,10 @@ const AdminDashboard = () => {
         return <UsersTab />;
       case "settings":
         return <SettingsTab />;
+      case "quiz":
+        return <QuizManagement />;
+      case "quiz-assignment":
+        return <QuizAssignment />;
       default:
         return <MoviesTab />;
     }
@@ -60,7 +64,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      <AdminHeader adminEmail={adminEmail} onLogout={handleLogout} />
+      <NewAdminHeader adminEmail={adminEmail} onLogout={logout} />
       
       <div className="container mx-auto px-4 py-8">
         <AdminNavTabs activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -73,4 +77,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default NewAdminDashboard;

@@ -5,12 +5,13 @@ import { Share2, Copy, Facebook, Twitter, MessageCircle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
 interface ShareLinksProps {
-  title?: string;
+  title: string;
+  url: string;
 }
 
-const ShareLinks = ({ title = "Share this content" }: ShareLinksProps) => {
+const ShareLinks = ({ title = "Share this content", url }: ShareLinksProps) => {
   const [showShare, setShowShare] = useState(false);
-  const currentUrl = window.location.href;
+  const currentUrl = url || window.location.href;
   const shareText = `Check out this amazing content: ${title}`;
 
   const copyToClipboard = async () => {

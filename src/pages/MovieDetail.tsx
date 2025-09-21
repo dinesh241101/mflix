@@ -1,322 +1,254 @@
 
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Play, Download, Star, Calendar, Globe, User, Building } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { CalendarDays, Star, Globe, User, Building, Download, Play, Share2, Eye, Heart } from "lucide-react";
+import UniversalHeader from "@/components/universal/UniversalHeader";
 import LoadingScreen from "@/components/LoadingScreen";
+import DownloadLinksSection from "@/components/movie/DownloadLinksSection";
 import RelatedMoviesSection from "@/components/RelatedMoviesSection";
 import ShareLinks from "@/components/ShareLinks";
 import ImprovedYouTubePlayer from "@/components/ImprovedYouTubePlayer";
-import EnhancedAdPlacements from "@/components/ads/EnhancedAdPlacements";
-import { toast } from "@/components/ui/use-toast";
+import { checkReturnFromRedirect } from "@/utils/redirectLoop";
+import Movies from "./Movies";
+
+interface Movie {
+  movie_id: string;
+  title: string;
+  poster_url?: string;
+  year?: number;
+  imdb_rating?: number;
+  user_rating?: number;
+  genre?: string[];
+  country?: string;
+  director?: string;
+  production_house?: string;
+  storyline?: string;
+  content_type: string;
+  quality?: string;
+  trailer_url?: string;
+  screenshots?: string[];
+  downloads: number;
+}
 
 const MovieDetail = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [movie, setMovie] = useState<any>(null);
-  const [downloadLinks, setDownloadLinks] = useState<any[]>([]);
+  const { id } = useParams<{ id: string }>();
+  const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showTrailer, setShowTrailer] = useState(false);
 
   useEffect(() => {
-    fetchMovie();
-    fetchDownloadLinks();
+    // Check for redirect returns
+    checkReturnFromRedirect();
+    
+    if (id) {
+      fetchMovie(id);
+    }
   }, [id]);
 
-  const fetchMovie = async () => {
+  const fetchMovie = async (movieId: string) => {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('movies')
-        .select('*')
-        .eq('movie_id', id)
-        .single();
+        .select('movie_id, title, poster_url, year, imdb_rating, genre, country, quality, director, production_house, trailer_url, storyline, screenshots, content_type, downloads')
+        .eq('movie_id', movieId)
+        .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching movie:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load movie details.",
-          variant: "destructive"
-        });
-      }
-
-      setMovie(data);
-    } catch (error) {
-      console.error('Error fetching movie:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchDownloadLinks = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('download_links')
-        .select('*')
-        .eq('movie_id', id);
-
-      if (error) {
-        console.error('Error fetching download links:', error);
+      if (error) throw error;
+      if (!data) {
+        setError('Movie not found or has been removed.');
         return;
       }
-
-      setDownloadLinks(data || []);
-    } catch (error) {
-      console.error('Error fetching download links:', error);
+      setMovie(data);
+    } catch (err) {
+      console.error('Error fetching movie:', err);
+      setError('Movie not found or has been removed.');
+    } finally {
+      setTimeout(() => setLoading(false), 2000); // 2-second loading
     }
-  };
-
-  const handleDownloadClick = (linkId: string) => {
-    navigate(`/download/${linkId}`);
   };
 
   if (loading) {
     return <LoadingScreen message="Loading movie details..." />;
   }
 
-  if (!movie) {
+  if (error || !movie) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Movie Not Found</h1>
-          <Button onClick={() => navigate('/')}>Go Home</Button>
+      <div className="min-h-screen bg-gray-900">
+        <UniversalHeader />
+        <div className="container mx-auto px-4 py-16 text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">Movie Not Found</h1>
+          <p className="text-gray-400 mb-8">{error}</p>
+          <Link to="/">
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              Back to Home
+            </Button>
+          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      {/* Top Ad Banner */}
-      <EnhancedAdPlacements 
-        pageType="movie_detail" 
-        position="top_banner" 
-        className="mb-4"
-      />
-
+    <div className="min-h-screen bg-gray-900">
+      <UniversalHeader />
+      
       <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Movie Header */}
-            <div className="flex flex-col md:flex-row gap-6">
-              {/* Poster */}
-              <div className="flex-shrink-0">
-                <img
-                  src={movie.poster_url || '/placeholder.svg'}
-                  alt={movie.title}
-                  className="w-64 h-96 object-cover rounded-lg shadow-lg mx-auto md:mx-0"
+        {/* Movie Header */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+          {/* Poster */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-8">
+              <div className="relative rounded-lg overflow-hidden shadow-2xl">
+                {movie.poster_url ? (
+                  <img
+                    src={movie.poster_url}
+                    alt={movie.title}
+                    className="w-full h-auto object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-96 bg-gray-800 flex items-center justify-center">
+                    <span className="text-gray-400">No Poster Available</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Movie Info */}
+          <div className="lg:col-span-2 space-y-6">
+            <div>
+              <h1 className="text-4xl font-bold text-white mb-4">{movie.title}</h1>
+              
+              {/* Metadata */}
+              <div className="flex flex-wrap gap-4 mb-6">
+                {movie.year && (
+                  <div className="flex items-center text-gray-300">
+                    <CalendarDays size={16} className="mr-2" />
+                    {movie.year}
+                  </div>
+                )}
+                {movie.imdb_rating && (
+                  <div className="flex items-center text-yellow-400">
+                    <Star size={16} className="mr-2" />
+                    {movie.imdb_rating}/10 IMDB
+                  </div>
+                )}
+                {movie.country && (
+                  <div className="flex items-center text-gray-300">
+                    <Globe size={16} className="mr-2" />
+                    {movie.country}
+                  </div>
+                )}
+                <div className="flex items-center text-gray-300">
+                  <Download size={16} className="mr-2" />
+                  {movie.downloads} downloads
+                </div>
+              </div>
+
+              {/* Genres */}
+              {movie.genre && movie.genre.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {movie.genre.map((g, idx) => (
+                    <Badge key={idx} variant="secondary" className="bg-blue-600/20 text-blue-300">
+                      {g}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-4 mb-6">
+                {movie.trailer_url && (
+                  <Button
+                    onClick={() => setShowTrailer(!showTrailer)}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    <Play size={16} className="mr-2" />
+                    {showTrailer ? 'Hide' : 'Watch'} Trailer
+                  </Button>
+                )}
+                <ShareLinks
+                  title={movie.title}
+                  url={window.location.href}
                 />
               </div>
 
-              {/* Movie Info */}
-              <div className="flex-1 space-y-4">
-                <div>
-                  <h1 className="text-3xl md:text-4xl font-bold mb-2">{movie.title}</h1>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {movie.genre?.map((g: string) => (
-                      <Badge key={g} variant="secondary">{g}</Badge>
-                    ))}
-                  </div>
+              {/* Trailer */}
+              {showTrailer && movie.trailer_url && (
+                <div className="mb-6">
+                  <ImprovedYouTubePlayer
+                    videoUrl={movie.trailer_url}
+                    title={`${movie.title} - Trailer`}
+                  />
                 </div>
-
-                {/* Movie Meta */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  {movie.year && (
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-blue-400" />
-                      <span>{movie.year}</span>
-                    </div>
-                  )}
-                  {movie.country && (
-                    <div className="flex items-center gap-2">
-                      <Globe className="w-4 h-4 text-green-400" />
-                      <span>{movie.country}</span>
-                    </div>
-                  )}
-                  {movie.imdb_rating && (
-                    <div className="flex items-center gap-2">
-                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                      <span>{movie.imdb_rating}/10</span>
-                    </div>
-                  )}
-                  {movie.quality && (
-                    <div className="text-purple-400 font-semibold">
-                      {movie.quality}
-                    </div>
-                  )}
-                </div>
-
-                {/* Additional Info */}
-                {movie.director && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <User className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-300">Director: {movie.director}</span>
-                  </div>
-                )}
-                {movie.production_house && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Building className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-300">Studio: {movie.production_house}</span>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex flex-wrap gap-3 pt-4">
-                  {movie.trailer_url && (
-                    <Button className="bg-red-600 hover:bg-red-700">
-                      <Play className="w-4 h-4 mr-2" />
-                      Watch Trailer
-                    </Button>
-                  )}
-                  {downloadLinks.length > 0 && (
-                    <Button 
-                      onClick={() => handleDownloadClick(downloadLinks[0].link_id)}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Download Now
-                    </Button>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
 
-            {/* Ad placement after movie header */}
-            <EnhancedAdPlacements 
-              pageType="movie_detail" 
-              position="after_header" 
-              className="my-6"
-            />
+            {/* Additional Info */}
+            <Card className="bg-gray-800/50 border-gray-700">
+              <CardContent className="p-6">
+                {movie.director && (
+                  <div className="flex items-center mb-4">
+                    <User size={16} className="mr-3 text-gray-400" />
+                    <div>
+                      <span className="text-gray-400">Director:</span>
+                      <span className="text-white ml-2">{movie.director}</span>
+                    </div>
+                  </div>
+                )}
+                
+                {movie.production_house && (
+                  <div className="flex items-center mb-4">
+                    <Building size={16} className="mr-3 text-gray-400" />
+                    <div>
+                      <span className="text-gray-400">Production:</span>
+                      <span className="text-white ml-2">{movie.production_house}</span>
+                    </div>
+                  </div>
+                )}
 
-            {/* Trailer */}
-            {movie.trailer_url && (
-              <Card className="bg-gray-800 border-gray-700">
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-semibold mb-4">Trailer</h3>
-                  <ImprovedYouTubePlayer 
-                    videoUrl={movie.trailer_url} 
-                    title={`${movie.title} Trailer`}
-                  />
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Ad placement after trailer */}
-            <EnhancedAdPlacements 
-              pageType="movie_detail" 
-              position="after_trailer" 
-              className="my-6"
-            />
+                {movie.quality && (
+                  <div className="flex items-center">
+                    <Eye size={16} className="mr-3 text-gray-400" />
+                    <div>
+                      <span className="text-gray-400">Quality:</span>
+                      <span className="text-white ml-2">{movie.quality}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Storyline */}
             {movie.storyline && (
-              <Card className="bg-gray-800 border-gray-700">
+              <Card className="bg-gray-800/50 border-gray-700">
                 <CardContent className="p-6">
-                  <h3 className="text-xl font-semibold mb-4">Storyline</h3>
+                  <h3 className="text-xl font-semibold text-white mb-4">Storyline</h3>
                   <p className="text-gray-300 leading-relaxed">{movie.storyline}</p>
                 </CardContent>
               </Card>
             )}
-
-            {/* Download Links */}
-            {downloadLinks.length > 0 && (
-              <Card className="bg-gray-800 border-gray-700">
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-semibold mb-4">Download Links</h3>
-                  <div className="grid gap-3">
-                    {downloadLinks.map((link) => (
-                      <div key={link.link_id} className="flex items-center justify-between p-4 bg-gray-700 rounded-lg">
-                        <div>
-                          <div className="font-medium">{link.quality}</div>
-                          <div className="text-sm text-gray-400">{link.file_size}</div>
-                        </div>
-                        <Button 
-                          onClick={() => handleDownloadClick(link.link_id)}
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Share Section */}
-            <ShareLinks title={movie.title} />
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Sidebar Ad */}
-            <EnhancedAdPlacements 
-              pageType="movie_detail" 
-              position="sidebar_top" 
-              className="mb-6"
-            />
-
-            {/* Screenshots */}
-            {movie.screenshots && movie.screenshots.length > 0 && (
-              <Card className="bg-gray-800 border-gray-700">
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">Screenshots</h3>
-                  <div className="grid grid-cols-1 gap-3">
-                    {movie.screenshots.slice(0, 4).map((screenshot: string, index: number) => (
-                      <img
-                        key={index}
-                        src={screenshot}
-                        alt={`Screenshot ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Another Sidebar Ad */}
-            <EnhancedAdPlacements 
-              pageType="movie_detail" 
-              position="sidebar_bottom" 
-              className="my-6"
-            />
           </div>
         </div>
 
-        {/* Bottom Ad before related movies */}
-        <EnhancedAdPlacements 
-          pageType="movie_detail" 
-          position="before_related" 
-          className="my-8"
-        />
+        {/* Download Links */}
+        <DownloadLinksSection movieId={movie.movie_id} />
 
         {/* Related Movies */}
-        <div className="mt-12">
-          <RelatedMoviesSection 
-            currentMovie={movie.movie_id}
-            genres={movie.genre}
-            contentType={movie.content_type}
-          />
-        </div>
-
-        {/* Final bottom ad */}
-        <EnhancedAdPlacements 
-          pageType="movie_detail" 
-          position="bottom_banner" 
-          className="mt-8"
+        <RelatedMoviesSection
+          currentMovie={movie.movie_id}
+          genres={movie.genre || []}
+          contentType={movie.content_type}
         />
       </div>
+
+      
     </div>
   );
 };
