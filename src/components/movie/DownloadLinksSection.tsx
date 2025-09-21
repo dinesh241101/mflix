@@ -45,9 +45,9 @@ const DownloadLinksSection = ({ movieId }: DownloadLinksSectionProps) => {
     }
   };
 
-  const handleDownload = (link: DownloadLink) => {
-    // Navigate to the new download sources page
-    navigate(`/download-sources/${movieId}/${link.link_id}`);
+const handleDownload = (link: DownloadLink) => {
+    // Open download page in new tab as requested
+    window.open(`/download-sources/${movieId}/${link.link_id}`, '_blank');
   };
 
   const qualityOrder = ['4K', '1080p', '720p', '480p'];
@@ -91,47 +91,33 @@ const DownloadLinksSection = ({ movieId }: DownloadLinksSectionProps) => {
           Download Links
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-4">
-          {sortedLinks.map((link) => (
-            <div
-              key={link.link_id}
-              className="flex items-center justify-between p-4 bg-gray-700 rounded-lg border border-gray-600 hover:border-blue-500 transition-colors flex-col sm:flex-row gap-4"
-            >
-              <div className="flex items-center space-x-4 w-full sm:w-auto">
-                <div className="text-center">
-                  <Badge 
-                    className={`text-sm font-semibold ${
-                      link.quality === '4K' ? 'bg-red-600' :
-                      link.quality === '1080p' ? 'bg-blue-600' :
-                      link.quality === '720p' ? 'bg-green-600' :
-                      'bg-gray-600'
-                    }`}
-                  >
-                    {link.quality}
-                  </Badge>
-                  <p className="text-xs text-gray-400 mt-1">{link.resolution}</p>
-                </div>
-                
-                <div className="text-center sm:text-left">
-                  <p className="text-white font-medium">
-                    {link.quality} Quality
-                  </p>
-                  <p className="text-gray-400 text-sm">
-                    File Size: {link.file_size}
-                  </p>
-                </div>
-              </div>
-              
+      <CardContent className="space-y-6">
+        {/* Quality buttons grid - matching image-1 reference */}
+        <div className="text-center mb-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Select Quality to Download</h3>
+          <div className="flex flex-wrap justify-center gap-4">
+            {sortedLinks.map((link) => (
               <Button
+                key={link.link_id}
                 onClick={() => handleDownload(link)}
-                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 w-full sm:w-auto"
+                className={`relative px-8 py-6 h-auto flex flex-col items-center gap-2 border-2 transition-all hover:scale-105 ${
+                  link.quality === '4K' ? 'bg-red-600 border-red-500 hover:bg-red-700' :
+                  link.quality === '1080p' ? 'bg-blue-600 border-blue-500 hover:bg-blue-700' :
+                  link.quality === '720p' ? 'bg-green-600 border-green-500 hover:bg-green-700' :
+                  'bg-gray-600 border-gray-500 hover:bg-gray-700'
+                }`}
               >
-                <Download size={16} className="mr-2" />
-                Download
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">{link.quality}</div>
+                  {link.resolution && (
+                    <div className="text-xs text-gray-200 opacity-80">{link.resolution}</div>
+                  )}
+                  <div className="text-sm text-gray-200 mt-1">{link.file_size}</div>
+                </div>
+                <Download size={20} className="text-white" />
               </Button>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         <div className="mt-6 p-4 bg-blue-900/20 border border-blue-800 rounded-lg">

@@ -68,26 +68,24 @@ const DownloadVerify = () => {
   };
 
   const handleDownloadClick = () => {
-    if (source?.url) {
-      // Scroll to bottom of page first
-      const scrollToBottom = () => {
+    if (source?.mirror_url) {
+      // Auto-scroll to bottom as requested
+      setTimeout(() => {
         window.scrollTo({
           top: document.body.scrollHeight,
           behavior: 'smooth'
         });
-      };
-      
-      scrollToBottom();
+      }, 100);
       
       // Wait for scroll animation, then show interstitial and redirect
       setTimeout(() => {
         setShowInterstitial(true);
         setTimeout(() => {
           setShowInterstitial(false);
-          window.open(source.url, '_blank');
+          window.open(source.mirror_url, '_blank');
           toast({
             title: "Download Started",
-            description: `Redirecting to ${source.name}`,
+            description: `Redirecting to ${source.source_name}`,
           });
         }, 1000);
       }, 1000);

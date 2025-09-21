@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Edit, Trash2, Plus, Eye, EyeOff, Link as LinkIcon } from "lucide-react";
 import MovieUploadForm from "./MovieUploadForm";
+import EnhancedMovieUploadForm from "./EnhancedMovieUploadForm";
 import MovieDetailsDialog from "./MovieDetailsDialog";
 import DownloadLinksForm from "./DownloadLinksForm";
 
@@ -34,6 +36,7 @@ interface MoviesTabProps {
 }
 
 const MoviesTab = ({ contentType = 'all' }: MoviesTabProps) => {
+  const navigate = useNavigate();
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -159,7 +162,25 @@ const MoviesTab = ({ contentType = 'all' }: MoviesTabProps) => {
             Back to List
           </Button>
         </div>
-        <MovieUploadForm />
+        <EnhancedMovieUploadForm
+          existingMovie={editingMovie}
+          onClose={() => {
+            setShowUploadForm(false);
+            setEditingMovie(null);
+            fetchMovies();
+          }}
+          onSuccess={(movieId, contentType) => {
+            // Redirect to content links manager after successful edit/upload
+            setTimeout(() => {
+              navigate('/admin/content-links', {
+                state: { 
+                  contentId: movieId, 
+                  contentType: contentType.split(',')[0].trim()
+                }
+              });
+            }, 1500);
+          }}
+        />
       </div>
     );
   }

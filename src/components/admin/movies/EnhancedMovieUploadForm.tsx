@@ -37,11 +37,12 @@ const formSchema = z.object({
 });
 
 interface EnhancedMovieUploadFormProps {
-  movieId?: string;
-  onSuccess?: () => void;
+  existingMovie?: any;
+  onClose?: () => void;
+  onSuccess?: (movieId: string, contentType: string) => void;
 }
 
-const EnhancedMovieUploadForm = ({ movieId, onSuccess }: EnhancedMovieUploadFormProps) => {
+const EnhancedMovieUploadForm = ({ existingMovie, onClose, onSuccess }: EnhancedMovieUploadFormProps) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [genres, setGenres] = useState<any[]>([]);
@@ -63,10 +64,10 @@ const EnhancedMovieUploadForm = ({ movieId, onSuccess }: EnhancedMovieUploadForm
   useEffect(() => {
     fetchGenres();
     fetchAllSeoTags();
-    if (movieId) {
-      fetchMovieData(movieId);
+    if (existingMovie?.movie_id) {
+      fetchMovieData(existingMovie.movie_id);
     }
-  }, [movieId]);
+  }, [existingMovie]);
 
   const fetchMovieData = async (movieId: string) => {
     setLoading(true);
@@ -161,7 +162,7 @@ const EnhancedMovieUploadForm = ({ movieId, onSuccess }: EnhancedMovieUploadForm
     setLoading(true);
     try {
       const submitData = {
-        movie_id: movieId || undefined,
+        movie_id: existingMovie?.movie_id || undefined,
         title: data.title,
         content_type: data.content_type,
         year: parseInt(data.year),
@@ -186,10 +187,16 @@ const EnhancedMovieUploadForm = ({ movieId, onSuccess }: EnhancedMovieUploadForm
 
       toast({
         title: "Success",
-        description: `Content ${movieId ? 'updated' : 'uploaded'} successfully`,
+        description: `Content ${existingMovie ? 'updated' : 'uploaded'} successfully`,
       });
-      onSuccess && onSuccess();
-      navigate('/admin/movies');
+      
+      // Call success callback with movie ID and content type for redirect
+      if (onSuccess) {
+        const movieId = existingMovie?.movie_id || submitData.movie_id;
+        onSuccess(movieId, data.content_type);
+      } else {
+        navigate('/admin/movies');
+      }
     } catch (error: any) {
       console.error("Error uploading content:", error);
       toast({
@@ -265,7 +272,7 @@ const EnhancedMovieUploadForm = ({ movieId, onSuccess }: EnhancedMovieUploadForm
     <Card className="bg-gray-800 border-gray-700">
       <CardHeader>
         <CardTitle className="text-white">
-          {movieId ? "Edit Content" : "Upload New Content"}
+          {existingMovie ? "Edit Content" : "Upload New Content"}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -514,7 +521,7 @@ const EnhancedMovieUploadForm = ({ movieId, onSuccess }: EnhancedMovieUploadForm
           </div>
 
           <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700">
-            {loading ? "Uploading..." : (movieId ? "Update Content" : "Upload Content")}
+            {loading ? "Uploading..." : (existingMovie ? "Update Content" : "Upload Content")}
           </Button>
         </form>
       </CardContent>

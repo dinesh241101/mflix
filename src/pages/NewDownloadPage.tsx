@@ -196,10 +196,8 @@ const NewDownloadPage = () => {
   };
 
   const handleDownloadClick = (linkId: string, quality: string) => {
-    // Navigate to download sources page
-    navigate(`/download-sources/${movieId}/${linkId}`, {
-      state: { movie, quality }
-    });
+    // Open download sources page in new tab as requested
+    window.open(`/download-sources/${movieId}/${linkId}`, '_blank');
   };
 
   const getQualityColor = (quality: string) => {
