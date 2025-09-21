@@ -18,7 +18,7 @@ const DownloadVerify = () => {
   const { source, movie, downloadLink } = location.state || {};
   
   const [currentStep, setCurrentStep] = useState<VerificationStep>('captcha');
-  const [countdown, setCountdown] = useState(3);
+  const [countdown, setCountdown] = useState(5);
   const [showInterstitial, setShowInterstitial] = useState(false);
 
   useEffect(() => {
@@ -46,6 +46,7 @@ const DownloadVerify = () => {
     setTimeout(() => {
       setShowInterstitial(false);
       setCurrentStep('countdown');
+      setCountdown(5); // Set to 5 seconds as requested
       
       // Start countdown
       const countdownInterval = setInterval(() => {
@@ -67,15 +68,26 @@ const DownloadVerify = () => {
   };
 
   const handleDownloadClick = () => {
-    if (source?.url) {
-      setShowInterstitial(true);
+    if (source?.mirror_url) {
+      // Auto-scroll to bottom as requested
       setTimeout(() => {
-        setShowInterstitial(false);
-        window.open(source.url, '_blank');
-        toast({
-          title: "Download Started",
-          description: `Redirecting to ${source.name}`,
+        window.scrollTo({
+          top: document.body.scrollHeight,
+          behavior: 'smooth'
         });
+      }, 100);
+      
+      // Wait for scroll animation, then show interstitial and redirect
+      setTimeout(() => {
+        setShowInterstitial(true);
+        setTimeout(() => {
+          setShowInterstitial(false);
+          window.open(source.mirror_url, '_blank');
+          toast({
+            title: "Download Started",
+            description: `Redirecting to ${source.source_name}`,
+          });
+        }, 1000);
       }, 1000);
     } else {
       setCurrentStep('error');

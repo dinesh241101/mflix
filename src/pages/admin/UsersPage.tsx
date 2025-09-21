@@ -1,46 +1,17 @@
 
-import { useEffect, useState } from "react";
-import AdminHeader from "@/components/admin/AdminHeader";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
-import LoadingScreen from "@/components/LoadingScreen";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users } from "lucide-react";
+import { useState } from "react";
+import NewAdminHeader from "@/components/admin/NewAdminHeader";
+import { useNewAdminAuth } from "@/hooks/useNewAdminAuth";
+import UsersTab from "@/components/admin/users/UsersTab";
 
 const UsersPage = () => {
-  const { adminEmail, loading, isAuthenticated, handleLogout } = useAdminAuth();
-
-  if (loading) {
-    return <LoadingScreen message="Loading Users Management" />;
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
+  const { adminEmail, logout } = useNewAdminAuth();
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <AdminHeader adminEmail={adminEmail} onLogout={handleLogout} />
-      
+    <div className="min-h-screen bg-gray-900">
+      <NewAdminHeader adminEmail={adminEmail} onLogout={logout} />
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">User Management</h1>
-          <p className="text-gray-400">Manage user accounts and permissions</p>
-        </div>
-
-        <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center">
-              <Users className="mr-2" />
-              Users Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8">
-              <Users size={64} className="mx-auto text-gray-600 mb-4" />
-              <p className="text-gray-400">User management features coming soon</p>
-            </div>
-          </CardContent>
-        </Card>
+        <UsersTab />
       </div>
     </div>
   );

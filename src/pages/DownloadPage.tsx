@@ -1,163 +1,147 @@
 
 import { useState, useEffect } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import UniversalHeader from "@/components/universal/UniversalHeader";
-import LoadingScreen from "@/components/LoadingScreen";
+import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Download, Play } from "lucide-react";
-import { handleDownloadClick, checkReturnFromRedirect } from "@/utils/redirectLoop";
-
-interface DownloadLink {
-  link_id: string;
-  quality: string;
-  file_size: string;
-  download_url: string;
-}
-
-interface EpisodeLink {
-  link_id: string;
-  episode_number: number;
-  episode_title: string;
-  quality: string;
-  file_size: string;
-  download_url: string;
-  source_name: string;
-}
+import { Download, ArrowLeft, Play, Award } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import FixedGlobalHeader from "@/components/enhanced/FixedGlobalHeader";
+import QuizModal from "@/components/quiz/QuizModal";
+import DownloadPageAds from "@/components/ads/DownloadPageAds";
+import ResponsiveAdPlaceholder from "@/components/ResponsiveAdPlaceholder";
 
 const DownloadPage = () => {
-  const { movieId } = useParams();
-  const [searchParams] = useSearchParams();
+  const { movieId = "" } = useParams();
   const [movie, setMovie] = useState<any>(null);
-  const [downloadLinks, setDownloadLinks] = useState<DownloadLink[]>([]);
-  const [episodeLinks, setEpisodeLinks] = useState<EpisodeLink[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showLinks, setShowLinks] = useState(false);
-  const [countdown, setCountdown] = useState(10);
-
-  const quality = searchParams.get("quality") || "1080p";
+  const [downloadLinks, setDownloadLinks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [selectedResolution, setSelectedResolution] = useState("");
+  const [userPoints, setUserPoints] = useState(0);
 
   useEffect(() => {
-    checkReturnFromRedirect();
-    fetchMovieDetails();
+    if (movieId) {
+      fetchMovieData();
+      fetchDownloadLinks();
+      loadUserPoints();
+    }
   }, [movieId]);
 
-  useEffect(() => {
-    if (!isLoading && !showLinks) {
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            setShowLinks(true);
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
-    }
-  }, [isLoading, showLinks]);
-
-  const fetchMovieDetails = async () => {
-    if (!movieId) return;
-
+  const fetchMovieData = async () => {
     try {
-      setIsLoading(true);
-
-      // Fetch movie details
-      const { data: movieData, error: movieError } = await supabase
+      const { data, error } = await supabase
         .from('movies')
         .select('*')
         .eq('movie_id', movieId)
         .single();
 
-      if (movieError) throw movieError;
-      setMovie(movieData);
-
-      if (movieData.content_type === 'series') {
-        // For series, fetch episodes stored in download_episodes table
-        const { data: episodesData, error: episodesError } = await supabase
-          .from('download_episodes')
-          .select(`
-            episode_id,
-            episode_number,
-            episode_title,
-            download_mirrors (
-              mirror_id,
-              source_name,
-              mirror_url
-            )
-          `)
-          .eq('link_id', movieId)
-          .order('episode_number');
-
-        if (episodesError) {
-          console.error('Episodes error:', episodesError);
-          // Fallback to regular download links for series
-          const { data: linksData, error: linksError } = await supabase
-            .from('download_links')
-            .select('*')
-            .eq('movie_id', movieId)
-            .eq('quality', quality);
-
-          if (linksError) throw linksError;
-          setDownloadLinks(linksData || []);
-        } else {
-          // Transform episodes data into episode links
-          const transformedEpisodes: EpisodeLink[] = [];
-          episodesData?.forEach(episode => {
-            episode.download_mirrors?.forEach((mirror: any) => {
-              transformedEpisodes.push({
-                link_id: mirror.mirror_id,
-                episode_number: parseInt(episode.episode_number),
-                episode_title: episode.episode_title || `Episode ${episode.episode_number}`,
-                quality: quality,
-                file_size: '1.2GB', // Default size for now
-                download_url: mirror.mirror_url,
-                source_name: mirror.source_name
-              });
-            });
-          });
-          setEpisodeLinks(transformedEpisodes);
-        }
-      } else {
-        // Fetch regular download links
-        const { data: linksData, error: linksError } = await supabase
-          .from('download_links')
-          .select('*')
-          .eq('movie_id', movieId)
-          .eq('quality', quality);
-
-        if (linksError) throw linksError;
-        setDownloadLinks(linksData || []);
-      }
+      if (error) throw error;
+      setMovie(data);
     } catch (error) {
-      console.error('Error fetching download details:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Error fetching movie:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load movie details",
+        variant: "destructive"
+      });
     }
   };
 
-  const handleDownloadLinkClick = async (downloadUrl: string, linkType: 'main' | 'episode' = 'main') => {
-    const position = linkType === 'main' ? 'download_cta_1' : 'download_cta_2';
-    await handleDownloadClick(position, downloadUrl);
+  const fetchDownloadLinks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('download_links')
+        .select('*')
+        .eq('movie_id', movieId)
+        .order('quality', { ascending: true });
+
+      if (error) throw error;
+      setDownloadLinks(data || []);
+    } catch (error) {
+      console.error('Error fetching download links:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (isLoading) {
-    return <LoadingScreen message="Loading download page..." />;
+  const loadUserPoints = () => {
+    const points = localStorage.getItem('user_points');
+    setUserPoints(points ? parseInt(points) : 0);
+  };
+
+  const handleDownloadClick = (resolution: string, hasQuiz: boolean = false) => {
+    setSelectedResolution(resolution);
+    
+    if (hasQuiz && resolution === '1080p') {
+      setShowQuiz(true);
+    } else {
+      // Check if this is a series and redirect to episode page
+      if (movie?.content_type === 'series') {
+        toast({
+          title: "Preparing Episodes",
+          description: `Loading ${resolution} episodes...`,
+        });
+        
+        // Redirect to episode download page
+        window.open(`/download-episodes/${movieId}/${resolution}`, '_blank');
+      } else {
+        // Direct download or redirect to download source for movies/anime
+        toast({
+          title: "Download Started",
+          description: `Starting ${resolution} download...`,
+        });
+      
+        // In a real app, this would redirect to the actual download
+        window.open('/download-sources/' + movieId, '_blank');
+      }
+    }
+  };
+
+  const handleQuizComplete = (earnedPoints: number) => {
+    const newPoints = userPoints + earnedPoints;
+    setUserPoints(newPoints);
+    localStorage.setItem('user_points', newPoints.toString());
+    
+    toast({
+      title: "Quiz Completed!",
+      description: `You earned ${earnedPoints} points! Starting download...`,
+    });
+    // Check if this is a series and redirect to episode page
+    if (movie?.content_type === 'series') {
+      setTimeout(() => {
+        window.open(`/download-episodes/${movieId}/${selectedResolution}`, '_blank');
+      }, 1000);
+    } else {
+      // Start download after quiz completion for movies/anime
+      setTimeout(() => {
+        window.open('/download-sources/' + movieId, '_blank');
+      }, 1000);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900">
+        <FixedGlobalHeader />
+        <div className="pt-16 flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        </div>
+      </div>
+    );
   }
 
   if (!movie) {
     return (
       <div className="min-h-screen bg-gray-900">
-        <UniversalHeader />
-        <div className="container mx-auto px-4 py-8">
+        <FixedGlobalHeader />
+        <div className="pt-16 flex items-center justify-center min-h-screen">
           <div className="text-center text-white">
-            <h1 className="text-2xl font-bold mb-4">Movie Not Found</h1>
-            <p>The requested movie could not be found.</p>
+            <h2 className="text-2xl font-bold mb-4">Movie Not Found</h2>
+            <Link to="/">
+              <Button>Go Home</Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -165,184 +149,175 @@ const DownloadPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <UniversalHeader />
+    <div className="min-h-screen bg-gray-900 text-white">
+      <FixedGlobalHeader />
       
-      <div className="container mx-auto px-4 py-8">
-        {/* Movie Info */}
-        <Card className="bg-gray-800 border-gray-700 mb-6">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="w-full md:w-48 flex-shrink-0">
-                {movie.poster_url ? (
+      <div className="pt-20 px-4 max-w-6xl mx-auto">
+        {/* Top Ad Banner */}
+        <ResponsiveAdPlaceholder 
+          position="top-banner" 
+          title="Download Page Advertisement"
+          className="mb-6"
+        />
+
+        {/* Back Button */}
+        <div className="mb-6">
+          <Link to={`/movie/${movieId}`}>
+            <Button variant="ghost" className="text-gray-300 hover:text-white">
+              <ArrowLeft size={16} className="mr-2" />
+              Back to Movie Details
+            </Button>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Movie Info Card */}
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl text-white flex items-center gap-2">
+                    <Download className="text-blue-400" size={24} />
+                    Download: {movie.title}
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Award className="text-yellow-500" size={20} />
+                    <span className="text-yellow-500 font-semibold">{userPoints} Points</span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {movie.genre?.map((g: string, index: number) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {g}
+                    </Badge>
+                  ))}
+                  <Badge className="bg-blue-600 text-xs">
+                    {movie.year}
+                  </Badge>
+                  <Badge className="bg-green-600 text-xs">
+                    {movie.country}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  {movie.storyline}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Ad Space */}
+            <ResponsiveAdPlaceholder 
+              position="content-middle" 
+              title="Special Offers"
+              className="my-6"
+            />
+
+            {/* Download Links */}
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white">Available Downloads</CardTitle>
+                <p className="text-gray-400 text-sm">
+                  Choose your preferred quality and format
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {downloadLinks.map((link) => {
+                    const hasQuiz = link.quality === '1080p'; // Example: 1080p has quiz
+                    
+                    return (
+                      <div
+                        key={link.link_id}
+                        className="flex items-center justify-between p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-white">
+                              {link.quality}
+                            </span>
+                            <span className="text-sm text-gray-400">
+                              Size: {link.file_size}
+                            </span>
+                          </div>
+                          {hasQuiz && (
+                            <div className="flex items-center gap-1">
+                              <Play className="text-blue-400" size={16} />
+                              <span className="text-xs text-blue-400">Quiz Required</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <Button
+                          onClick={() => handleDownloadClick(link.quality, hasQuiz)}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          <Download size={16} className="mr-2" />
+                          {hasQuiz ? 'Play Quiz & Download' : 'Download'}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {downloadLinks.length === 0 && (
+                  <div className="text-center py-8 text-gray-400">
+                    <Download size={48} className="mx-auto mb-4 opacity-50" />
+                    <p>No download links available for this movie.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Additional Ad Space */}
+            <DownloadPageAds page="download-1" />
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Movie Poster */}
+            {movie.poster_url && (
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-4">
                   <img
                     src={movie.poster_url}
                     alt={movie.title}
-                    className="w-full h-auto rounded-lg"
+                    className="w-full rounded-lg"
                   />
-                ) : (
-                  <div className="w-full h-72 bg-gray-700 rounded-lg flex items-center justify-center">
-                    <Play size={48} className="text-gray-400" />
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex-1">
-                <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
-                  {movie.title}
-                </h1>
-                
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <Badge className="bg-blue-600">{movie.content_type.toUpperCase()}</Badge>
-                  <Badge variant="outline">{movie.year}</Badge>
-                  <Badge variant="outline">{quality}</Badge>
-                  {movie.imdb_rating && (
-                    <Badge className="bg-yellow-600">⭐ {movie.imdb_rating}</Badge>
-                  )}
-                </div>
-                
-                {movie.storyline && (
-                  <p className="text-gray-300 mb-4">{movie.storyline}</p>
-                )}
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  {movie.director && (
-                    <div>
-                      <span className="text-gray-400">Director:</span>
-                      <p className="text-white">{movie.director}</p>
-                    </div>
-                  )}
-                  {movie.country && (
-                    <div>
-                      <span className="text-gray-400">Country:</span>
-                      <p className="text-white">{movie.country}</p>
-                    </div>
-                  )}
-                  {movie.genre && movie.genre.length > 0 && (
-                    <div>
-                      <span className="text-gray-400">Genre:</span>
-                      <p className="text-white">{movie.genre.join(', ')}</p>
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-gray-400">Downloads:</span>
-                    <p className="text-white">{movie.downloads?.toLocaleString() || 0}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Countdown or Download Links */}
-        {!showLinks ? (
-          <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-8 text-center">
-              <div className="text-6xl mb-4">⏳</div>
-              <h2 className="text-2xl font-bold text-white mb-4">
-                Preparing Download Links
-              </h2>
-              <p className="text-gray-300 mb-6">
-                Please wait while we prepare your download links...
-              </p>
-              <div className="text-4xl font-bold text-blue-400 mb-4">
-                {countdown}
-              </div>
-              <div className="w-full bg-gray-700 rounded-full h-2">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-1000"
-                  style={{ width: `${((10 - countdown) / 10) * 100}%` }}
-                ></div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-6">
-            {/* Episodes Links (for series) */}
-            {movie.content_type === 'series' && episodeLinks.length > 0 && (
-              <Card className="bg-gray-800 border-gray-700">
-                <CardHeader>
-                  <CardTitle className="text-white">Episodes - {quality}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-3">
-                    {episodeLinks.map((episode) => (
-                      <div key={episode.link_id} className="flex items-center justify-between p-4 bg-gray-700 rounded-lg">
-                        <div className="flex-1">
-                          <h3 className="text-white font-medium">
-                            Episode {episode.episode_number}
-                            {episode.episode_title && `: ${episode.episode_title}`}
-                          </h3>
-                          <div className="flex gap-2 mt-2">
-                            <Badge variant="outline">{episode.quality}</Badge>
-                            <Badge variant="outline">{episode.file_size}</Badge>
-                            <Badge className="bg-green-600">{episode.source_name}</Badge>
-                          </div>
-                        </div>
-                        <Button
-                          onClick={() => handleDownloadLinkClick(episode.download_url, 'episode')}
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          <Download size={16} className="mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Regular Download Links (for movies) */}
-            {movie.content_type !== 'series' && downloadLinks.length > 0 && (
-              <Card className="bg-gray-800 border-gray-700">
-                <CardHeader>
-                  <CardTitle className="text-white">Download Links - {quality}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-3">
-                    {downloadLinks.map((link) => (
-                      <div key={link.link_id} className="flex items-center justify-between p-4 bg-gray-700 rounded-lg">
-                        <div className="flex-1">
-                          <div className="flex gap-2 mb-2">
-                            <Badge variant="outline">{link.quality}</Badge>
-                            <Badge variant="outline">{link.file_size}</Badge>
-                          </div>
-                          <p className="text-gray-300 text-sm truncate">{link.download_url}</p>
-                        </div>
-                        <Button
-                          onClick={() => handleDownloadLinkClick(link.download_url)}
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          <Download size={16} className="mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* No Links Available */}
-            {((movie.content_type === 'series' && episodeLinks.length === 0) || 
-              (movie.content_type !== 'series' && downloadLinks.length === 0)) && (
-              <Card className="bg-gray-800 border-gray-700">
-                <CardContent className="p-8 text-center">
-                  <div className="text-6xl mb-4">😔</div>
-                  <h2 className="text-xl font-bold text-white mb-4">
-                    No Download Links Available
-                  </h2>
-                  <p className="text-gray-400">
-                    Download links for {quality} quality are not available at the moment.
-                    Please try a different quality or check back later.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+            {/* Sidebar Ads */}
+            <ResponsiveAdPlaceholder 
+              position="sidebar" 
+              title="Recommended for You"
+            />
+            
+            <ResponsiveAdPlaceholder 
+              position="sidebar" 
+              title="Premium Downloads"
+            />
           </div>
-        )}
+        </div>
+
+        {/* Bottom Ad */}
+        <ResponsiveAdPlaceholder 
+          position="bottom-banner" 
+          title="Download Page Footer Advertisement"
+          className="mt-8 mb-6"
+        />
       </div>
+
+      {/* Quiz Modal */}
+      <QuizModal
+        isOpen={showQuiz}
+        onClose={() => setShowQuiz(false)}
+        onComplete={handleQuizComplete}
+        movieTitle={movie.title}
+        resolution={selectedResolution}
+      />
     </div>
   );
 };

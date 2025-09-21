@@ -106,16 +106,16 @@ const ScrollableHeader = () => {
       hasDropdown: false,
       icon: "🎧"
     },
-    { 
-      name: "Telugu", 
-      path: "/movies?language=telugu",
-      hasDropdown: false
-    },
-    { 
-      name: "Tamil", 
-      path: "/movies?language=tamil",
-      hasDropdown: false
-    },
+    // { 
+    //   name: "Telugu", 
+    //   path: "/movies?language=telugu",
+    //   hasDropdown: false
+    // },
+    // { 
+    //   name: "Tamil", 
+    //   path: "/movies?language=tamil",
+    //   hasDropdown: false
+    // },
     { 
       name: "Tv Shows", 
       path: "/web-series",
@@ -132,24 +132,24 @@ const ScrollableHeader = () => {
         path: `/movies?genre=${genre.name.toLowerCase()}`
       }))
     },
-    { 
-      name: "Country", 
-      path: "#",
-      hasDropdown: true,
-      dropdownItems: countries.map(country => ({
-        name: country.name,
-        path: `/movies?country=${country.name.toLowerCase()}`
-      }))
-    },
-    { 
-      name: "By Year", 
-      path: "#",
-      hasDropdown: true,
-      dropdownItems: years.map(year => ({
-        name: year.toString(),
-        path: `/movies?year=${year}`
-      }))
-    }
+    // { 
+    //   name: "Country", 
+    //   path: "#",
+    //   hasDropdown: true,
+    //   dropdownItems: countries.map(country => ({
+    //     name: country.name,
+    //     path: `/movies?country=${country.name.toLowerCase()}`
+    //   }))
+    // },
+    // { 
+    //   name: "By Year", 
+    //   path: "#",
+    //   hasDropdown: true,
+    //   dropdownItems: years.map(year => ({
+    //     name: year.toString(),
+    //     path: `/movies?year=${year}`
+    //   }))
+    // }
   ];
 
   const isActive = (path: string) => {

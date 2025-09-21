@@ -1,167 +1,118 @@
 
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from "@/components/ui/navigation-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Search, Film, Tv, Play, Video, Home } from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
-import MFlixLogo from "@/components/MFlixLogo";
-import { Input } from "@/components/ui/input";
+import { Film, Search, Menu, X } from "lucide-react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 const UniversalHeader = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
     }
   };
 
-  const navigationItems = [
-    { label: "Home", href: "/", icon: Home },
-    { label: "Movies", href: "/movies", icon: Film },
-    { label: "Web Series", href: "/web-series", icon: Tv },
-    { label: "Anime", href: "/anime", icon: Play },
-    { label: "Shorts", href: "/shorts", icon: Video },
+  const navItems = [
+    { label: "Home", path: "/" },
+    { label: "Movies", path: "/movies" },
+    { label: "Web Series", path: "/webseries" },
+    { label: "Anime", path: "/anime" },
   ];
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      isScrolled 
-        ? 'bg-gray-900/95 backdrop-blur-md border-b border-gray-800/50' 
-        : 'bg-transparent'
-    }`}>
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex items-center justify-between">
+    <header className="bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <MFlixLogo />
+          <Link to="/" className="flex items-center space-x-2 flex-shrink-0">
+            <Film className="h-8 w-8 text-blue-500" />
+            <span className="text-xl font-bold text-white">MFlix</span>
           </Link>
 
           {/* Desktop Navigation */}
-          <NavigationMenu className="hidden lg:block">
-            <NavigationMenuList className="space-x-2">
-              {navigationItems.map((item) => {
-                const IconComponent = item.icon;
-                return (
-                  <NavigationMenuItem key={item.label}>
-                    <NavigationMenuLink asChild>
-                      <Link
-                        to={item.href}
-                        className="flex items-center space-x-2 px-4 py-2 text-white hover:text-blue-400 hover:bg-gray-800/50 rounded-md transition-colors"
-                      >
-                        <IconComponent size={18} />
-                        <span>{item.label}</span>
-                      </Link>
-                    </NavigationMenuLink>
-                  </NavigationMenuItem>
-                );
-              })}
-            </NavigationMenuList>
-          </NavigationMenu>
+          <nav className="hidden md:flex items-center space-x-6 flex-1 justify-center">
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className="text-gray-300 hover:text-white transition-colors px-3 py-2 rounded-md hover:bg-gray-800"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
 
-          {/* Search Bar - Desktop */}
-          <form onSubmit={handleSearch} className="hidden md:flex items-center space-x-2 flex-1 max-w-md mx-4">
-            <div className="relative flex-1">
-              <Input
+          {/* Search Bar */}
+          <form onSubmit={handleSearch} className="hidden md:flex items-center flex-shrink-0">
+            <div className="relative">
+              <input
                 type="text"
-                placeholder="Search movies, series, anime..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-400 pr-10"
+                placeholder="Search movies, series..."
+                className="bg-gray-800 text-white px-4 py-2 pr-10 rounded-lg border border-gray-700 focus:border-blue-500 focus:outline-none w-64"
               />
-              <Button
+              <button
                 type="submit"
-                size="sm"
-                variant="ghost"
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
               >
-                <Search size={16} />
-              </Button>
+                <Search size={20} />
+              </button>
             </div>
           </form>
 
-          {/* Mobile Menu */}
-          <div className="lg:hidden flex items-center space-x-2">
-            {/* Mobile Search Button */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-white">
-                  <Search size={20} />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="top" className="bg-gray-900 border-gray-800 h-32">
-                <form onSubmit={handleSearch} className="mt-4">
-                  <div className="relative">
-                    <Input
-                      type="text"
-                      placeholder="Search movies, series, anime..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="bg-gray-800 border-gray-700 text-white placeholder-gray-400 pr-10"
-                      autoFocus
-                    />
-                    <Button
-                      type="submit"
-                      size="sm"
-                      variant="ghost"
-                      className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
-                    >
-                      <Search size={16} />
-                    </Button>
-                  </div>
-                </form>
-              </SheetContent>
-            </Sheet>
-
-            {/* Mobile Navigation Menu */}
-            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-white">
-                  <Menu size={20} />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="bg-gray-900 border-gray-800 w-80">
-                <div className="flex flex-col space-y-4 mt-6">
-                  {navigationItems.map((item) => {
-                    const IconComponent = item.icon;
-                    return (
-                      <Link
-                        key={item.label}
-                        to={item.href}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center space-x-3 px-4 py-3 text-white hover:text-blue-400 hover:bg-gray-800/50 rounded-md transition-colors"
-                      >
-                        <IconComponent size={20} />
-                        <span className="text-lg">{item.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
+          {/* Mobile menu button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="md:hidden text-white"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </Button>
         </div>
+
+        {/* Mobile Navigation */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden py-4 border-t border-gray-800">
+            <nav className="flex flex-col space-y-4">
+              {navItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className="text-gray-300 hover:text-white transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+            
+            {/* Mobile Search */}
+            <form onSubmit={handleSearch} className="mt-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search movies, series..."
+                  className="bg-gray-800 text-white px-4 py-2 pr-10 rounded-lg border border-gray-700 focus:border-blue-500 focus:outline-none w-full"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                >
+                  <Search size={20} />
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </div>
     </header>
   );

@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,9 +10,10 @@ import { supabase } from "@/integrations/supabase/client";
 import ImageUploader from "./ImageUploader";
 import MultipleImageUploader from "./MultipleImageUploader";
 import CountrySelector from "./CountrySelector";
-import GenreSelector from "./GenreSelector";
+import GenreSelectorWithSearch from "../genres/GenreSelectorWithSearch";
 
 const MovieUploadForm = () => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
@@ -75,8 +77,18 @@ const MovieUploadForm = () => {
 
       toast({
         title: "Success",
-        description: "Movie uploaded successfully!",
+        description: "Movie uploaded successfully! Redirecting to add download links...",
       });
+
+      // Redirect to content links manager with the new movie
+      setTimeout(() => {
+        navigate(`/admin/content-links`, {
+          state: { 
+            contentId: data.movie_id, 
+            contentType: formData.content_type.split(',')[0].trim()
+          }
+        });
+      }, 1500);
 
       // Reset form
       setFormData({
@@ -205,7 +217,7 @@ const MovieUploadForm = () => {
         />
       </div>
 
-      <GenreSelector 
+      <GenreSelectorWithSearch 
         selectedGenres={formData.genre}
         onGenresChange={handleGenresChange}
       />

@@ -26,13 +26,7 @@ const DownloadSources = () => {
   const [loading, setLoading] = useState(true);
   const [showInterstitial, setShowInterstitial] = useState(false);
   
-  // Download sources - in a real app, these would come from the database
-  const downloadSources: DownloadSource[] = [
-    { id: '1', name: 'Telegram Bot', url: 'https://t.me/moviebot', icon: '📱' },
-    { id: '2', name: 'Google Drive', url: 'https://drive.google.com/file/123', icon: '💾' },
-    { id: '3', name: 'TeraBox', url: 'https://terabox.com/file/456', icon: '📦' },
-    { id: '4', name: 'MediaFire', url: 'https://mediafire.com/file/789', icon: '🔥' },
-  ];
+  const [downloadSources, setDownloadSources] = useState<DownloadSource[]>([]);
 
   useEffect(() => {
     if (id && linkId) {
@@ -55,13 +49,30 @@ const DownloadSources = () => {
       
       const { data: linkData, error: linkError } = await supabase
         .from('download_links')
-        .select('*')
+        .select(`
+          *,
+          download_mirrors(
+            mirror_id,
+            source_name, 
+            mirror_url
+          )
+        `)
         .eq('link_id', linkId)
         .eq('movie_id', id)
         .single();
       
       if (linkError) throw linkError;
       setDownloadLink(linkData);
+
+      // Set download sources from database
+      const sources = linkData.download_mirrors?.map((mirror: any, index: number) => ({
+        id: mirror.mirror_id || (index + 1).toString(),
+        name: mirror.source_name,
+        url: mirror.mirror_url,
+        icon: getSourceIcon(mirror.source_name)
+      })) || [];
+      
+      setDownloadSources(sources);
       
     } catch (error: any) {
       console.error("Error fetching data:", error);
@@ -74,6 +85,16 @@ const DownloadSources = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getSourceIcon = (sourceName: string) => {
+    if (sourceName.toLowerCase().includes('telegram')) return '📱';
+    if (sourceName.toLowerCase().includes('drive')) return '💾';
+    if (sourceName.toLowerCase().includes('terabox')) return '📦';
+    if (sourceName.toLowerCase().includes('mediafire')) return '🔥';
+    if (sourceName.toLowerCase().includes('dropbox')) return '📋';
+    if (sourceName.toLowerCase().includes('mega')) return '☁️';
+    return '🔗';
   };
 
   const handleSourceClick = (source: DownloadSource) => {
@@ -151,7 +172,7 @@ const DownloadSources = () => {
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {downloadSources.map((source) => (
+              {downloadSources.length > 0 ? downloadSources.map((source) => (
                 <Card key={source.id} className="bg-gray-700 border-gray-600 hover:border-blue-500 transition-colors">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-white flex items-center gap-3 text-lg">
@@ -169,7 +190,19 @@ const DownloadSources = () => {
                     </Button>
                   </CardContent>
                 </Card>
-              ))}
+              )) : (
+                <div className="col-span-2 text-center text-gray-400 py-8">
+                  <p>No download sources available for this link.</p>
+                  <Button 
+                    onClick={() => navigate(`/movie/${id}`)} 
+                    variant="outline" 
+                    className="mt-4"
+                  >
+                    <ArrowLeft className="mr-2" size={16} />
+                    Back to Movie
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 p-4 bg-blue-900/20 border border-blue-800 rounded-lg">

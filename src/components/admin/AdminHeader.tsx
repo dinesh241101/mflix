@@ -26,7 +26,7 @@ const AdminHeader = ({ adminEmail, onLogout }: AdminHeaderProps) => {
           </Button>
           <div className="text-white">
             <span className="text-sm text-gray-300">Welcome, </span>
-            <span className="font-medium">{adminEmail}</span>
+            <span className="font-medium">Drishu Sharma</span>
           </div>
         </div>
         

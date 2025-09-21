@@ -16,6 +16,7 @@ const GenreSelector = ({ selectedGenres, onGenresChange }: GenreSelectorProps) =
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
   const [newGenre, setNewGenre] = useState("");
   const [showAddGenre, setShowAddGenre] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Predefined genres for the movie platform
   const predefinedGenres = [
